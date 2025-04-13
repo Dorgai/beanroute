@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 const AuthContext = createContext();
 
 // Public routes that don't require authentication
-const publicRoutes = ['/login'];
+const publicRoutes = ['/login', '/dashboard'];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);

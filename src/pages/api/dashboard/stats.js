@@ -1,5 +1,6 @@
-import { getUserFromRequest } from '../../../lib/auth';
+import { verifyRequestAndGetUser } from '../../../lib/auth';
 import prisma from '../../../lib/prisma';
+import { UserStatus } from '@prisma/client';
 
 export default async function handler(req, res) {
   // Only allow GET requests
@@ -8,41 +9,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Get the current user
-    const user = await getUserFromRequest(req);
-    
+    // Verify the request and get user (runs in Node.js runtime)
+    const user = await verifyRequestAndGetUser(req);
+
     if (!user) {
-      // Instead of returning 401, return demo data when not authenticated
-      // This helps avoid breaking the dashboard in development
-      console.log('No authenticated user found, returning demo data');
-      return res.status(200).json({
-        totalUsers: 1,
-        activeUsers: 1,
-        inactiveUsers: 0,
-        totalTeams: 0,
-        totalShops: 0,
-        isDemo: true
-      });
+      // If verification fails, return 401
+      console.log('/api/dashboard/stats: Verification failed or no user found.');
+      return res.status(401).json({ message: 'Unauthorized: Invalid or missing token' });
     }
 
-    console.log('Fetching stats for user:', user.username);
+    // If verification succeeds, proceed to fetch stats
+    console.log('/api/dashboard/stats: User verified, fetching stats for:', user.username);
 
     // Get dashboard statistics
-    const [
-      totalUsers,
-      activeUsers,
-      inactiveUsers,
-      totalTeams,
-      totalShops
-    ] = await Promise.all([
+    const [totalUsers, activeUsers, inactiveUsers, totalTeams, totalShops] = await Promise.all([
       prisma.user.count(),
-      prisma.user.count({ where: { status: 'ACTIVE' } }),
-      prisma.user.count({ where: { status: 'INACTIVE' } }),
+      prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
+      prisma.user.count({ where: { status: UserStatus.INACTIVE } }),
       prisma.team.count(),
-      prisma.shop.count()
+      prisma.shop.count(),
     ]);
-
-    console.log('Stats fetched successfully');
+    
+    console.log('/api/dashboard/stats: Stats fetched successfully:', { totalUsers, activeUsers, inactiveUsers, totalTeams, totalShops });
 
     // Return the statistics
     return res.status(200).json({
@@ -54,17 +42,11 @@ export default async function handler(req, res) {
       isDemo: false
     });
   } catch (error) {
-    console.error('Error fetching dashboard statistics:', error);
-    
-    // Return fallback data on error
-    return res.status(200).json({
-      totalUsers: 1,
-      activeUsers: 1,
-      inactiveUsers: 0,
-      totalTeams: 0,
-      totalShops: 0,
-      isDemo: true,
-      error: error.message
+    // Catch errors during the Prisma queries specifically
+    console.error('/api/dashboard/stats: Error fetching stats:', error);
+    return res.status(500).json({
+      message: 'Internal server error while fetching stats',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 } 

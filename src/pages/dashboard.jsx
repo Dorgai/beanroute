@@ -19,10 +19,23 @@ try {
         if (userData) {
           setUser(JSON.parse(userData));
         } else {
-          window.location.href = '/login';
+          // window.location.href = '/login';
+          // Set a default guest user if none found in localStorage
+          console.log('No user in localStorage, setting default guest user.');
+          setUser({
+            id: 'guest-' + Date.now(),
+            username: 'guest',
+            role: 'GUEST' // Assign a default role
+          });
         }
       } catch (err) {
         console.error('Error loading user data:', err);
+        // Optionally set a default user on error too
+        setUser({
+          id: 'guest-error-' + Date.now(),
+          username: 'guest',
+          role: 'GUEST'
+        });
       }
     }, []);
     
@@ -48,10 +61,20 @@ function Dashboard() {
     // Fetch dashboard statistics
     async function fetchStats() {
       try {
-        const response = await fetch('/api/dashboard/stats');
+        // Add credentials option to include cookies
+        const response = await fetch('/api/dashboard/stats', { credentials: 'same-origin' });
         
         if (!response.ok) {
-          throw new Error('Failed to fetch dashboard statistics');
+          // Try to get error message from response body if available
+          let errorMsg = 'Failed to fetch dashboard statistics';
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.message || errorMsg;
+          } catch (jsonError) {
+            // Ignore if response body is not valid JSON
+          }
+          console.error('API response not OK:', response.status, errorMsg);
+          throw new Error(errorMsg); // Throw specific error
         }
         
         const data = await response.json();
@@ -283,4 +306,4 @@ function Dashboard() {
   );
 }
 
-export default withAuth(Dashboard); 
+export default Dashboard; 

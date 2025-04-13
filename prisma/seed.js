@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Role, TeamRole } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
@@ -23,7 +23,7 @@ async function main() {
 
   console.log(`Created admin user: ${admin.username}`);
 
-  // Create manager user
+  // Create manager user (using OWNER role)
   const managerPassword = await bcrypt.hash('manager123', 10);
   const manager = await prisma.user.upsert({
     where: { email: 'manager@example.com' },
@@ -34,13 +34,13 @@ async function main() {
       password: managerPassword,
       firstName: 'Manager',
       lastName: 'User',
-      role: 'MANAGER',
+      role: 'OWNER',
     },
   });
 
-  console.log(`Created manager user: ${manager.username}`);
+  console.log(`Created manager (owner) user: ${manager.username}`);
 
-  // Create regular user
+  // Create regular user (using BARISTA role)
   const userPassword = await bcrypt.hash('user123', 10);
   const user = await prisma.user.upsert({
     where: { email: 'user@example.com' },
@@ -51,11 +51,11 @@ async function main() {
       password: userPassword,
       firstName: 'Regular',
       lastName: 'User',
-      role: 'USER',
+      role: 'BARISTA',
     },
   });
 
-  console.log(`Created regular user: ${user.username}`);
+  console.log(`Created regular (barista) user: ${user.username}`);
 
   // Create a team
   const team = await prisma.team.upsert({

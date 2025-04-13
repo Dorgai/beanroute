@@ -1,4 +1,4 @@
-import { removeAuthCookie, getUserFromRequest, logUserActivity } from '../../../lib/auth';
+import { removeAuthCookie, verifyRequestAndGetUser, logUserActivity } from '../../../lib/auth';
 import prisma from '../../../lib/prisma';
 
 export default async function handler(req, res) {
@@ -8,8 +8,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Get the current user
-    const user = await getUserFromRequest(req);
+    // Get the current user using the correct function
+    const user = await verifyRequestAndGetUser(req);
     
     if (user) {
       // Log user activity

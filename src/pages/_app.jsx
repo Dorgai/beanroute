@@ -1,40 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import '../styles/globals.css';
 import Layout from '../components/Layout';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { AuthProvider } from '../context/AuthContext';
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const isLoginPage = router.pathname === '/login';
   const isRootPage = router.pathname === '/';
   
-  // Direct render for root page and login page
-  if (isRootPage || isLoginPage) {
-    return (
-      <>
-        <Head>
-          <title>Bean Route</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-        </Head>
-        <Component {...pageProps} />
-      </>
-    );
-  }
-  
-  // For all other pages, use the Layout
+  // Wrap everything in AuthProvider again
   return (
-    <>
-      <Head>
-        <title>User Management System</title>
-        <meta name="description" content="User Management System with Authentication and Access Control" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
-    </>
+    <AuthProvider>
+      {isRootPage || isLoginPage ? (
+        // Direct render for root and login pages
+        <>
+          <Head>
+            <title>Bean Route</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+          </Head>
+          <Component {...pageProps} />
+        </>
+      ) : (
+        // Use Layout for all other pages
+        <>
+          <Head>
+            <title>User Management System</title>
+            <meta name="description" content="User Management System with Authentication and Access Control" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <link rel="icon" href="/favicon.ico" />
+          </Head>
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </>
+      )}
+    </AuthProvider>
   );
 } 
