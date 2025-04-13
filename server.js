@@ -31,13 +31,11 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 async function startServer() {
-  // Setup the database first
-  await setupDatabase();
-  
-  // Then prepare the Next.js app
+  // Start the server first
   await app.prepare();
   
-  createServer(async (req, res) => {
+  // Create and start the HTTP server
+  const server = createServer(async (req, res) => {
     try {
       // Parse the request URL
       const parsedUrl = parse(req.url, true);
@@ -49,9 +47,24 @@ async function startServer() {
       res.statusCode = 500;
       res.end('Internal Server Error');
     }
-  }).listen(port, (err) => {
+  });
+  
+  server.listen(port, (err) => {
     if (err) throw err;
     console.log(`> Ready on http://${hostname}:${port}`);
+    
+    // Setup the database after the server is already listening
+    // This way the health check can succeed even if DB setup is still in progress
+    setupDatabase().then(success => {
+      if (success) {
+        console.log('✅ Database setup completed after server start');
+      } else {
+        console.warn('⚠️ Database setup failed, but server is still running');
+        console.warn('⚠️ Some features may not work until database is properly set up');
+      }
+    }).catch(err => {
+      console.error('Database setup error:', err);
+    });
   });
 }
 

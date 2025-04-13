@@ -8,7 +8,8 @@ export async function middleware(req) {
     '/api/auth/login', 
     '/api/auth/register',
     '/api/health', // Allow health check
-    '/api/admin/seed-db' // Allow seeding
+    '/api/admin/seed-db', // Allow seeding
+    '/api' // Allow root API endpoint
   ];
   
   const { pathname } = req.nextUrl;
