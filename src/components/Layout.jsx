@@ -11,12 +11,22 @@ export default function Layout({ children }) {
   useEffect(() => {
     // Load user data from localStorage
     try {
-      const userData = localStorage.getItem('user');
+      let userData = null;
+      try {
+        userData = localStorage.getItem('user');
+      } catch (e) {
+        console.error('Error reading from localStorage:', e);
+      }
+      
       if (userData) {
-        setUser(JSON.parse(userData));
+        try {
+          setUser(JSON.parse(userData));
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
       }
     } catch (error) {
-      console.error('Error parsing user data:', error);
+      console.error('Error in Layout useEffect:', error);
     } finally {
       setLoading(false);
     }
@@ -24,7 +34,13 @@ export default function Layout({ children }) {
 
   // Use router for a more React-friendly navigation
   const handleLogout = () => {
-    router.push('/logout');
+    try {
+      router.push('/logout');
+    } catch (error) {
+      console.error('Error navigating to logout:', error);
+      // Fallback if router fails
+      window.location.href = '/logout';
+    }
   };
 
   // If still loading, show loading indicator
@@ -83,7 +99,7 @@ export default function Layout({ children }) {
             {/* Desktop menu */}
             <div className="hidden md:flex md:items-center md:space-x-6">
               <span className="text-gray-700">
-                Welcome, {user?.firstName || user?.username}
+                Welcome, {user?.firstName || user?.username || 'User'}
               </span>
               <button
                 onClick={handleLogout}

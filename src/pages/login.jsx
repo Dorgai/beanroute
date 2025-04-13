@@ -9,7 +9,9 @@ export default function Login() {
   const [debug, setDebug] = useState('');
   
   const addDebug = (message) => {
-    setDebug(prev => `${prev}\n${new Date().toISOString().substr(11, 8)}: ${message}`);
+    const now = new Date();
+    const time = now.toTimeString().split(' ')[0];
+    setDebug(prev => `${prev}\n${time}: ${message}`);
   };
 
   const handleLogin = async (e) => {
@@ -43,7 +45,7 @@ export default function Login() {
       window.location.replace('/dashboard');
       
     } catch (err) {
-      addDebug(`Error: ${err.message}`);
+      addDebug(`Error: ${err.message || 'Unknown error'}`);
       setError(err.message || 'Login failed');
       setLoading(false);
     }

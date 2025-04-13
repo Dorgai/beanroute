@@ -7,13 +7,20 @@ import { useRouter } from 'next/router';
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const isLoginPage = router.pathname === '/login';
-  const [initialAuth, setInitialAuth] = useState(false);
+  const [ready, setReady] = useState(false);
   
   // Check initial auth state
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const userData = localStorage.getItem('user');
+        // Safely check localStorage
+        let userData = null;
+        try {
+          userData = localStorage.getItem('user');
+        } catch (e) {
+          console.error('Error reading from localStorage:', e);
+        }
+        
         if (userData && isLoginPage) {
           // Already logged in, redirect to dashboard
           console.log('User already logged in, redirecting to dashboard');
@@ -27,21 +34,27 @@ export default function App({ Component, pageProps }) {
           window.location.replace('/login');
           return;
         }
-        
-        setInitialAuth(true);
       } catch (err) {
-        console.error('Error checking auth state:', err);
-        setInitialAuth(true);
+        console.error('Error in auth check:', err);
+      } finally {
+        // Always set ready to true, even if there was an error
+        setReady(true);
       }
     }
-  }, []);
+  }, [isLoginPage]);
   
-  // While checking auth, show loading
-  if (!initialAuth && typeof window !== 'undefined') {
+  // In SSR or while checking auth, render minimum content
+  if (typeof window === 'undefined' || !ready) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      <>
+        <Head>
+          <title>User Management System</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </Head>
+        <div className="flex justify-center items-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      </>
     );
   }
   
