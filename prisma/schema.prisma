@@ -2,16 +2,15 @@
 generator client {
   provider        = "prisma-client-js"
   binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
-  previewFeatures = ["interactiveTransactions"]
+  // "interactiveTransactions" is now a standard feature - removing the preview flag
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // Uncomment the directUrl line if you're using Railway
-  // directUrl is the direct connection to the database, bypassing pooling
-  // Uncomment only if needed for connection stability
-  // directUrl = env("DIRECT_DATABASE_URL")
+  // Only use directUrl when deploying to Railway or similar PaaS 
+  // that uses connection pooling
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // User model - Core of our user management system
