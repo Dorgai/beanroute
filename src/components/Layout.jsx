@@ -14,9 +14,6 @@ export default function Layout({ children }) {
       const userData = localStorage.getItem('user');
       if (userData) {
         setUser(JSON.parse(userData));
-      } else {
-        // If no user, redirect to login
-        window.location.href = '/login';
       }
     } catch (error) {
       console.error('Error parsing user data:', error);
@@ -25,12 +22,9 @@ export default function Layout({ children }) {
     }
   }, []);
 
+  // Use router for a more React-friendly navigation
   const handleLogout = () => {
-    // Clear user data from localStorage
-    localStorage.removeItem('user');
-    
-    // Redirect to login page
-    window.location.href = '/login';
+    router.push('/logout');
   };
 
   // If still loading, show loading indicator
@@ -42,7 +36,7 @@ export default function Layout({ children }) {
     );
   }
 
-  // If no user after loading, don't render anything (redirect happens in useEffect)
+  // If no user after loading, don't render anything (redirect happens in _app.jsx)
   if (!user) {
     return null;
   }
