@@ -1,15 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
+  const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { user, logout, loading } = useAuth();
 
-  const handleLogout = async () => {
-    await logout(); // This already handles the redirect to login page
+  useEffect(() => {
+    // Load user data from localStorage
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      setLoading(false);
+    }
+  }, []);
+
+  // Handle authentication
+  useEffect(() => {
+    // Skip if still loading
+    if (loading) return;
+
+    // If no user and not on login page, redirect to login
+    if (!user && router.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }, [user, router.pathname, loading]);
+
+  const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('user');
+    
+    // Redirect to login page
+    window.location.href = '/login';
   };
 
   // If on login page, don't show the layout
@@ -17,18 +46,8 @@ export default function Layout({ children }) {
     return <>{children}</>;
   }
 
-  // If still loading auth state, show a loading spinner
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  // If no user and not on login page, this will automatically redirect to login
-  // via the AuthContext, but we'll return a loading indicator in the meantime
-  if (!user) {
+  // If still loading or no user, show loading indicator
+  if (loading || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -124,7 +143,17 @@ export default function Layout({ children }) {
               >
                 Teams
               </Link>
-              {user?.role === 'ADMIN' && (
+              <Link
+                href="/shops"
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  router.pathname.startsWith('/shops')
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Shops
+              </Link>
+              {(user?.role === 'ADMIN' || user?.role === 'OWNER') && (
                 <Link
                   href="/admin"
                   className={`block px-3 py-2 rounded-md text-base font-medium ${
