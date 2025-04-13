@@ -1,30 +1,11 @@
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
-const { execSync } = require('child_process');
+const { initializeDatabase } = require('./db-init');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
 const port = process.env.PORT || 3000;
-
-// Function to run database migrations and seed
-async function setupDatabase() {
-  try {
-    console.log('🔄 Setting up database...');
-    
-    console.log('Running Prisma migrations...');
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-    
-    console.log('Seeding database...');
-    execSync('npx prisma db seed', { stdio: 'inherit' });
-    
-    console.log('✅ Database setup completed successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Database setup failed:', error);
-    return false;
-  }
-}
 
 // Initialize the Next.js app
 const app = next({ dev, hostname, port });
@@ -55,7 +36,7 @@ async function startServer() {
     
     // Setup the database after the server is already listening
     // This way the health check can succeed even if DB setup is still in progress
-    setupDatabase().then(success => {
+    initializeDatabase().then(success => {
       if (success) {
         console.log('✅ Database setup completed after server start');
       } else {
