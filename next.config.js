@@ -6,10 +6,6 @@ const nextConfig = {
   env: {
     APP_NAME: 'User Management System',
   },
-  // If you're using import aliases
-  experimental: {
-    appDir: false,
-  },
   // Configure redirects if needed
   async redirects() {
     return [
