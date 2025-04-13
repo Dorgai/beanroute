@@ -20,6 +20,7 @@ export default async function handler(req, res) {
         activeUsers: 1,
         inactiveUsers: 0,
         totalTeams: 0,
+        totalShops: 0,
         isDemo: true
       });
     }
@@ -31,12 +32,14 @@ export default async function handler(req, res) {
       totalUsers,
       activeUsers,
       inactiveUsers,
-      totalTeams
+      totalTeams,
+      totalShops
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { status: 'ACTIVE' } }),
       prisma.user.count({ where: { status: 'INACTIVE' } }),
-      prisma.team.count()
+      prisma.team.count(),
+      prisma.shop.count()
     ]);
 
     console.log('Stats fetched successfully');
@@ -47,6 +50,7 @@ export default async function handler(req, res) {
       activeUsers,
       inactiveUsers,
       totalTeams,
+      totalShops,
       isDemo: false
     });
   } catch (error) {
@@ -58,6 +62,7 @@ export default async function handler(req, res) {
       activeUsers: 1,
       inactiveUsers: 0,
       totalTeams: 0,
+      totalShops: 0,
       isDemo: true,
       error: error.message
     });

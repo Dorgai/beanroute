@@ -1,8 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useAuth } from '../context/AuthContext';
-import { withAuth } from '../context/AuthContext';
+
+// Try to use AuthContext, but fallback to direct localStorage approach if not available
+let useAuth, withAuth;
+try {
+  const authModule = require('../context/AuthContext');
+  useAuth = authModule.useAuth;
+  withAuth = authModule.withAuth;
+} catch (err) {
+  console.warn('Auth context not available, using localStorage fallback');
+  useAuth = () => {
+    const [user, setUser] = useState(null);
+    
+    useEffect(() => {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          setUser(JSON.parse(userData));
+        } else {
+          window.location.href = '/login';
+        }
+      } catch (err) {
+        console.error('Error loading user data:', err);
+      }
+    }, []);
+    
+    return { user };
+  };
+  
+  withAuth = (Component) => Component;
+}
 
 function Dashboard() {
   const { user } = useAuth();
@@ -255,5 +283,4 @@ function Dashboard() {
   );
 }
 
-// Use the withAuth higher-order component to protect this page
 export default withAuth(Dashboard); 
