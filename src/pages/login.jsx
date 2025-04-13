@@ -14,10 +14,14 @@ export default function Login() {
     setIsClient(true);
     
     // Check if already logged in
-    if (typeof window !== 'undefined' && localStorage.getItem('user')) {
-      router.push('/dashboard');
+    if (typeof window !== 'undefined') {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        console.log('User already logged in, redirecting to dashboard');
+        window.location.href = '/dashboard';
+      }
     }
-  }, [router]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,12 +35,14 @@ export default function Login() {
     setError('');
     
     try {
+      console.log('Submitting login for:', username);
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
+        credentials: 'include', // Important: include cookies in the request
       });
       
       const data = await response.json();
@@ -45,18 +51,18 @@ export default function Login() {
         throw new Error(data.message || 'Login failed');
       }
       
+      console.log('Login successful:', data);
+      
       // Store user data in localStorage
-      if (isClient) {
+      if (isClient && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('User data stored in localStorage:', data.user);
+        console.log('User data stored in localStorage');
       }
       
-      // Add a small delay to ensure localStorage is updated
-      setTimeout(() => {
-        // Redirect to dashboard
-        console.log('Redirecting to dashboard...');
-        window.location.href = '/dashboard';
-      }, 500);
+      // Use a direct window location change instead of Next.js router
+      console.log('Redirecting to dashboard...');
+      // Add timestamp parameter to bust cache
+      window.location.href = `/dashboard?t=${Date.now()}`;
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Invalid credentials');

@@ -22,18 +22,25 @@ export default function Dashboard() {
       } catch (error) {
         console.error('Error parsing user data:', error);
       }
+    } else {
+      console.log('No user data found, redirecting to login');
+      window.location.href = '/login';
+      return;
     }
 
     // Fetch dashboard statistics
     async function fetchStats() {
       try {
-        const response = await fetch('/api/dashboard/stats');
+        const response = await fetch('/api/dashboard/stats', {
+          credentials: 'include', // Important: include cookies in the request
+        });
         
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard statistics');
         }
         
         const data = await response.json();
+        console.log('Dashboard stats:', data);
         setStats(data);
       } catch (err) {
         console.error('Error fetching dashboard statistics:', err);

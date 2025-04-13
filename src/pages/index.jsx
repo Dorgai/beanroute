@@ -1,29 +1,30 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 
 export default function Home() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is logged in by looking for user data in localStorage
     try {
+      console.log('Checking user login state');
       const userData = localStorage.getItem('user');
       
       if (userData) {
         // If logged in, redirect to dashboard
-        router.push('/dashboard');
+        console.log('User found in localStorage, redirecting to dashboard');
+        window.location.href = `/dashboard?t=${Date.now()}`;
       } else {
         // If not logged in, redirect to login
-        router.push('/login');
+        console.log('No user found, redirecting to login');
+        window.location.href = `/login?t=${Date.now()}`;
       }
     } catch (err) {
       console.error('Error checking login state:', err);
       // On any error, default to login page
-      router.push('/login');
+      window.location.href = `/login?t=${Date.now()}`;
     }
-  }, [router]);
+  }, []);
 
   // Show a simple loading indicator
   return (

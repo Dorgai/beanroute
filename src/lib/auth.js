@@ -39,12 +39,14 @@ export function verifyToken(token) {
 }
 
 export function setAuthCookie(res, token) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   res.setHeader(
     'Set-Cookie',
     cookie.serialize('auth', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax', // Allow cross-site cookies in production
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     })
