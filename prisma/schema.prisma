@@ -17,7 +17,7 @@ model User {
   password            String               // Will be hashed with bcrypt
   firstName           String?
   lastName            String?
-  role                Role                 @default(USER)
+  role                Role                 @default(BARISTA)
   status              UserStatus           @default(ACTIVE)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -27,6 +27,34 @@ model User {
   createdPermissions  Permission[]         @relation("PermissionCreator")
   teams               UserTeam[]           // Many-to-many relationship with teams
   activities          UserActivity[]       // One-to-many relationship with user activities
+  shops               UserShop[]           // Many-to-many relationship with shops
+  createdShops        Shop[]               // Shops created by this user
+}
+
+// Shop model - For managing coffee shops
+model Shop {
+  id                    String               @id @default(uuid())
+  name                  String               @unique
+  address               String?
+  minCoffeeQuantityLarge Int                 @default(0)  // Minimum coffee quantity in large bags (1 Kg)
+  minCoffeeQuantitySmall Int                 @default(0)  // Minimum coffee quantity in small bags (250 g)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  createdBy             User                 @relation(fields: [createdById], references: [id])
+  createdById           String
+  users                 UserShop[]           // Users associated with this shop
+}
+
+// Junction table for User and Shop
+model UserShop {
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId    String
+  role      Role     @default(BARISTA)
+  createdAt DateTime @default(now())
+
+  @@id([userId, shopId])
 }
 
 // Team model - For organizing users into groups
@@ -91,11 +119,12 @@ model UserActivity {
   createdAt   DateTime @default(now())
 }
 
-// Enums
+// Updated Enums for new roles
 enum Role {
   ADMIN
-  MANAGER
-  USER
+  OWNER
+  RETAILER
+  BARISTA
 }
 
 enum UserStatus {

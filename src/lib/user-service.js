@@ -1,61 +1,37 @@
 import prisma from './prisma';
 import { hashPassword } from './auth';
+import { addUserToShop } from './shop-service';
 
-export async function getUserById(id) {
-  return prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-      lastLogin: true,
-    },
-  });
-}
-
-export async function getUserByUsername(username) {
-  return prisma.user.findUnique({
-    where: { username },
-  });
-}
-
-export async function getUserByEmail(email) {
-  return prisma.user.findUnique({
-    where: { email },
-  });
-}
-
-export async function getUsers(filter = {}, page = 1, limit = 10) {
-  const where = {};
-  
-  if (filter.role) {
-    where.role = filter.role;
-  }
-  
-  if (filter.status) {
-    where.status = filter.status;
-  }
-  
-  if (filter.search) {
-    where.OR = [
-      { username: { contains: filter.search, mode: 'insensitive' } },
-      { email: { contains: filter.search, mode: 'insensitive' } },
-      { firstName: { contains: filter.search, mode: 'insensitive' } },
-      { lastName: { contains: filter.search, mode: 'insensitive' } },
-    ];
-  }
-  
+/**
+ * Get all users with pagination and filtering
+ */
+export async function getUsers(page = 1, limit = 10, search = '', status = '', role = '', sortBy = 'username', sortOrder = 'asc') {
   const skip = (page - 1) * limit;
-  
+
+  // Build where clause based on filters
+  const where = {
+    // Add status filter if provided
+    ...(status && { status }),
+    // Add role filter if provided
+    ...(role && { role }),
+    // Add search filter if provided
+    ...(search && {
+      OR: [
+        { username: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  };
+
+  // Get users and total count in parallel for efficiency
   const [users, total] = await Promise.all([
     prisma.user.findMany({
       where,
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
       select: {
         id: true,
         username: true,
@@ -65,91 +41,221 @@ export async function getUsers(filter = {}, page = 1, limit = 10) {
         role: true,
         status: true,
         createdAt: true,
-        updatedAt: true,
         lastLogin: true,
+        // Include related data counts
+        _count: {
+          select: {
+            teams: true,
+            permissions: true,
+            shops: true,
+          },
+        },
       },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
     }),
     prisma.user.count({ where }),
   ]);
-  
+
   return {
     users,
     meta: {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      pageCount: Math.ceil(total / limit),
     },
   };
 }
 
-export async function createUser(userData) {
-  const { password, ...data } = userData;
+/**
+ * Get a single user by ID with their related data
+ */
+export async function getUserById(id) {
+  return prisma.user.findUnique({
+    where: { id },
+    include: {
+      teams: {
+        include: {
+          team: true,
+        },
+      },
+      permissions: true,
+      shops: {
+        include: {
+          shop: true,
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Get a user by username
+ */
+export async function getUserByUsername(username) {
+  return prisma.user.findUnique({
+    where: { username },
+  });
+}
+
+/**
+ * Get a user by email
+ */
+export async function getUserByEmail(email) {
+  return prisma.user.findUnique({
+    where: { email },
+  });
+}
+
+/**
+ * Check if a user has permission to manage users
+ * Only ADMIN and OWNER roles can manage users
+ */
+export function canManageUsers(userRole) {
+  return userRole === 'ADMIN' || userRole === 'OWNER';
+}
+
+/**
+ * Check if a user has permission to manage shops
+ * ADMIN, OWNER, and RETAILER roles can manage shops
+ */
+export function canManageShops(userRole) {
+  return userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'RETAILER';
+}
+
+/**
+ * Create a new user
+ */
+export async function createUser(data, createdByUserId) {
+  const { password, shopId, ...userData } = data;
   
   // Hash the password
   const hashedPassword = await hashPassword(password);
   
-  return prisma.user.create({
+  // Create the user
+  const createdUser = await prisma.user.create({
     data: {
-      ...data,
+      ...userData,
       password: hashedPassword,
     },
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
   });
+  
+  // If shop ID is provided, assign the user to that shop
+  if (shopId) {
+    await addUserToShop(createdUser.id, shopId, userData.role || 'BARISTA');
+  }
+  
+  return createdUser;
 }
 
-export async function updateUser(id, userData) {
-  const data = { ...userData };
+/**
+ * Update an existing user
+ */
+export async function updateUser(id, data) {
+  const { password, ...userData } = data;
   
   // If password is provided, hash it
-  if (data.password) {
-    data.password = await hashPassword(data.password);
+  if (password) {
+    userData.password = await hashPassword(password);
   }
   
   return prisma.user.update({
     where: { id },
-    data,
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-      lastLogin: true,
-    },
+    data: userData,
   });
 }
 
+/**
+ * Update user status (activate/deactivate)
+ */
+export async function updateUserStatus(id, status) {
+  return prisma.user.update({
+    where: { id },
+    data: { status },
+  });
+}
+
+/**
+ * Reset user password
+ */
+export async function resetUserPassword(id, newPassword) {
+  const hashedPassword = await hashPassword(newPassword);
+  
+  return prisma.user.update({
+    where: { id },
+    data: { password: hashedPassword },
+  });
+}
+
+/**
+ * Delete a user
+ */
 export async function deleteUser(id) {
   return prisma.user.delete({
     where: { id },
   });
 }
 
+/**
+ * Update user's last login timestamp
+ */
 export async function updateLastLogin(id) {
   return prisma.user.update({
     where: { id },
-    data: { 
+    data: {
       lastLogin: new Date(),
     },
   });
+}
+
+/**
+ * Get user activity with pagination
+ */
+export async function getUserActivity(userId, page = 1, limit = 10) {
+  const skip = (page - 1) * limit;
+  
+  const [activities, total] = await Promise.all([
+    prisma.userActivity.findMany({
+      where: { userId },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.userActivity.count({ where: { userId } }),
+  ]);
+  
+  return {
+    activities,
+    meta: {
+      total,
+      page,
+      limit,
+      pageCount: Math.ceil(total / limit),
+    },
+  };
+}
+
+/**
+ * Get available user roles
+ */
+export function getUserRoles() {
+  return [
+    { id: 'ADMIN', name: 'Administrator' },
+    { id: 'OWNER', name: 'Owner' },
+    { id: 'RETAILER', name: 'Retailer' },
+    { id: 'BARISTA', name: 'Barista' },
+  ];
+}
+
+/**
+ * Get available user statuses
+ */
+export function getUserStatuses() {
+  return [
+    { id: 'ACTIVE', name: 'Active' },
+    { id: 'INACTIVE', name: 'Inactive' },
+    { id: 'PENDING', name: 'Pending' },
+    { id: 'LOCKED', name: 'Locked' },
+  ];
 }
 
 export async function getUserPermissions(userId) {

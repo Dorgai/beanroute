@@ -1,122 +1,105 @@
 import { NextResponse } from 'next/server';
-import { getUserFromRequest, checkPermission } from './lib/auth';
+import { getUserFromRequest } from './lib/auth';
+import { canManageUsers, canManageShops } from './lib/user-service';
 
-export async function middleware(req) {
-  // Public paths that don't require authentication
-  const publicPaths = [
-    '/login', 
-    '/api/auth/login', 
-    '/api/auth/register',
-    '/api/health', // Allow health check
-    '/api/admin/seed-db', // Allow seeding
-    '/api/admin/test-db', // Allow db testing
-    '/api' // Allow root API endpoint
-  ];
+// Define public paths that don't require authentication
+const publicPaths = [
+  '/login',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/admin/test-db', // Allow db testing
+];
+
+// Check if a path is public
+const isPublicPath = (path) => {
+  return publicPaths.some(publicPath => path === publicPath || path.startsWith(publicPath + '?'));
+};
+
+// Check if a path is an API path
+const isApiPath = (path) => {
+  return path.startsWith('/api/');
+};
+
+export async function middleware(request) {
+  const { pathname } = request.nextUrl;
   
-  const { pathname } = req.nextUrl;
-  
-  // Skip middleware for public paths
-  if (publicPaths.includes(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/static')) {
+  // Allow public paths without authentication
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
   
-  // Check for authentication
   try {
-    const user = await getUserFromRequest(req);
+    // Get user from request (using cookies)
+    const user = await getUserFromRequest(request);
     
-    if (!user) {
-      // Redirect to login for page requests
-      if (!pathname.startsWith('/api/')) {
-        return NextResponse.redirect(new URL('/login', req.url));
-      }
-      
-      // Return 401 for API requests
+    // If no user and this is not an API path, redirect to login
+    if (!user && !isApiPath(pathname)) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    
+    // If no user and this is an API path, return 401 Unauthorized
+    if (!user && isApiPath(pathname)) {
       return new NextResponse(
         JSON.stringify({ message: 'Unauthorized' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
     
-    // For admin pages/routes, check if user is an admin
-    if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-      if (user.role !== 'ADMIN') {
-        // Redirect to dashboard for page requests
-        if (!pathname.startsWith('/api/')) {
-          return NextResponse.redirect(new URL('/dashboard', req.url));
-        }
-        
-        // Return 403 for API requests
-        return new NextResponse(
-          JSON.stringify({ message: 'Forbidden' }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    // Check permissions for admin routes
+    if (pathname.startsWith('/api/admin/') && user.role !== 'ADMIN') {
+      return new NextResponse(
+        JSON.stringify({ message: 'Forbidden: Admin access required' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
     }
     
-    // For API routes that start with /api/users or /api/teams, check appropriate permissions
-    if (pathname.startsWith('/api/users')) {
-      const action = getActionFromMethod(req.method);
-      const hasPermission = await checkPermission(user.id, 'user', action);
-      
-      if (!hasPermission && user.role !== 'ADMIN') {
-        return new NextResponse(
-          JSON.stringify({ message: 'Forbidden - Insufficient permissions' }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    // Check permissions for user management routes
+    if (pathname.startsWith('/api/users/') && !canManageUsers(user.role)) {
+      return new NextResponse(
+        JSON.stringify({ message: 'Forbidden: Insufficient permissions to manage users' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
     }
     
-    if (pathname.startsWith('/api/teams')) {
-      const action = getActionFromMethod(req.method);
-      const hasPermission = await checkPermission(user.id, 'team', action);
-      
-      if (!hasPermission && user.role !== 'ADMIN') {
-        return new NextResponse(
-          JSON.stringify({ message: 'Forbidden - Insufficient permissions' }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+    // Check permissions for shop management routes
+    if (pathname.startsWith('/api/shops/') && !canManageShops(user.role)) {
+      return new NextResponse(
+        JSON.stringify({ message: 'Forbidden: Insufficient permissions to manage shops' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
     }
+    
+    // Pass user info in headers for API routes
+    if (isApiPath(pathname)) {
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-user-id', user.id);
+      requestHeaders.set('x-user-role', user.role);
+      
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    }
+    
+    // For any other route, allow the request to proceed
+    return NextResponse.next();
   } catch (error) {
     console.error('Middleware error:', error);
     
-    // In case of error, continue to login for non-API routes
-    if (!pathname.startsWith('/api/')) {
-      return NextResponse.redirect(new URL('/login', req.url));
+    // Return appropriate error based on path type
+    if (isApiPath(pathname)) {
+      return new NextResponse(
+        JSON.stringify({ message: 'Internal server error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    } else {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
-    
-    // For API routes, return an error
-    return new NextResponse(
-      JSON.stringify({ message: 'Internal Server Error in middleware' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  // Allow the request to proceed
-  return NextResponse.next();
-}
-
-// Helper function to convert HTTP method to action
-function getActionFromMethod(method) {
-  switch (method.toUpperCase()) {
-    case 'GET':
-      return 'read';
-    case 'POST':
-      return 'create';
-    case 'PUT':
-    case 'PATCH':
-      return 'update';
-    case 'DELETE':
-      return 'delete';
-    default:
-      return 'read';
   }
 }
 
-// Configure the middleware to run for specific paths
+// Specify which paths this middleware should run on
 export const config = {
-  matcher: [
-    // Match all routes except for static files
-    '/((?!_next/static|favicon.ico|robots.txt).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }; 
