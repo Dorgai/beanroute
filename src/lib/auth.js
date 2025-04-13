@@ -7,6 +7,10 @@ import prisma from './prisma';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development-only-never-use-in-production';
 const JWT_EXPIRES_IN = '7d'; // Token expires in 7 days
 
+// Cookie configuration from environment variables
+const COOKIE_SECURE = process.env.COOKIE_SECURE === 'false' ? false : process.env.NODE_ENV === 'production';
+const COOKIE_SAMESITE = process.env.COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax');
+
 export async function hashPassword(password) {
   return bcrypt.hash(password, 10);
 }
@@ -39,14 +43,14 @@ export function verifyToken(token) {
 }
 
 export function setAuthCookie(res, token) {
-  const isProduction = process.env.NODE_ENV === 'production';
+  console.log(`Setting auth cookie with secure=${COOKIE_SECURE}, sameSite=${COOKIE_SAMESITE}`);
   
   res.setHeader(
     'Set-Cookie',
     cookie.serialize('auth', token, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax', // Allow cross-site cookies in production
+      secure: COOKIE_SECURE,
+      sameSite: COOKIE_SAMESITE,
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     })
@@ -58,8 +62,8 @@ export function removeAuthCookie(res) {
     'Set-Cookie',
     cookie.serialize('auth', '', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: COOKIE_SECURE,
+      sameSite: COOKIE_SAMESITE,
       maxAge: -1,
       path: '/',
     })
