@@ -14,24 +14,16 @@ export default function Layout({ children }) {
       const userData = localStorage.getItem('user');
       if (userData) {
         setUser(JSON.parse(userData));
+      } else {
+        // If no user, redirect to login
+        window.location.href = '/login';
       }
-      setLoading(false);
     } catch (error) {
       console.error('Error parsing user data:', error);
+    } finally {
       setLoading(false);
     }
   }, []);
-
-  // Handle authentication
-  useEffect(() => {
-    // Skip if still loading
-    if (loading) return;
-
-    // If no user and not on login page, redirect to login
-    if (!user && router.pathname !== '/login') {
-      window.location.href = '/login';
-    }
-  }, [user, router.pathname, loading]);
 
   const handleLogout = () => {
     // Clear user data from localStorage
@@ -41,18 +33,18 @@ export default function Layout({ children }) {
     window.location.href = '/login';
   };
 
-  // If on login page, don't show the layout
-  if (router.pathname === '/login') {
-    return <>{children}</>;
-  }
-
-  // If still loading or no user, show loading indicator
-  if (loading || !user) {
+  // If still loading, show loading indicator
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
+  }
+
+  // If no user after loading, don't render anything (redirect happens in useEffect)
+  if (!user) {
+    return null;
   }
 
   return (

@@ -1,8 +1,12 @@
 import '../styles/globals.css';
 import Layout from '../components/Layout';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 
 export default function App({ Component, pageProps }) {
+  const router = useRouter();
+  const isLoginPage = router.pathname === '/login';
+  
   return (
     <>
       <Head>
@@ -12,9 +16,13 @@ export default function App({ Component, pageProps }) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       
-      <Layout>
+      {isLoginPage ? (
         <Component {...pageProps} />
-      </Layout>
+      ) : (
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      )}
     </>
   );
 } 
