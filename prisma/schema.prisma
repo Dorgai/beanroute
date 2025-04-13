@@ -7,10 +7,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // Only use directUrl when deploying to Railway or similar PaaS 
-  // that uses connection pooling - uncomment in production
-  // Comment this out if you don't have DIRECT_DATABASE_URL set
-  // directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // User model - Core of our user management system
