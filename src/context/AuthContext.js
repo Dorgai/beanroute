@@ -69,8 +69,9 @@ export function AuthProvider({ children }) {
       setUser(data.user);
       localStorage.setItem('user', JSON.stringify(data.user));
       
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Use direct window location for more reliable redirection
+      console.log('Login successful, redirecting to dashboard...');
+      window.location.href = '/dashboard';
       
       return { success: true };
     } catch (error) {
@@ -91,8 +92,9 @@ export function AuthProvider({ children }) {
       setUser(null);
       localStorage.removeItem('user');
       
-      // Redirect to login page
-      router.push('/login');
+      // Use direct window location for more reliable redirection
+      console.log('Logout successful, redirecting to login...');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -139,9 +141,10 @@ export function withAuth(Component) {
 
     useEffect(() => {
       if (!loading && !user) {
-        router.push('/login');
+        // Use direct window location for more reliable redirection
+        window.location.href = '/login';
       }
-    }, [user, loading, router]);
+    }, [user, loading]);
 
     // Show loading state while checking authentication
     if (loading) {

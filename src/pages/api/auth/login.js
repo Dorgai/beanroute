@@ -61,9 +61,13 @@ export default async function handler(req, res) {
 
     console.log(`Login successful for user: ${username}`);
 
+    // Set the redirection header
+    res.setHeader('X-Auth-Redirect', '/dashboard');
+
     // Return user data (excluding sensitive fields)
     return res.status(200).json({
       message: 'Login successful',
+      redirect: '/dashboard', // Include redirect URL in response
       user: {
         id: user.id,
         username: user.username,

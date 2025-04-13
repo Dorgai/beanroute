@@ -7,7 +7,13 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [debug, setDebug] = useState('');
   const { login, isAuthenticated } = useAuth();
+
+  // Clear any errors when inputs change
+  useEffect(() => {
+    if (error) setError('');
+  }, [username, password]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,21 +23,33 @@ export default function Login() {
       return;
     }
     
+    // Reset states
     setLoading(true);
     setError('');
+    setDebug('Attempting login...');
     
     try {
+      setDebug(prev => prev + '\nSubmitting login for: ' + username);
       console.log('Submitting login for:', username);
+      
       const result = await login(username, password);
       
       if (!result.success) {
         throw new Error(result.error || 'Login failed');
       }
       
-      // Login successful - redirect is handled by the AuthContext
+      setDebug(prev => prev + '\nLogin successful - redirection should happen automatically');
+      // Manual redirect as fallback in case the context redirect fails
+      setTimeout(() => {
+        if (document.location.pathname === '/login') {
+          setDebug(prev => prev + '\nFallback redirection after 2 seconds');
+          window.location.href = '/dashboard';
+        }
+      }, 2000);
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Invalid credentials');
+      setDebug(prev => prev + '\nLogin failed: ' + (err.message || 'Unknown error'));
       setLoading(false);
     }
   };
@@ -72,6 +90,7 @@ export default function Login() {
                 onChange={(e) => setUsername(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your username"
+                autoComplete="username"
                 required
               />
             </div>
@@ -88,6 +107,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 required
               />
             </div>
@@ -100,6 +120,14 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
+          
+          {/* Debug information - hidden in production */}
+          {process.env.NODE_ENV !== 'production' && debug && (
+            <div className="mt-4 p-3 bg-gray-100 text-gray-700 rounded text-xs">
+              <p className="font-bold">Debug Info:</p>
+              <pre className="whitespace-pre-wrap">{debug}</pre>
+            </div>
+          )}
         </div>
       </div>
     </>
