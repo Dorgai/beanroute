@@ -14,26 +14,20 @@ export default function Dashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Get user data from localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
+    // Simple user check from localStorage - no redirects
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
         setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
       }
-    } else {
-      console.log('No user data found, redirecting to login');
-      window.location.href = '/login';
-      return;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
     }
 
     // Fetch dashboard statistics
     async function fetchStats() {
       try {
-        const response = await fetch('/api/dashboard/stats', {
-          credentials: 'include', // Important: include cookies in the request
-        });
+        const response = await fetch('/api/dashboard/stats');
         
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard statistics');

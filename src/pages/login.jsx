@@ -1,35 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isClient, setIsClient] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const router = useRouter();
-
-  useEffect(() => {
-    setIsClient(true);
-    
-    // Only check login status if we're not already on the login page as a result of a redirect
-    if (typeof window !== 'undefined' && !window.location.href.includes('redirected=true')) {
-      try {
-        const userData = localStorage.getItem('user');
-        if (userData && JSON.parse(userData)) {
-          // If logged in, redirect to dashboard
-          window.location.href = '/dashboard';
-          return;
-        }
-      } catch (error) {
-        console.error('Error checking auth status:', error);
-      }
-    }
-    
-    setCheckingAuth(false);
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,15 +34,14 @@ export default function Login() {
         throw new Error(data.message || 'Login failed');
       }
       
-      console.log('Login successful:', data);
+      console.log('Login successful');
       
       // Store user data in localStorage
-      if (isClient && data.user) {
+      if (typeof window !== 'undefined' && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('User data stored in localStorage');
       }
       
-      // Navigate to dashboard
+      // Navigate to dashboard with simple redirect
       window.location.href = '/dashboard';
     } catch (err) {
       console.error('Login error:', err);
@@ -75,15 +50,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  // Don't render anything while we're checking auth to prevent flashes
-  if (checkingAuth) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-      </div>
-    );
-  }
 
   return (
     <>
