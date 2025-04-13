@@ -1,0 +1,114 @@
+// This is your Prisma schema file for the PostgreSQL database
+generator client {
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  previewFeatures = ["interactiveTransactions"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// User model - Core of our user management system
+model User {
+  id                  String               @id @default(uuid())
+  username            String               @unique
+  email               String               @unique
+  password            String               // Will be hashed with bcrypt
+  firstName           String?
+  lastName            String?
+  role                Role                 @default(USER)
+  status              UserStatus           @default(ACTIVE)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  lastLogin           DateTime?
+  permissions         Permission[]         // One-to-many relationship with permissions
+  sessions            Session[]            // One-to-many relationship with sessions
+  createdPermissions  Permission[]         @relation("PermissionCreator")
+  teams               UserTeam[]           // Many-to-many relationship with teams
+  activities          UserActivity[]       // One-to-many relationship with user activities
+}
+
+// Team model - For organizing users into groups
+model Team {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  users       UserTeam[] // Many-to-many relationship with users
+}
+
+// Junction table for User and Team
+model UserTeam {
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  role      TeamRole @default(MEMBER)
+  createdAt DateTime @default(now())
+
+  @@id([userId, teamId])
+}
+
+// Permission model - For fine-grained access control
+model Permission {
+  id          String    @id @default(uuid())
+  name        String
+  resource    String
+  action      String    // create, read, update, delete
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String?
+  createdBy   User      @relation("PermissionCreator", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, resource, action])
+}
+
+// Session model - For keeping track of user sessions
+model Session {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+}
+
+// UserActivity model - For audit trail
+model UserActivity {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  action      String   // login, logout, create_user, update_user, delete_user, etc.
+  details     Json?    // Additional details about the activity
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+}
+
+// Enums
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  LOCKED
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+} 
