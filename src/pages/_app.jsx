@@ -4,6 +4,9 @@ import Layout from '../components/Layout';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
+// Keep track of redirect state in a module-level variable to prevent infinite loops
+let redirecting = false;
+
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const isLoginPage = router.pathname === '/login';
@@ -11,6 +14,9 @@ export default function App({ Component, pageProps }) {
   
   // Check initial auth state
   useEffect(() => {
+    // If already redirecting, skip this effect
+    if (redirecting) return;
+    
     if (typeof window !== 'undefined') {
       try {
         // Safely check localStorage
@@ -24,14 +30,16 @@ export default function App({ Component, pageProps }) {
         if (userData && isLoginPage) {
           // Already logged in, redirect to dashboard
           console.log('User already logged in, redirecting to dashboard');
-          window.location.replace('/dashboard');
+          redirecting = true;
+          window.location.href = '/dashboard';
           return;
         }
         
         if (!userData && !isLoginPage) {
           // Not logged in and not on login page, redirect to login
           console.log('User not logged in, redirecting to login');
-          window.location.replace('/login');
+          redirecting = true;
+          window.location.href = '/login';
           return;
         }
       } catch (err) {
