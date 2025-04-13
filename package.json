@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node server.js",
+    "start": "npx prisma migrate deploy && npx prisma db seed && node server.js",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
@@ -30,7 +30,8 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "cookie": "^0.6.0",
-    "tailwindcss": "^3.3.0"
+    "tailwindcss": "^3.3.0",
+    "prisma": "^5.3.1"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -40,7 +41,6 @@
     "eslint": "^8",
     "eslint-config-next": "^14.0.4",
     "postcss": "^8.4.31",
-    "prisma": "^5.3.1",
     "typescript": "^5"
   },
   "engines": {

@@ -4,7 +4,7 @@ import cookie from 'cookie';
 import prisma from './prisma';
 
 // JWT secret should be in environment variables in production
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development-only-never-use-in-production';
 const JWT_EXPIRES_IN = '7d'; // Token expires in 7 days
 
 export async function hashPassword(password) {
@@ -33,6 +33,7 @@ export function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (error) {
+    console.error('Token verification error:', error.message);
     return null;
   }
 }
@@ -64,19 +65,19 @@ export function removeAuthCookie(res) {
 }
 
 export async function getUserFromRequest(req) {
-  const token = req.cookies?.auth;
-  
-  if (!token) {
-    return null;
-  }
-
-  const decoded = verifyToken(token);
-  
-  if (!decoded) {
-    return null;
-  }
-
   try {
+    const token = req.cookies?.auth;
+    
+    if (!token) {
+      return null;
+    }
+
+    const decoded = verifyToken(token);
+    
+    if (!decoded) {
+      return null;
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: {
