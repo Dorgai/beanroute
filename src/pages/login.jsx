@@ -12,7 +12,12 @@ export default function Login() {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    
+    // Check if already logged in
+    if (typeof window !== 'undefined' && localStorage.getItem('user')) {
+      router.push('/dashboard');
+    }
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,10 +48,15 @@ export default function Login() {
       // Store user data in localStorage
       if (isClient) {
         localStorage.setItem('user', JSON.stringify(data.user));
+        console.log('User data stored in localStorage:', data.user);
       }
       
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Add a small delay to ensure localStorage is updated
+      setTimeout(() => {
+        // Redirect to dashboard
+        console.log('Redirecting to dashboard...');
+        window.location.href = '/dashboard';
+      }, 500);
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Invalid credentials');
@@ -68,7 +78,7 @@ export default function Login() {
             <h1 className="text-3xl font-bold text-blue-600">User Management</h1>
             <p className="mt-2 text-gray-600">Sign in to your account</p>
             <p className="mt-1 text-sm text-gray-500">
-              Demo: try "admin" with password "admin123"
+              Demo: username "admin" with password "secret"
             </p>
           </div>
           
