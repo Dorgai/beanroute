@@ -10,7 +10,8 @@ datasource db {
   url       = env("DATABASE_URL")
   // Only use directUrl when deploying to Railway or similar PaaS 
   // that uses connection pooling
-  directUrl = env("DIRECT_DATABASE_URL")
+  // This is commented out for local development but used in production
+  // directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // User model - Core of our user management system
