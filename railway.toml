@@ -7,5 +7,5 @@ startCommand = "./docker-entrypoint.sh"
 healthcheckPath = "/api/admin/test-db"
 healthcheckTimeout = 60
 
-[environments]
+[variables]
 NODE_ENV = "production" 
