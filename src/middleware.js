@@ -9,6 +9,7 @@ export async function middleware(req) {
     '/api/auth/register',
     '/api/health', // Allow health check
     '/api/admin/seed-db', // Allow seeding
+    '/api/admin/test-db', // Allow db testing
     '/api' // Allow root API endpoint
   ];
   
