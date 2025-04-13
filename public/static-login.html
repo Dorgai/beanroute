@@ -23,6 +23,12 @@
                     Logging in...
                 </div>
                 
+                <div id="error" class="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded hidden">
+                </div>
+                
+                <div id="debug" class="mb-4 p-2 bg-gray-100 border border-gray-300 text-gray-700 rounded overflow-auto max-h-40 hidden">
+                </div>
+                
                 <div class="space-y-6">
                     <div>
                         <label for="username" class="block text-sm font-medium text-gray-700">
@@ -35,6 +41,7 @@
                                 type="text"
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 placeholder="admin"
+                                value="admin"
                             />
                         </div>
                     </div>
@@ -50,6 +57,7 @@
                                 type="password"
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 placeholder="secret"
+                                value="secret"
                             />
                         </div>
                     </div>
@@ -71,15 +79,23 @@
                         </div>
                         <div class="relative flex justify-center text-sm">
                             <span class="px-2 bg-white text-gray-500">
-                                Dashboard Access
+                                Alternative Options
                             </span>
                         </div>
                     </div>
                     
-                    <div class="mt-6 text-center">
-                        <a href="/dashboard" class="font-medium text-blue-600 hover:text-blue-500">
-                            Direct Dashboard Access
-                        </a>
+                    <div class="mt-6 space-y-4">
+                        <div class="text-center">
+                            <button id="debugButton" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                Show Debug Info
+                            </button>
+                        </div>
+                        
+                        <div class="text-center">
+                            <a href="/dashboard" class="font-medium text-blue-600 hover:text-blue-500">
+                                Try Direct Dashboard Access
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -87,32 +103,79 @@
     </div>
 
     <script>
-        document.getElementById('loginButton').addEventListener('click', function() {
-            // Show message
+        // Debug logging function
+        function addDebug(message) {
+            const debugDiv = document.getElementById('debug');
+            const now = new Date().toISOString().substring(11, 19);
+            debugDiv.innerHTML += `<div>${now}: ${message}</div>`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+            console.log(`${now}: ${message}`);
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+        
+        // Toggle debug info visibility
+        document.getElementById('debugButton').addEventListener('click', function() {
+            const debugDiv = document.getElementById('debug');
+            if (debugDiv.classList.contains('hidden')) {
+                debugDiv.classList.remove('hidden');
+                this.textContent = 'Hide Debug Info';
+            } else {
+                debugDiv.classList.add('hidden');
+                this.textContent = 'Show Debug Info';
+            }
+        });
+        
+        // Login button click handler
+        document.getElementById('loginButton').addEventListener('click', async function() {
+            // Show message and debug info
             document.getElementById('message').classList.remove('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('debug').classList.remove('hidden');
             
-            // Store user data - using vanilla JS
-            const user = {
-                id: 'static-login-' + Date.now(),
-                username: document.getElementById('username').value || 'admin',
-                email: 'admin@example.com',
-                firstName: 'Admin',
-                lastName: 'User',
-                role: 'ADMIN'
-            };
+            const username = document.getElementById('username').value || 'admin';
+            const password = document.getElementById('password').value || 'secret';
             
-            // Store in localStorage
+            addDebug(`Attempting login with username: ${username}`);
+            
             try {
-                localStorage.setItem('user', JSON.stringify(user));
-                console.log('User data saved to localStorage');
+                // Make real API call to login endpoint
+                addDebug('Sending API request to /api/auth/login');
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
                 
-                // Redirect after short delay
+                addDebug(`API response status: ${response.status}`);
+                
+                // Get response data
+                const data = await response.json();
+                addDebug(`API response: ${JSON.stringify(data).substring(0, 200)}...`);
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Login failed');
+                }
+                
+                // Store user data in localStorage
+                addDebug('Storing user data in localStorage');
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // Wait a moment before redirecting
+                addDebug('Login successful, redirecting to dashboard...');
                 setTimeout(function() {
                     window.location.href = '/dashboard';
-                }, 100);
+                }, 500);
+                
             } catch (err) {
-                console.error('Error saving user data:', err);
-                alert('Error logging in: ' + err.message);
+                addDebug(`Error: ${err.message}`);
+                showError(`Login failed: ${err.message}`);
+                document.getElementById('message').classList.add('hidden');
             }
         });
     </script>
