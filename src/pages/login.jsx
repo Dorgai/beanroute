@@ -8,19 +8,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     setIsClient(true);
     
-    // Check if already logged in
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        console.log('User already logged in, redirecting to dashboard');
-        window.location.href = '/dashboard';
+    // Only check login status if we're not already on the login page as a result of a redirect
+    if (typeof window !== 'undefined' && !window.location.href.includes('redirected=true')) {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData && JSON.parse(userData)) {
+          // If logged in, redirect to dashboard
+          window.location.href = '/dashboard';
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking auth status:', error);
       }
     }
+    
+    setCheckingAuth(false);
   }, []);
 
   const handleSubmit = async (e) => {
@@ -42,7 +50,6 @@ export default function Login() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
-        credentials: 'include', // Important: include cookies in the request
       });
       
       const data = await response.json();
@@ -59,10 +66,8 @@ export default function Login() {
         console.log('User data stored in localStorage');
       }
       
-      // Use a direct window location change instead of Next.js router
-      console.log('Redirecting to dashboard...');
-      // Add timestamp parameter to bust cache
-      window.location.href = `/dashboard?t=${Date.now()}`;
+      // Navigate to dashboard
+      window.location.href = '/dashboard';
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Invalid credentials');
@@ -70,6 +75,15 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // Don't render anything while we're checking auth to prevent flashes
+  if (checkingAuth) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+      </div>
+    );
+  }
 
   return (
     <>

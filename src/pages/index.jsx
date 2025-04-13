@@ -5,24 +5,43 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in by looking for user data in localStorage
-    try {
-      console.log('Checking user login state');
-      const userData = localStorage.getItem('user');
+    // Check if we're in a redirection loop
+    if (typeof window !== 'undefined') {
+      // We'll use sessionStorage to track redirects to prevent loops
+      const redirectCount = parseInt(sessionStorage.getItem('redirectCount') || '0');
       
-      if (userData) {
-        // If logged in, redirect to dashboard
-        console.log('User found in localStorage, redirecting to dashboard');
-        window.location.href = `/dashboard?t=${Date.now()}`;
-      } else {
-        // If not logged in, redirect to login
-        console.log('No user found, redirecting to login');
-        window.location.href = `/login?t=${Date.now()}`;
+      if (redirectCount > 3) {
+        console.error('Detected possible redirection loop, stopping redirects');
+        sessionStorage.removeItem('redirectCount');
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error('Error checking login state:', err);
-      // On any error, default to login page
-      window.location.href = `/login?t=${Date.now()}`;
+      
+      sessionStorage.setItem('redirectCount', (redirectCount + 1).toString());
+      
+      // Clear the counter after 5 seconds
+      setTimeout(() => {
+        sessionStorage.removeItem('redirectCount');
+      }, 5000);
+      
+      try {
+        console.log('Checking user login state');
+        const userData = localStorage.getItem('user');
+        
+        if (userData) {
+          // If logged in, redirect to dashboard
+          console.log('User found in localStorage, redirecting to dashboard');
+          window.location.href = '/dashboard';
+        } else {
+          // If not logged in, redirect to login
+          console.log('No user found, redirecting to login');
+          window.location.href = '/login?redirected=true';
+        }
+      } catch (err) {
+        console.error('Error checking login state:', err);
+        // On any error, default to login page
+        window.location.href = '/login?redirected=true';
+      }
     }
   }, []);
 
