@@ -3,7 +3,13 @@ import { getUserFromRequest, checkPermission } from './lib/auth';
 
 export async function middleware(req) {
   // Public paths that don't require authentication
-  const publicPaths = ['/login', '/api/auth/login', '/api/auth/register'];
+  const publicPaths = [
+    '/login', 
+    '/api/auth/login', 
+    '/api/auth/register',
+    '/api/health', // Allow health check
+    '/api/admin/seed-db' // Allow seeding
+  ];
   
   const { pathname } = req.nextUrl;
   
