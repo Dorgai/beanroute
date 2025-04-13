@@ -1,46 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
-  const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    // Get user data from localStorage on client side
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    }
-  }, []);
+  const { user, logout, loading } = useAuth();
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      // Clear user data from localStorage
-      localStorage.removeItem('user');
-      
-      // Redirect to login page
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await logout(); // This already handles the redirect to login page
   };
 
   // If on login page, don't show the layout
   if (router.pathname === '/login') {
     return <>{children}</>;
+  }
+
+  // If still loading auth state, show a loading spinner
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // If no user and not on login page, this will automatically redirect to login
+  // via the AuthContext, but we'll return a loading indicator in the meantime
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   return (
@@ -84,19 +77,15 @@ export default function Layout({ children }) {
             
             {/* Desktop menu */}
             <div className="hidden md:flex md:items-center md:space-x-6">
-              {user && (
-                <>
-                  <span className="text-gray-700">
-                    Welcome, {user.firstName || user.username}
-                  </span>
-                  <button
-                    onClick={handleLogout}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    Logout
-                  </button>
-                </>
-              )}
+              <span className="text-gray-700">
+                Welcome, {user?.firstName || user?.username}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -147,14 +136,12 @@ export default function Layout({ children }) {
                   Admin
                 </Link>
               )}
-              {user && (
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Logout
-                </button>
-              )}
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Logout
+              </button>
             </div>
           </div>
         )}
@@ -248,7 +235,34 @@ export default function Layout({ children }) {
                   Teams
                 </Link>
                 
-                {user?.role === 'ADMIN' && (
+                <Link
+                  href="/shops"
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    router.pathname.startsWith('/shops')
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg
+                    className={`mr-3 h-6 w-6 ${
+                      router.pathname.startsWith('/shops') ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                    }`}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
+                  </svg>
+                  Shops
+                </Link>
+                
+                {(user?.role === 'ADMIN' || user?.role === 'OWNER') && (
                   <Link
                     href="/admin"
                     className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
@@ -279,7 +293,7 @@ export default function Layout({ children }) {
                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    Admin Panel
+                    Admin
                   </Link>
                 )}
               </nav>
@@ -288,13 +302,13 @@ export default function Layout({ children }) {
         </div>
         
         {/* Main content area */}
-        <main className="md:ml-64 flex-1">
-          <div className="py-6">
+        <div className="md:pl-64 flex flex-col flex-1">
+          <main className="flex-1">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {children}
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { login, isAuthenticated } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,33 +22,16 @@ export default function Login() {
     
     try {
       console.log('Submitting login for:', username);
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const result = await login(username, password);
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+      if (!result.success) {
+        throw new Error(result.error || 'Login failed');
       }
       
-      console.log('Login successful');
-      
-      // Store user data in localStorage
-      if (typeof window !== 'undefined' && data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
-      
-      // Navigate to dashboard with simple redirect
-      window.location.href = '/dashboard';
+      // Login successful - redirect is handled by the AuthContext
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Invalid credentials');
-    } finally {
       setLoading(false);
     }
   };

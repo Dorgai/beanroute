@@ -1,29 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useAuth } from '../context/AuthContext';
+import { withAuth } from '../context/AuthContext';
 
-export default function Dashboard() {
-  const [user, setUser] = useState(null);
+function Dashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeams: 0,
     activeUsers: 0,
     inactiveUsers: 0,
+    totalShops: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Simple user check from localStorage - no redirects
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
-      }
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-    }
-
     // Fetch dashboard statistics
     async function fetchStats() {
       try {
@@ -165,22 +158,22 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Teams Card */}
+            {/* Shops Card */}
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-purple-500 rounded-md p-3">
                     <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Teams
+                        Total Shops
                       </dt>
                       <dd className="text-3xl font-semibold text-gray-900">
-                        {stats.totalTeams}
+                        {stats.totalShops || 0}
                       </dd>
                     </dl>
                   </div>
@@ -188,8 +181,8 @@ export default function Dashboard() {
               </div>
               <div className="bg-gray-50 px-4 py-4 sm:px-6">
                 <div className="text-sm">
-                  <Link href="/teams" className="font-medium text-blue-600 hover:text-blue-500">
-                    View all teams
+                  <Link href="/shops" className="font-medium text-blue-600 hover:text-blue-500">
+                    View all shops
                   </Link>
                 </div>
               </div>
@@ -201,12 +194,12 @@ export default function Dashboard() {
         <div className="mt-8">
           <h2 className="text-lg font-medium text-gray-900">Quick Actions</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {user?.role === 'ADMIN' && (
+            {(user?.role === 'ADMIN' || user?.role === 'OWNER') && (
               <div className="bg-white shadow rounded-lg overflow-hidden">
                 <div className="p-5">
                   <h3 className="text-lg font-medium text-gray-900">Create New User</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    Add a new user to the system with appropriate permissions
+                    Add a new user to the system with appropriate role
                   </p>
                   <div className="mt-4">
                     <Link
@@ -220,19 +213,19 @@ export default function Dashboard() {
               </div>
             )}
 
-            {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+            {(user?.role === 'ADMIN' || user?.role === 'OWNER' || user?.role === 'RETAILER') && (
               <div className="bg-white shadow rounded-lg overflow-hidden">
                 <div className="p-5">
-                  <h3 className="text-lg font-medium text-gray-900">Create New Team</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Create New Shop</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    Create a new team to organize users and manage access
+                    Create a new coffee shop and set minimum coffee quantities
                   </p>
                   <div className="mt-4">
                     <Link
-                      href="/teams/create"
+                      href="/shops/create"
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                     >
-                      Create Team
+                      Create Shop
                     </Link>
                   </div>
                 </div>
@@ -248,26 +241,9 @@ export default function Dashboard() {
                 <div className="mt-4">
                   <Link
                     href={`/users/profile/${user?.id}`}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                   >
                     View Profile
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="p-5">
-                <h3 className="text-lg font-medium text-gray-900">View Your Teams</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  See which teams you belong to and your role in each
-                </p>
-                <div className="mt-4">
-                  <Link
-                    href="/teams/my-teams"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    My Teams
                   </Link>
                 </div>
               </div>
@@ -277,4 +253,7 @@ export default function Dashboard() {
       </div>
     </>
   );
-} 
+}
+
+// Use the withAuth higher-order component to protect this page
+export default withAuth(Dashboard); 
