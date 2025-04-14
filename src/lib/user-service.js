@@ -116,10 +116,10 @@ export function canManageUsers(userRole) {
 
 /**
  * Check if a user has permission to manage shops
- * ADMIN, OWNER, and RETAILER roles can manage shops
+ * All roles except ROASTER can manage shops
  */
 export function canManageShops(userRole) {
-  return userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'RETAILER';
+  return userRole !== 'ROASTER';
 }
 
 /**

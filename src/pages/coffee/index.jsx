@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Layout from '../../components/Layout';
 import { useAuth } from '../../context/AuthContext';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { FiSearch, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
 
 export default function CoffeeListPage() {
   const router = useRouter();
@@ -97,162 +95,171 @@ export default function CoffeeListPage() {
   const canManageCoffee = user && ['ADMIN', 'OWNER'].includes(user.role);
 
   return (
-    <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Coffee Management</h1>
-          {canManageCoffee && (
-            <Link href="/coffee/create" className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded">
-              Add New Coffee
-            </Link>
-          )}
-        </div>
+    <div className="container mx-auto px-4 py-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold text-gray-800">Coffee Management</h1>
+        {canManageCoffee && (
+          <Link href="/coffee/create" className="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-3 rounded-md text-sm flex items-center">
+            <FiPlus className="mr-1" /> Add Coffee
+          </Link>
+        )}
+      </div>
 
-        {/* Search and filter */}
-        <div className="mb-6">
+      {/* Search and filter */}
+      <div className="mb-4">
+        <div className="relative">
+          <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
             placeholder="Search coffee by name, roaster, or origin..."
-            className="w-full p-2 border border-gray-300 rounded"
+            className="w-full pl-10 py-2 pr-4 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
             value={searchTerm}
             onChange={handleSearchChange}
           />
         </div>
+      </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
-        {loading ? (
-          <div className="text-center py-8">Loading coffee data...</div>
-        ) : coffeeList.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded">
-            <p className="text-gray-500">No coffee entries found.</p>
-            {searchTerm && (
-              <p className="mt-2">
-                <button 
-                  onClick={() => {
-                    setSearchTerm('');
-                    fetchCoffee(1, '');
-                  }}
-                  className="text-blue-600 hover:underline"
-                >
-                  Clear search
-                </button>
-              </p>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto bg-white rounded-lg shadow">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roaster</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origin</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+      {loading ? (
+        <div className="text-center py-6">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-emerald-500 border-r-transparent"></div>
+          <p className="mt-2 text-sm text-gray-500">Loading coffee data...</p>
+        </div>
+      ) : coffeeList.length === 0 ? (
+        <div className="text-center py-6 bg-gray-50 rounded-md border border-gray-200">
+          <p className="text-gray-500 text-sm">No coffee entries found.</p>
+          {searchTerm && (
+            <p className="mt-2">
+              <button 
+                onClick={() => {
+                  setSearchTerm('');
+                  fetchCoffee(1, '');
+                }}
+                className="text-emerald-600 hover:underline text-sm"
+              >
+                Clear search
+              </button>
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto bg-white rounded-md border border-gray-200 shadow-sm">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roaster</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origin</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  {canManageCoffee && (
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {coffeeList.map((coffee) => (
+                  <tr key={coffee.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{coffee.name}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.roaster || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.origin || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {coffee.price ? `$${parseFloat(coffee.price).toFixed(2)}` : '-'}
+                      </div>
+                    </td>
                     {canManageCoffee && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {coffeeList.map((coffee) => (
-                    <tr key={coffee.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{coffee.name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{coffee.roaster || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{coffee.origin || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {coffee.price ? `$${parseFloat(coffee.price).toFixed(2)}` : '-'}
-                        </div>
-                      </td>
-                      {canManageCoffee && (
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-4 py-2 whitespace-nowrap text-right text-sm">
+                        <div className="flex justify-end space-x-2">
                           <Link
                             href={`/coffee/${coffee.id}`}
-                            className="text-blue-600 hover:text-blue-900 mr-4"
+                            className="text-blue-600 hover:text-blue-800"
+                            title="View details"
                           >
                             View
                           </Link>
                           <Link
                             href={`/coffee/edit/${coffee.id}`}
-                            className="text-indigo-600 hover:text-indigo-900 mr-4"
+                            className="text-indigo-600 hover:text-indigo-800"
+                            title="Edit coffee"
                           >
-                            Edit
+                            <FiEdit2 className="inline" />
                           </Link>
                           <button
                             onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-red-600 hover:text-red-800"
+                            title="Delete coffee"
                           >
-                            Delete
+                            <FiTrash2 className="inline" />
                           </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-6">
-                <nav className="flex items-center">
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4">
+              <nav className="flex items-center space-x-1">
+                <button
+                  onClick={() => fetchCoffee(currentPage - 1, searchTerm)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 rounded-md text-xs ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Previous
+                </button>
+                {[...Array(totalPages).keys()].map((page) => (
                   <button
-                    onClick={() => fetchCoffee(currentPage - 1, searchTerm)}
-                    disabled={currentPage === 1}
-                    className={`mx-1 px-3 py-1 rounded ${
-                      currentPage === 1
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    key={page + 1}
+                    onClick={() => fetchCoffee(page + 1, searchTerm)}
+                    className={`px-2 py-1 rounded-md text-xs ${
+                      currentPage === page + 1
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    Previous
+                    {page + 1}
                   </button>
-                  {[...Array(totalPages).keys()].map((page) => (
-                    <button
-                      key={page + 1}
-                      onClick={() => fetchCoffee(page + 1, searchTerm)}
-                      className={`mx-1 px-3 py-1 rounded ${
-                        currentPage === page + 1
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      {page + 1}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => fetchCoffee(currentPage + 1, searchTerm)}
-                    disabled={currentPage === totalPages}
-                    className={`mx-1 px-3 py-1 rounded ${
-                      currentPage === totalPages
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Next
-                  </button>
-                </nav>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </Layout>
+                ))}
+                <button
+                  onClick={() => fetchCoffee(currentPage + 1, searchTerm)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1 rounded-md text-xs ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Next
+                </button>
+              </nav>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 } 

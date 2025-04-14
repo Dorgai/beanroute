@@ -294,4 +294,85 @@ export async function getCoffeeSummary() {
       quantity: item._sum.quantity || 0
     }))
   };
+}
+
+/**
+ * Get total coffee inventory (sum of all coffee quantities)
+ */
+export async function getTotalCoffeeInventory() {
+  try {
+    const result = await prisma.greenCoffee.aggregate({
+      _sum: {
+        quantity: true
+      }
+    });
+    
+    return result._sum.quantity || 0;
+  } catch (error) {
+    console.error('Error calculating total coffee inventory:', error);
+    return 0;
+  }
+}
+
+/**
+ * Get coffee stock summary information
+ */
+export async function getCoffeeStockSummary() {
+  try {
+    // Get total coffee quantity
+    const totalQuantity = await prisma.greenCoffee.aggregate({
+      _sum: {
+        quantity: true
+      }
+    });
+    
+    // Get count of coffee types
+    const coffeeCount = await prisma.greenCoffee.count();
+    
+    // Get low stock coffee (less than 10kg)
+    const lowStockCoffee = await prisma.greenCoffee.findMany({
+      where: {
+        quantity: {
+          lt: 10
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        quantity: true
+      },
+      orderBy: {
+        quantity: 'asc'
+      },
+      take: 5
+    });
+    
+    // Get top 5 coffee by quantity
+    const topCoffee = await prisma.greenCoffee.findMany({
+      select: {
+        id: true,
+        name: true,
+        quantity: true
+      },
+      orderBy: {
+        quantity: 'desc'
+      },
+      take: 5
+    });
+    
+    return {
+      totalQuantity: totalQuantity._sum.quantity || 0,
+      coffeeCount,
+      lowStockCoffee,
+      topCoffee
+    };
+  } catch (error) {
+    console.error('Error getting coffee stock summary:', error);
+    return {
+      totalQuantity: 0,
+      coffeeCount: 0,
+      lowStockCoffee: [],
+      topCoffee: []
+    };
+  }
 } 

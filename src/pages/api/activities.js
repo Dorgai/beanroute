@@ -1,14 +1,12 @@
-import { verifyRequestAndGetUser } from '../../lib/auth-service';
+import { verifyRequestAndGetUser } from '../../lib/auth';
 import { getActivityLogs } from '../../lib/activity-service';
 
 export default async function handler(req, res) {
   // Verify user authentication
-  const authResult = await verifyRequestAndGetUser(req);
-  if (!authResult.success) {
+  const user = await verifyRequestAndGetUser(req);
+  if (!user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  
-  const { user } = authResult;
   
   // Only Admin, Owner and Retailer can view activity logs
   const canViewLogs = ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);

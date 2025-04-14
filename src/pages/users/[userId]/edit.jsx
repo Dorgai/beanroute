@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Layout from '../../../components/Layout';
 import { useAuth } from '../../../context/AuthContext';
 import Link from 'next/link';
+import { FiArrowLeft, FiSave } from 'react-icons/fi';
 
 export default function EditUser() {
   const router = useRouter();
@@ -34,14 +34,24 @@ export default function EditUser() {
       setError('');
       
       try {
-        const response = await fetch(`/api/users/${userId}`);
+        const response = await fetch(`/api/users/${userId}`, {
+          credentials: 'same-origin',
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
         
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('User not found');
           } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to fetch user data');
+            const errorText = await response.text();
+            try {
+              const errorData = JSON.parse(errorText);
+              throw new Error(errorData.message || errorData.error || 'Failed to fetch user data');
+            } catch (jsonError) {
+              throw new Error('Failed to fetch user data: Server returned an invalid response');
+            }
           }
         }
         
@@ -97,13 +107,20 @@ export default function EditUser() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify(updateData),
+        credentials: 'same-origin'
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update user');
+        const errorText = await response.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || errorData.error || 'Failed to update user');
+        } catch (jsonError) {
+          throw new Error('Failed to update user: Server returned an invalid response');
+        }
       }
       
       const updatedUser = await response.json();
@@ -122,11 +139,12 @@ export default function EditUser() {
   
   if (loading) {
     return (
-      <Layout>
+      <div className="max-w-3xl mx-auto py-4">
         <div className="flex justify-center items-center h-40">
-          <div className="animate-pulse">Loading user data...</div>
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
+          <p className="ml-2 text-gray-500">Loading user data...</p>
         </div>
-      </Layout>
+      </div>
     );
   }
   
@@ -134,151 +152,142 @@ export default function EditUser() {
   const canChangeRoleStatus = ['ADMIN', 'OWNER'].includes(currentUser?.role);
   
   return (
-    <Layout>
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-normal">{isOwnProfile ? 'Edit Your Profile' : 'Edit User'}</h1>
-          <Link href="/users" className="text-sm border border-gray-200 px-4 py-2 rounded hover:bg-gray-50">
-            Back to Users
-          </Link>
+    <div className="max-w-3xl mx-auto py-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-medium text-gray-800">{isOwnProfile ? 'Edit Your Profile' : 'Edit User'}</h1>
+        <Link href="/users" className="inline-flex items-center text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md">
+          <FiArrowLeft className="mr-1" /> Back to Users
+        </Link>
+      </div>
+      
+      {error && (
+        <div className="mb-4 p-3 border border-red-100 bg-red-50 rounded-md text-red-700 text-sm">
+          {error}
         </div>
-        
-        {error && (
-          <div className="mb-6 p-4 border border-gray-300 bg-gray-50">
-            <p className="text-gray-900">{error}</p>
-          </div>
-        )}
-        
-        {successMessage && (
-          <div className="mb-6 p-4 border border-gray-300 bg-gray-50">
-            <p className="text-gray-900">{successMessage}</p>
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="username" className="block text-sm font-normal text-gray-500 mb-1">
-                Username
-              </label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-normal text-gray-500 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-normal text-gray-500 mb-1">
-                First Name
-              </label>
-              <input
-                type="text"
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-normal text-gray-500 mb-1">
-                Last Name
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-              />
-            </div>
-            
-            {canChangeRoleStatus && (
-              <>
-                <div>
-                  <label htmlFor="role" className="block text-sm font-normal text-gray-500 mb-1">
-                    Role
-                  </label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-                    required
-                  >
-                    <option value="">Select a role</option>
-                    <option value="ADMIN">Admin</option>
-                    <option value="OWNER">Owner</option>
-                    <option value="RETAILER">Retailer</option>
-                    <option value="ROASTER">Roaster</option>
-                    <option value="BARISTA">Barista</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="status" className="block text-sm font-normal text-gray-500 mb-1">
-                    Status
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-                    required
-                  >
-                    <option value="">Select a status</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="LOCKED">Locked</option>
-                  </select>
-                </div>
-              </>
-            )}
+      )}
+      
+      {successMessage && (
+        <div className="mb-4 p-3 border border-green-100 bg-green-50 rounded-md text-green-700 text-sm">
+          {successMessage}
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-md shadow-sm p-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
           </div>
           
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => router.push('/users')}
-              className="px-5 py-2 text-sm border border-gray-300 rounded mr-3 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 text-sm text-white bg-gray-900 border border-gray-900 rounded hover:bg-gray-800 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
           </div>
-        </form>
-      </div>
-    </Layout>
+          
+          <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+              First Name
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+              Last Name
+            </label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          {canChangeRoleStatus && (
+            <>
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                  Role
+                </label>
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select a role</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="OWNER">Owner</option>
+                  <option value="RETAILER">Retailer</option>
+                  <option value="ROASTER">Roaster</option>
+                  <option value="BARISTA">Barista</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select a status</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="LOCKED">Locked</option>
+                </select>
+              </div>
+            </>
+          )}
+        </div>
+        
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm flex items-center ${saving ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            <FiSave className="mr-1" /> {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 } 

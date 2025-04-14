@@ -1,6 +1,5 @@
 import { verifyRequestAndGetUser } from '../../../../lib/auth';
-import { getShopById, addUserToShop, removeUserFromShop, updateUserRoleInShop } from '../../../../lib/shop-service';
-import { canManageShops } from '../../../../lib/user-service';
+import { getShopById, addUserToShop, removeUserFromShop, updateUserRoleInShop, getShopUsers } from '../../../../lib/shop-service';
 
 export default async function handler(req, res) {
   try {
@@ -24,9 +23,17 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'Shop not found' });
     }
     
-    // Check if user has permission to manage this shop
-    if (!canManageShops(user.role)) {
-      return res.status(403).json({ message: 'Forbidden: Insufficient permissions to manage shop users' });
+    // Deny access to ROASTER role users
+    if (user.role === 'ROASTER') {
+      return res.status(403).json({ message: 'Forbidden: Roasters cannot manage shop users' });
+    }
+    
+    // Handle GET request - Fetch users assigned to shop
+    if (req.method === 'GET') {
+      // Fetch users assigned to this shop
+      const shopUsers = await getShopUsers(shopId);
+      
+      return res.status(200).json(shopUsers);
     }
     
     // Handle POST request - Add user to shop
@@ -85,7 +92,7 @@ export default async function handler(req, res) {
     }
     
     // Return 405 for other methods
-    res.setHeader('Allow', ['POST', 'PUT', 'DELETE']);
+    res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
     return res.status(405).json({ message: 'Method not allowed' });
   } catch (error) {
     console.error('Error in shop users API:', error);

@@ -1,7 +1,68 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
+
+// Component to fetch and display coffee inventory
+function CoffeeInventory() {
+  const [totalInventory, setTotalInventory] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    async function fetchCoffeeInventory() {
+      try {
+        setLoading(true);
+        setError(false);
+        
+        // Add cache-busting parameter to prevent caching
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/coffee/inventory/total?_=${timestamp}`);
+        
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Invalid response format');
+        }
+        
+        const data = await response.json();
+        setTotalInventory(data.total !== undefined ? data.total : 0);
+      } catch (error) {
+        console.error('Error fetching coffee inventory:', error);
+        setError(true);
+        setTotalInventory(0);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCoffeeInventory();
+    
+    // Setup refresh interval every 60 seconds
+    const intervalId = setInterval(fetchCoffeeInventory, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  if (loading) {
+    return <span className="text-sm text-green-600">Loading...</span>;
+  }
+  
+  if (error) {
+    return <span className="text-sm text-yellow-600">Inventory unavailable</span>;
+  }
+
+  return (
+    <div className="text-sm px-3 py-1 bg-green-50 text-green-600 rounded-md">
+      <Link href="/coffee" className="flex items-center">
+        <span className="font-medium">{Number(totalInventory).toFixed(1)} kg</span>
+        <span className="ml-1">Coffee in Stock</span>
+      </Link>
+    </div>
+  );
+}
 
 export default function Layout({ children }) {
   const { user, loading, logout } = useAuth();
@@ -21,6 +82,9 @@ export default function Layout({ children }) {
 
   // Check if user can access the activities page (Admin, Owner, Retailer)
   const canViewActivities = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
+  
+  // Check if user can view coffee inventory in header
+  const canViewCoffeeInventory = user && ['OWNER', 'RETAILER'].includes(user.role);
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -60,7 +124,9 @@ export default function Layout({ children }) {
             </div>
             
             {/* User Info / Logout */}
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-4">
+              {canViewCoffeeInventory && <CoffeeInventory />}
+              
               {user ? (
                 <>
                   <span className="text-sm text-gray-500 hidden sm:inline">

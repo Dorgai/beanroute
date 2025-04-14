@@ -173,4 +173,29 @@ export async function getShopsForUser(userId, page = 1, limit = 10) {
       pageCount: Math.ceil(total / limit),
     },
   };
+}
+
+/**
+ * Get users assigned to a specific shop with their details
+ */
+export async function getShopUsers(shopId) {
+  const userShops = await prisma.userShop.findMany({
+    where: { shopId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          status: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return userShops;
 } 

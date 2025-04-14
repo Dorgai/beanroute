@@ -1,19 +1,18 @@
-import { verifyRequestAndGetUser, canManageUsers, getUserById, deleteUser } from '../../../../lib/auth-service';
+import { verifyRequestAndGetUser } from '../../../../lib/auth';
 import { logActivity } from '../../../../lib/activity-service';
-import { updateUser } from '../../../../lib/user-service';
+import { getUserById, deleteUser, updateUser, canManageUsers } from '../../../../lib/user-service';
 
 export default async function handler(req, res) {
   // Authenticate request
-  const authResult = await verifyRequestAndGetUser(req);
-  if (!authResult.success) {
+  const user = await verifyRequestAndGetUser(req);
+  if (!user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { user } = authResult;
   const { userId } = req.query;
 
   // Check if user has permission to manage users
-  if (!canManageUsers(user)) {
+  if (!canManageUsers(user.role)) {
     return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
   }
 
@@ -21,7 +20,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       // Check if user has permission to view user details
-      if (!canManageUsers(user) && userId !== user.id) {
+      if (!canManageUsers(user.role) && userId !== user.id) {
         return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
       }
       
@@ -44,7 +43,7 @@ export default async function handler(req, res) {
   else if (req.method === 'PUT') {
     try {
       // Check if user has permission to update users
-      if (!canManageUsers(user) && userId !== user.id) {
+      if (!canManageUsers(user.role) && userId !== user.id) {
         return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
       }
       
@@ -58,7 +57,7 @@ export default async function handler(req, res) {
       const { username, email, firstName, lastName, role, status } = req.body;
       
       // Regular users can only update their own profile and can't change role or status
-      if (userId === user.id && !canManageUsers(user)) {
+      if (userId === user.id && !canManageUsers(user.role)) {
         // Only allow updating personal info for regular users
         const updatedUser = await updateUser(userId, {
           firstName: firstName || existingUser.firstName,
@@ -78,8 +77,8 @@ export default async function handler(req, res) {
       if (email) updateData.email = email;
       if (firstName !== undefined) updateData.firstName = firstName;
       if (lastName !== undefined) updateData.lastName = lastName;
-      if (role && canManageUsers(user)) updateData.role = role;
-      if (status && canManageUsers(user)) updateData.status = status;
+      if (role && canManageUsers(user.role)) updateData.role = role;
+      if (status && canManageUsers(user.role)) updateData.status = status;
       
       const updatedUser = await updateUser(userId, updateData);
       

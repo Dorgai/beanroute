@@ -9,6 +9,7 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [meta, setMeta] = useState({}); // For pagination info
   const { user: currentUser } = useAuth(); // Get the logged-in user
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
 
   // TODO: Add state for filters, sorting, search, page
 
@@ -129,9 +130,11 @@ export default function UsersPage() {
     }
 
     setError(''); // Clear previous errors
-    // Consider adding a specific loading state for this action
+    setResetPasswordLoading(true);
 
     try {
+      console.log(`Attempting to reset password for ${username} (${userId})`);
+      
       const response = await fetch(`/api/users/${userId}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,19 +142,29 @@ export default function UsersPage() {
         credentials: 'same-origin',
       });
 
-      const data = await response.json(); // Get response body for message
-
-      if (!response.ok) {
-        throw new Error(data.message || `Error: ${response.status}`);
+      let data;
+      try {
+        data = await response.json(); // Get response body for message
+      } catch (jsonError) {
+        console.error('Error parsing JSON response:', jsonError);
+        throw new Error('Invalid response from server');
       }
 
-      alert(data.message); // Show success message
+      if (!response.ok) {
+        const errorMessage = data.message || `Error ${response.status}: ${response.statusText}`;
+        console.error('Reset password API error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      alert(data.message || 'Password has been reset successfully'); // Show success message
       // No UI change needed in the list itself
 
     } catch (err) {
       console.error('Reset password error:', err);
-      setError(err.message || 'Could not reset password.');
-      // TODO: Display error more prominently
+      setError(`Password reset failed: ${err.message || 'Unknown error occurred'}`);
+      alert(`Failed to reset password: ${err.message || 'Unknown error occurred'}`);
+    } finally {
+      setResetPasswordLoading(false);
     }
   };
 
