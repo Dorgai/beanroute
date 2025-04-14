@@ -1,5 +1,6 @@
 import { verifyRequestAndGetUser } from '../../../../lib/auth';
 import { getShopById, addUserToShop, removeUserFromShop, updateUserRoleInShop, getShopUsers } from '../../../../lib/shop-service';
+import { logActivity } from '../../../../lib/activity-service';
 
 export default async function handler(req, res) {
   try {
@@ -44,12 +45,29 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'User ID is required' });
       }
       
-      const userShop = await addUserToShop(userId, shopId, role || 'BARISTA');
-      
-      return res.status(201).json({
-        message: 'User added to shop successfully',
-        userShop,
-      });
+      try {
+        const userShop = await addUserToShop(userId, shopId, role || 'BARISTA');
+        
+        // Log the activity
+        await logActivity({
+          userId: user.id, 
+          action: 'ASSIGN',
+          resource: 'SHOP_USER',
+          resourceId: shopId,
+          details: `User ${userId} assigned to shop ${shopId} with role ${role || 'BARISTA'}`
+        });
+        
+        return res.status(201).json({
+          message: 'User added to shop successfully',
+          userShop,
+        });
+      } catch (error) {
+        console.error('Error adding user to shop:', error);
+        if (error.code === 'P2002') {
+          return res.status(409).json({ message: 'User is already assigned to this shop' });
+        }
+        throw error;
+      }
     }
     
     // Handle PUT request - Update user role in shop
@@ -68,12 +86,29 @@ export default async function handler(req, res) {
         });
       }
       
-      const updatedUserShop = await updateUserRoleInShop(userId, shopId, role);
-      
-      return res.status(200).json({
-        message: 'User role updated successfully',
-        userShop: updatedUserShop,
-      });
+      try {
+        const updatedUserShop = await updateUserRoleInShop(userId, shopId, role);
+        
+        // Log the activity
+        await logActivity({
+          userId: user.id,
+          action: 'UPDATE',
+          resource: 'SHOP_USER',
+          resourceId: shopId,
+          details: `Updated role for user ${userId} in shop ${shopId} to ${role}`
+        });
+        
+        return res.status(200).json({
+          message: 'User role updated successfully',
+          userShop: updatedUserShop,
+        });
+      } catch (error) {
+        console.error('Error updating user role:', error);
+        if (error.code === 'P2025') {
+          return res.status(404).json({ message: 'User is not assigned to this shop' });
+        }
+        throw error;
+      }
     }
     
     // Handle DELETE request - Remove user from shop
@@ -84,11 +119,28 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'User ID is required' });
       }
       
-      await removeUserFromShop(userId, shopId);
-      
-      return res.status(200).json({
-        message: 'User removed from shop successfully',
-      });
+      try {
+        await removeUserFromShop(userId, shopId);
+        
+        // Log the activity
+        await logActivity({
+          userId: user.id,
+          action: 'REMOVE',
+          resource: 'SHOP_USER',
+          resourceId: shopId,
+          details: `Removed user ${userId} from shop ${shopId}`
+        });
+        
+        return res.status(200).json({
+          message: 'User removed from shop successfully',
+        });
+      } catch (error) {
+        console.error('Error removing user from shop:', error);
+        if (error.code === 'P2025') {
+          return res.status(404).json({ message: 'User is not assigned to this shop' });
+        }
+        throw error;
+      }
     }
     
     // Return 405 for other methods

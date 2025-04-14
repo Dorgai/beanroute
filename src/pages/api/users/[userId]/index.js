@@ -11,16 +11,14 @@ export default async function handler(req, res) {
 
   const { userId } = req.query;
 
-  // Check if user has permission to manage users
-  if (!canManageUsers(user.role)) {
-    return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
-  }
-
   // Handle GET requests
   if (req.method === 'GET') {
     try {
-      // Check if user has permission to view user details
-      if (!canManageUsers(user.role) && userId !== user.id) {
+      // Users can always view their own profile, admins/owners can view any profile
+      const isOwnProfile = userId === user.id;
+      const hasViewPermission = isOwnProfile || canManageUsers(user.role);
+      
+      if (!hasViewPermission) {
         return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
       }
       
@@ -43,7 +41,10 @@ export default async function handler(req, res) {
   else if (req.method === 'PUT') {
     try {
       // Check if user has permission to update users
-      if (!canManageUsers(user.role) && userId !== user.id) {
+      const isOwnProfile = userId === user.id;
+      const hasUpdatePermission = isOwnProfile || canManageUsers(user.role);
+      
+      if (!hasUpdatePermission) {
         return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
       }
       
@@ -57,7 +58,7 @@ export default async function handler(req, res) {
       const { username, email, firstName, lastName, role, status } = req.body;
       
       // Regular users can only update their own profile and can't change role or status
-      if (userId === user.id && !canManageUsers(user.role)) {
+      if (isOwnProfile && !canManageUsers(user.role)) {
         // Only allow updating personal info for regular users
         const updatedUser = await updateUser(userId, {
           firstName: firstName || existingUser.firstName,
@@ -67,6 +68,14 @@ export default async function handler(req, res) {
         
         // Remove sensitive data
         delete updatedUser.password;
+        
+        await logActivity({
+          userId: user.id,
+          action: 'UPDATE',
+          resource: 'USER',
+          resourceId: userId,
+          details: 'Updated own profile'
+        });
         
         return res.status(200).json(updatedUser);
       }
@@ -81,6 +90,15 @@ export default async function handler(req, res) {
       if (status && canManageUsers(user.role)) updateData.status = status;
       
       const updatedUser = await updateUser(userId, updateData);
+      
+      // Log the activity
+      await logActivity({
+        userId: user.id,
+        action: 'UPDATE',
+        resource: 'USER',
+        resourceId: userId,
+        details: `Updated user ${updatedUser.username}`
+      });
       
       // Remove sensitive data
       delete updatedUser.password;
@@ -104,6 +122,11 @@ export default async function handler(req, res) {
   // Handle DELETE request - Remove a user
   else if (req.method === 'DELETE') {
     try {
+      // Only admins/owners can delete users
+      if (!canManageUsers(user.role)) {
+        return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+      }
+      
       // Don't allow deleting self
       if (userId === user.id) {
         return res.status(400).json({ error: 'Cannot delete your own account' });

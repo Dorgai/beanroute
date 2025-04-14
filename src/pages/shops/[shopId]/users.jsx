@@ -113,12 +113,11 @@ export default function ShopUsers() {
     setSuccessMessage('');
     
     try {
-      const response = await fetch(`/api/shops/${shopId}/users`, {
+      const response = await fetch(`/api/shops/${shopId}/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
+        }
       });
       
       if (!response.ok) {

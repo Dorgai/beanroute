@@ -1,5 +1,7 @@
 import { verifyRequestAndGetUser } from '../../../../../lib/auth';
 import { canManageShops } from '../../../../../lib/user-service';
+import { removeUserFromShop, getShopById } from '../../../../../lib/shop-service';
+import { logActivity } from '../../../../../lib/activity-service';
 import prisma from '../../../../../lib/prisma';
 
 export default async function handler(req, res) {
@@ -24,10 +26,7 @@ export default async function handler(req, res) {
       }
 
       // Check if both shop and user exist
-      const shop = await prisma.shop.findUnique({
-        where: { id: shopId },
-      });
-
+      const shop = await getShopById(shopId);
       if (!shop) {
         return res.status(404).json({ message: 'Shop not found' });
       }
@@ -55,13 +54,15 @@ export default async function handler(req, res) {
       }
 
       // Delete the user-shop assignment
-      await prisma.userShop.delete({
-        where: {
-          userId_shopId: {
-            userId,
-            shopId,
-          },
-        },
+      await removeUserFromShop(userId, shopId);
+
+      // Log the activity
+      await logActivity({
+        userId: authenticatedUser.id,
+        action: 'REMOVE',
+        resource: 'SHOP_USER',
+        resourceId: shopId,
+        details: `Removed user ${userId} from shop ${shopId}`
       });
 
       return res.status(200).json({
@@ -69,13 +70,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Method not allowed
-    return res.status(405).json({ message: 'Method not allowed' });
+    // Method not allowed for other HTTP methods
+    res.setHeader('Allow', ['DELETE']);
+    return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   } catch (error) {
-    console.error('Error in shop users API:', error);
-    return res.status(500).json({
-      message: 'Internal server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    console.error('Error in shop user API:', error);
+    return res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 } 

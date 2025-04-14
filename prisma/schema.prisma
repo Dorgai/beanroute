@@ -114,9 +114,11 @@ model UserActivity {
   id        String   @id @default(uuid())
   userId    String
   action    String   // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, etc.
-  resource  String  @default("USER") // USER, SHOP, COFFEE, etc.
+  resource  String   // USER, SHOP, COFFEE, etc.
   resourceId String? // ID of the affected resource
   details   String?  // Additional details about the action
+  ipAddress String?
+  userAgent String?
   createdAt DateTime @default(now())
 
   // Relation to User
