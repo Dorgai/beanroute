@@ -11,18 +11,45 @@ import prisma from './prisma';
  */
 export async function logActivity({ userId, action, resource, resourceId = null, details = '' }) {
   try {
-    await prisma.userActivity.create({
-      data: {
-        userId,
-        action,
-        resource,
-        resourceId,
-        details
-      }
+    // Basic validation
+    if (!userId || !action) {
+      console.error('Missing required fields for activity logging');
+      return null;
+    }
+
+    // Create a base data object with the required fields
+    const activityData = {
+      userId,
+      action,
+      details: details || ''
+    };
+
+    // Only add resource fields if they exist in the schema (to handle older DB versions)
+    try {
+      // Attempt to check if the UserActivity model has the resource field
+      // by querying with a limit of 0
+      await prisma.userActivity.findMany({
+        where: { resource: { not: null } },
+        take: 0
+      });
+      
+      // If the code reaches here, it means the resource field exists
+      if (resource) activityData.resource = resource;
+      if (resourceId) activityData.resourceId = resourceId;
+    } catch (err) {
+      // The resource field doesn't exist in the schema
+      // We'll continue without adding those fields
+      console.warn('Resource field not found in UserActivity schema, continuing without it');
+    }
+
+    // Create the activity log
+    return await prisma.userActivity.create({
+      data: activityData
     });
   } catch (error) {
     // Log errors but don't fail the main operation
     console.error('Failed to log user activity:', error);
+    return null;
   }
 }
 
@@ -40,7 +67,7 @@ export async function getActivityLogs({
 }) {
   const skip = (page - 1) * limit;
   
-  // Build filter conditions
+  // Build where clause for filters that definitely exist
   const where = {};
   
   if (userId) {
@@ -49,10 +76,6 @@ export async function getActivityLogs({
   
   if (action) {
     where.action = action;
-  }
-  
-  if (resource) {
-    where.resource = resource;
   }
   
   // Date filtering
@@ -68,8 +91,41 @@ export async function getActivityLogs({
     }
   }
   
+  // Determine if resource field exists by checking metadata
+  let hasResourceField = false;
+
+  try {
+    // Create a query to check if the resource field exists
+    await prisma.userActivity.findFirst({
+      select: { resource: true },
+      take: 0
+    });
+    
+    // If we get here, the resource field exists
+    hasResourceField = true;
+    
+    // Add resource filter if the field exists and a value was provided
+    if (resource && hasResourceField) {
+      where.resource = resource;
+    }
+  } catch (error) {
+    // Resource field doesn't exist, we'll ignore it
+    console.info('Resource field not available in UserActivity model');
+  }
+  
   // Get total count for pagination
   const totalCount = await prisma.userActivity.count({ where });
+  
+  // Define the select fields based on available columns
+  const selectFields = {
+    user: {
+      select: {
+        id: true,
+        username: true,
+        email: true
+      }
+    }
+  };
   
   // Get activities
   const activities = await prisma.userActivity.findMany({
@@ -77,15 +133,7 @@ export async function getActivityLogs({
     orderBy: {
       createdAt: 'desc'
     },
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          email: true
-        }
-      }
-    },
+    include: selectFields,
     skip,
     take: limit
   });

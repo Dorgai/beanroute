@@ -157,6 +157,7 @@ export default function CoffeeListPage() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roaster</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origin</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                   {canManageCoffee && (
                     <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -177,6 +178,11 @@ export default function CoffeeListPage() {
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className={`text-sm ${coffee.quantity > 0 ? 'text-green-600 font-medium' : 'text-red-500'}`}>
+                        {coffee.quantity ? `${coffee.quantity} kg` : 'Out of stock'}
+                      </div>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <div className="text-sm text-gray-500">

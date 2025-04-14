@@ -41,8 +41,8 @@ function CoffeeInventory() {
 
     fetchCoffeeInventory();
     
-    // Setup refresh interval every 60 seconds
-    const intervalId = setInterval(fetchCoffeeInventory, 60000);
+    // Setup refresh interval every 15 seconds instead of 60
+    const intervalId = setInterval(fetchCoffeeInventory, 15000);
     return () => clearInterval(intervalId);
   }, []);
 
