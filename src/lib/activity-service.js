@@ -8,8 +8,9 @@ import prisma from './prisma';
  * @param {string} data.resource Type of resource affected (USER, SHOP, COFFEE, etc.)
  * @param {string} data.resourceId ID of the resource affected (can be null)
  * @param {string} data.details Additional details about the action
+ * @param {object} req Optional request object for IP and user agent extraction
  */
-export async function logActivity({ userId, action, resource, resourceId = null, details = '' }) {
+export async function logActivity({ userId, action, resource, resourceId = null, details = '' }, req = null) {
   try {
     // Basic validation
     if (!userId || !action) {
@@ -24,28 +25,64 @@ export async function logActivity({ userId, action, resource, resourceId = null,
       details: details || ''
     };
 
-    // Only add resource fields if they exist in the schema (to handle older DB versions)
-    try {
-      // Attempt to check if the UserActivity model has the resource field
-      // by querying with a limit of 0
-      await prisma.userActivity.findMany({
-        where: { resource: { not: null } },
-        take: 0
-      });
-      
-      // If the code reaches here, it means the resource field exists
-      if (resource) activityData.resource = resource;
-      if (resourceId) activityData.resourceId = resourceId;
-    } catch (err) {
-      // The resource field doesn't exist in the schema
-      // We'll continue without adding those fields
-      console.warn('Resource field not found in UserActivity schema, continuing without it');
+    // Safely attempt to add optional fields if they exist in schema
+    if (resource) {
+      try {
+        activityData.resource = resource;
+      } catch (err) {
+        // Ignore if field doesn't exist
+      }
     }
 
-    // Create the activity log
-    return await prisma.userActivity.create({
-      data: activityData
-    });
+    if (resourceId) {
+      try {
+        activityData.resourceId = resourceId;
+      } catch (err) {
+        // Ignore if field doesn't exist
+      }
+    }
+
+    // Extract IP and user agent if request object is provided
+    if (req) {
+      try {
+        const ipAddress = req.headers['x-forwarded-for'] || 
+                         req.connection.remoteAddress || 
+                         req.socket.remoteAddress;
+        
+        if (ipAddress) activityData.ipAddress = ipAddress;
+        
+        const userAgent = req.headers['user-agent'];
+        if (userAgent) activityData.userAgent = userAgent;
+      } catch (err) {
+        // Ignore if these fields can't be added
+        console.warn('Could not add IP or user agent data to activity log');
+      }
+    }
+
+    // Create the activity log with safe error handling
+    try {
+      return await prisma.userActivity.create({
+        data: activityData
+      });
+    } catch (error) {
+      // If there's a specific error about unknown fields, try with just the basic fields
+      if (error.message && (
+          error.message.includes('unknown field') || 
+          error.message.includes('Unknown arg')
+      )) {
+        console.warn('Schema mismatch in UserActivity model, falling back to basic fields');
+        return await prisma.userActivity.create({
+          data: {
+            userId,
+            action,
+            details: details || ''
+          }
+        });
+      }
+      
+      // Re-throw other errors
+      throw error;
+    }
   } catch (error) {
     // Log errors but don't fail the main operation
     console.error('Failed to log user activity:', error);

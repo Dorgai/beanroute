@@ -375,4 +375,46 @@ export async function getCoffeeStockSummary() {
       topCoffee: []
     };
   }
+}
+
+/**
+ * Get all coffee inventory logs across all coffees
+ */
+export async function getAllCoffeeInventoryLogs(page = 1, limit = 20) {
+  const skip = (page - 1) * limit;
+  
+  const [logs, total] = await Promise.all([
+    prisma.greenCoffeeInventoryLog.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true
+          }
+        },
+        coffee: {
+          select: {
+            id: true,
+            name: true,
+            country: true,
+            producer: true
+          }
+        }
+      }
+    }),
+    prisma.greenCoffeeInventoryLog.count()
+  ]);
+  
+  return {
+    logs,
+    meta: {
+      total,
+      page,
+      limit,
+      pageCount: Math.ceil(total / limit)
+    }
+  };
 } 

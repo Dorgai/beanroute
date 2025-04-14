@@ -9,41 +9,53 @@ function CoffeeInventory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    async function fetchCoffeeInventory() {
-      try {
-        setLoading(true);
-        setError(false);
-        
-        // Add cache-busting parameter to prevent caching
-        const timestamp = new Date().getTime();
-        const response = await fetch(`/api/coffee/inventory/total?_=${timestamp}`);
-        
-        if (!response.ok) {
-          throw new Error(`Server responded with ${response.status}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Invalid response format');
-        }
-        
-        const data = await response.json();
-        setTotalInventory(data.total !== undefined ? data.total : 0);
-      } catch (error) {
-        console.error('Error fetching coffee inventory:', error);
-        setError(true);
-        setTotalInventory(0);
-      } finally {
-        setLoading(false);
+  const fetchCoffeeInventory = async () => {
+    try {
+      setLoading(true);
+      setError(false);
+      
+      // Add cache-busting parameter to prevent caching
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/coffee/inventory/total?_=${timestamp}`);
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
       }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format');
+      }
+      
+      const data = await response.json();
+      setTotalInventory(data.total !== undefined ? data.total : 0);
+    } catch (error) {
+      console.error('Error fetching coffee inventory:', error);
+      setError(true);
+      setTotalInventory(0);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     fetchCoffeeInventory();
     
-    // Setup refresh interval every 15 seconds instead of 60
+    // Setup refresh interval every 15 seconds
     const intervalId = setInterval(fetchCoffeeInventory, 15000);
-    return () => clearInterval(intervalId);
+    
+    // Listen for inventory update events
+    const handleInventoryUpdate = () => {
+      fetchCoffeeInventory();
+    };
+    
+    window.addEventListener('coffeeInventoryUpdated', handleInventoryUpdate);
+    
+    // Cleanup on unmount
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('coffeeInventoryUpdated', handleInventoryUpdate);
+    };
   }, []);
 
   if (loading) {

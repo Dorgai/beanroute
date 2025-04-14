@@ -1,41 +1,30 @@
 #!/bin/sh
 
-echo "Deploying database schema using Prisma Migrate..."
+set -e
 
-# Check if DATABASE_URL is set
+echo "Database deployment script started..."
+
+# Check if DATABASE_URL is provided
 if [ -z "$DATABASE_URL" ]; then
-  echo "ERROR: DATABASE_URL is not set. Cannot run migrations."
+  echo "ERROR: DATABASE_URL is not set."
   exit 1
 fi
 
-# Try to resolve any failed migrations first
-echo "Checking for and resolving any failed migrations..."
-npx prisma migrate resolve --applied 20250413220613_fix_state || {
-  echo "⚠️ Could not resolve failed migrations. Trying a different approach..."
-}
-
-# Run Prisma migrations
-echo "Applying pending migrations..."
-npx prisma migrate deploy
-
-# Check the exit status of the migration command
-if [ $? -eq 0 ]; then
-  echo "✅ Prisma migrations applied successfully!"
-else
-  echo "❌ Prisma migrations failed!"
-  # We'll continue anyway since the application might still work with the existing schema
-  echo "⚠️ Continuing deployment despite migration failure..."
-fi
-
-# Generate Prisma client to ensure it's up to date
-echo "Regenerating Prisma client..."
+# Generate Prisma client
+echo "Generating Prisma client..."
 npx prisma generate
 
-# Optional: Run seed script after migrations if needed in production
-# echo "Running database seed script..."
-# npx prisma db seed
-# if [ $? -eq 0 ]; then
-#   echo "✅ Database seeding completed successfully!"
-# else
-#   echo "⚠️ Database seeding failed."
-# fi 
+# Run Prisma migrations
+echo "Running database migrations..."
+npx prisma migrate deploy
+
+# Check if we need to seed the database
+if [ "$SEED_DATABASE" = "true" ]; then
+  echo "Seeding the database..."
+  npx prisma db seed
+else
+  echo "Skipping database seed (SEED_DATABASE not set to 'true')"
+fi
+
+echo "Database deployment completed successfully!"
+exit 0 

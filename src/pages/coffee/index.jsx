@@ -98,11 +98,16 @@ export default function CoffeeListPage() {
     <div className="container mx-auto px-4 py-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold text-gray-800">Coffee Management</h1>
-        {canManageCoffee && (
-          <Link href="/coffee/create" className="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-3 rounded-md text-sm flex items-center">
-            <FiPlus className="mr-1" /> Add Coffee
+        <div className="flex space-x-2">
+          <Link href="/coffee/inventory" className="bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-3 rounded-md text-sm flex items-center">
+            Inventory History
           </Link>
-        )}
+          {canManageCoffee && (
+            <Link href="/coffee/create" className="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-3 rounded-md text-sm flex items-center">
+              <FiPlus className="mr-1" /> Add Coffee
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Search and filter */}

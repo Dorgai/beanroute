@@ -1,16 +1,19 @@
 FROM node:18-alpine
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl
-
-# Set working directory
 WORKDIR /app
 
-# Copy all files
+# Install dependencies needed for PostgreSQL client
+RUN apk add --no-cache postgresql-client
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci
+
+# Copy application code
 COPY . .
 
-# Install ALL dependencies (including dev dependencies)
-RUN npm install
+# Make scripts executable
+RUN chmod +x docker-entrypoint.sh deploy-db.sh
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -18,11 +21,8 @@ RUN npx prisma generate
 # Build the application
 RUN npm run build
 
-# Expose the port
-EXPOSE 8080
+# Expose port
+EXPOSE 3000
 
-# Make entrypoint script executable
-RUN chmod +x /app/docker-entrypoint.sh
-
-# Set entrypoint
-ENTRYPOINT ["/app/docker-entrypoint.sh"] 
+# Start the application
+CMD ["./docker-entrypoint.sh"] 

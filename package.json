@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "./docker-entrypoint.sh",
+    "start": "chmod +x ./docker-entrypoint.sh && ./docker-entrypoint.sh",
     "start:server": "node server.js",
     "lint": "next lint",
     "prisma:generate": "prisma generate",

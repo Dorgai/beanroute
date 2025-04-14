@@ -115,6 +115,14 @@ export default function CoffeeDetailPage() {
         quantity: data.coffee.quantity
       }));
       
+      // Broadcast inventory update event so header component can update
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('coffeeInventoryUpdated', { 
+          detail: { timestamp: new Date().getTime() } 
+        });
+        window.dispatchEvent(event);
+      }
+      
       // Clear form
       setAmount('');
       setNotes('');

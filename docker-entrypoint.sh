@@ -9,21 +9,23 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
+echo "Starting with NODE_ENV: ${NODE_ENV:-development}"
+
 # Install PostgreSQL client for database setup
 echo "Installing PostgreSQL client..."
 apk add --no-cache postgresql-client
-
-# Deploy database schema using our dedicated script
-echo "Deploying database schema..."
-./deploy-db.sh "$DATABASE_URL" || {
-  echo "⚠️ Database schema deployment might not be complete."
-  echo "⚠️ Continuing anyway... Some features may not work."
-}
 
 # Generate Prisma client
 echo "Generating Prisma client..."
 npx prisma generate || {
   echo "⚠️ Prisma client generation failed."
+  echo "⚠️ Continuing anyway... Some features may not work."
+}
+
+# Deploy database schema using our dedicated script
+echo "Deploying database schema..."
+./deploy-db.sh || {
+  echo "⚠️ Database schema deployment might not be complete."
   echo "⚠️ Continuing anyway... Some features may not work."
 }
 
