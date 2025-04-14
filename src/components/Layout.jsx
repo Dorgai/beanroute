@@ -84,7 +84,7 @@ export default function Layout({ children }) {
   const canViewActivities = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
   
   // Check if user can view coffee inventory in header
-  const canViewCoffeeInventory = user && ['OWNER', 'RETAILER'].includes(user.role);
+  const canViewCoffeeInventory = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
