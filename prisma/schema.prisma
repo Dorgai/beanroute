@@ -29,6 +29,8 @@ model User {
   activities          UserActivity[]       // One-to-many relationship with user activities
   shops               UserShop[]           // Many-to-many relationship with shops
   createdShops        Shop[]               // Shops created by this user
+  createdCoffees      GreenCoffee[]        // Green coffee created by this user
+  inventoryLogs       GreenCoffeeInventoryLog[] // Inventory logs created by this user
 }
 
 // Shop model - For managing coffee shops
@@ -109,14 +111,53 @@ model Session {
 
 // UserActivity model - For audit trail
 model UserActivity {
-  id          String   @id @default(uuid())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, etc.
+  resource  String  @default("USER") // USER, SHOP, COFFEE, etc.
+  resourceId String? // ID of the affected resource
+  details   String?  // Additional details about the action
+  createdAt DateTime @default(now())
+
+  // Relation to User
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+}
+
+// GreenCoffee model - For managing green coffee inventory
+model GreenCoffee {
+  id          String                @id @default(uuid())
+  name        String
+  quantity    Float                 @default(0)  // Current quantity in kg
+  grade       CoffeeGrade
+  country     String?
+  producer    String?
+  notes       String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  createdBy   User                  @relation(fields: [createdById], references: [id])
+  createdById String
+  
+  inventoryLogs GreenCoffeeInventoryLog[]
+
+  @@unique([name, country, producer])
+}
+
+// GreenCoffeeInventoryLog model - For tracking inventory changes
+model GreenCoffeeInventoryLog {
+  id          String      @id @default(uuid())
+  coffee      GreenCoffee @relation(fields: [coffeeId], references: [id], onDelete: Cascade)
+  coffeeId    String
+  user        User        @relation(fields: [userId], references: [id])
   userId      String
-  action      String   // login, logout, create_user, update_user, delete_user, etc.
-  details     Json?    // Additional details about the activity
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  changeAmount Float       // Can be positive (addition) or negative (removal)
+  quantity    Float       // Quantity after change
+  notes       String?
+  createdAt   DateTime    @default(now())
 }
 
 // Updated Enums for new roles
@@ -124,6 +165,7 @@ enum Role {
   ADMIN
   OWNER
   RETAILER
+  ROASTER
   BARISTA
 }
 
@@ -138,4 +180,11 @@ enum TeamRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+// Coffee grade enum
+enum CoffeeGrade {
+  SPECIALTY
+  PREMIUM
+  RARITY
 } 

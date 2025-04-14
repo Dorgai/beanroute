@@ -4,8 +4,15 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "./docker-entrypoint.sh"
-healthcheckPath = "/api/admin/test-db"
+healthcheckPath = "/api/health"
 healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
 
 [variables]
-NODE_ENV = "production" 
+NODE_ENV = "production"
+PORT = "8080"
+
+# Note: Make sure to set these secrets in the Railway dashboard
+# DATABASE_URL
+# JWT_SECRET 

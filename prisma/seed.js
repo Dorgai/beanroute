@@ -4,195 +4,147 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding the database...');
+  console.log('🌱 Seeding the database with updated roles...');
 
-  // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 10);
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    update: {},
-    create: {
-      username: 'admin',
-      email: 'admin@example.com',
-      password: adminPassword,
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'ADMIN',
-    },
-  });
+  // --- Create Users with Correct Roles --- 
+  const usersToCreate = [
+    { username: 'admin', password: 'admin123', firstName: 'Admin', lastName: 'User', email: 'admin@example.com', role: 'ADMIN' },
+    { username: 'owner', password: 'owner123', firstName: 'Owner', lastName: 'User', email: 'owner@example.com', role: 'OWNER' },
+    { username: 'retailer', password: 'retailer123', firstName: 'Retail', lastName: 'User', email: 'retailer@example.com', role: 'RETAILER' },
+    { username: 'roaster', password: 'roaster123', firstName: 'Roast', lastName: 'User', email: 'roaster@example.com', role: 'ROASTER' },
+    { username: 'barista', password: 'barista123', firstName: 'Barista', lastName: 'User', email: 'barista@example.com', role: 'BARISTA' },
+  ];
 
-  console.log(`Created admin user: ${admin.username}`);
+  const createdUsers = {};
 
-  // Create manager user (using OWNER role)
-  const managerPassword = await bcrypt.hash('manager123', 10);
-  const manager = await prisma.user.upsert({
-    where: { email: 'manager@example.com' },
-    update: {},
-    create: {
-      username: 'manager',
-      email: 'manager@example.com',
-      password: managerPassword,
-      firstName: 'Manager',
-      lastName: 'User',
-      role: 'OWNER',
-    },
-  });
+  for (const userData of usersToCreate) {
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    try {
+      const user = await prisma.user.upsert({
+        where: { email: userData.email },
+        update: { 
+          role: userData.role, // Use string role instead of enum
+          password: hashedPassword, // Update password on seed run
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          username: userData.username
+        },
+        create: {
+          username: userData.username,
+          email: userData.email,
+          password: hashedPassword,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          role: userData.role, // Use string role from loop
+        },
+      });
+      createdUsers[userData.role] = user; // Store created user by role for later use
+      console.log(`Created/Updated ${userData.role} user: ${user.username}`);
+    } catch (error) {
+        console.error(`Failed to create/update user ${userData.username}:`, error);
+        // Decide if you want to continue or exit on error
+    }
+  }
 
-  console.log(`Created manager (owner) user: ${manager.username}`);
+  // --- Create Team and Assign Users (Example) ---
+  let team;
+  try {
+      team = await prisma.team.upsert({
+          where: { name: 'Main Operations' },
+          update: {},
+          create: {
+              name: 'Main Operations',
+              description: 'Primary operational team',
+          },
+      });
+      console.log(`Created/Found team: ${team.name}`);
+  } catch (error) {
+      console.error("Failed to create/find team:", error);
+      // Handle error appropriately, maybe exit
+  }
 
-  // Create regular user (using BARISTA role)
-  const userPassword = await bcrypt.hash('user123', 10);
-  const user = await prisma.user.upsert({
-    where: { email: 'user@example.com' },
-    update: {},
-    create: {
-      username: 'user',
-      email: 'user@example.com',
-      password: userPassword,
-      firstName: 'Regular',
-      lastName: 'User',
-      role: 'BARISTA',
-    },
-  });
+  if (team && Object.keys(createdUsers).length > 0) {
+      // Example assignments - adjust as needed
+      const assignments = [
+          { role: 'ADMIN', teamRole: 'OWNER' }, 
+          { role: 'OWNER', teamRole: 'ADMIN' },
+          { role: 'RETAILER', teamRole: 'MEMBER' },
+          { role: 'ROASTER', teamRole: 'MEMBER' },
+          { role: 'BARISTA', teamRole: 'MEMBER' },
+      ];
 
-  console.log(`Created regular (barista) user: ${user.username}`);
+      for (const assignment of assignments) {
+          const user = createdUsers[assignment.role];
+          if (user) {
+              try {
+                  await prisma.userTeam.upsert({
+                      where: { userId_teamId: { userId: user.id, teamId: team.id } },
+                      update: { role: assignment.teamRole }, // Update role if assignment exists
+                      create: {
+                          userId: user.id,
+                          teamId: team.id,
+                          role: assignment.teamRole, // Use string role instead of enum
+                      },
+                  });
+                  console.log(`Assigned ${assignment.role} user (${user.username}) to team ${team.name} as ${assignment.teamRole}`);
+              } catch (error) {
+                  console.error(`Failed to assign user ${user.username} to team:`, error);
+              }
+          }
+      }
+  } else {
+      console.log('Skipping team assignments (team or users missing).');
+  }
 
-  // Create a team
-  const team = await prisma.team.upsert({
-    where: { name: 'Engineering' },
-    update: {},
-    create: {
-      name: 'Engineering',
-      description: 'Engineering department responsible for development',
-    },
-  });
-
-  console.log(`Created team: ${team.name}`);
-
-  // Assign users to the team
-  await prisma.userTeam.upsert({
-    where: { userId_teamId: { userId: admin.id, teamId: team.id } },
-    update: {},
-    create: {
-      userId: admin.id,
-      teamId: team.id,
-      role: 'OWNER',
-    },
-  });
-
-  await prisma.userTeam.upsert({
-    where: { userId_teamId: { userId: manager.id, teamId: team.id } },
-    update: {},
-    create: {
-      userId: manager.id,
-      teamId: team.id,
-      role: 'ADMIN',
-    },
-  });
-
-  await prisma.userTeam.upsert({
-    where: { userId_teamId: { userId: user.id, teamId: team.id } },
-    update: {},
-    create: {
-      userId: user.id,
-      teamId: team.id,
-      role: 'MEMBER',
-    },
-  });
-
-  console.log('Assigned users to the Engineering team');
-
-  // Create permissions for admin
+  // --- Create Permissions (Example for ADMIN) ---
+  // Permissions might need adjustment based on new roles
   const adminPermissions = [
     { resource: 'user', action: 'create' },
     { resource: 'user', action: 'read' },
     { resource: 'user', action: 'update' },
     { resource: 'user', action: 'delete' },
+    { resource: 'shop', action: 'create' },
+    { resource: 'shop', action: 'read' },
+    { resource: 'shop', action: 'update' },
+    { resource: 'shop', action: 'delete' },
     { resource: 'team', action: 'create' },
     { resource: 'team', action: 'read' },
     { resource: 'team', action: 'update' },
     { resource: 'team', action: 'delete' },
   ];
 
-  for (const perm of adminPermissions) {
-    await prisma.permission.upsert({
-      where: {
-        userId_resource_action: {
-          userId: admin.id,
-          resource: perm.resource,
-          action: perm.action,
-        },
-      },
-      update: {},
-      create: {
-        name: `${perm.action}_${perm.resource}`,
-        resource: perm.resource,
-        action: perm.action,
-        userId: admin.id,
-        createdById: admin.id,
-      },
-    });
+  const adminUser = createdUsers['ADMIN'];
+  if (adminUser) {
+      console.log(`Setting up permissions for ADMIN user: ${adminUser.username}`);
+      for (const perm of adminPermissions) {
+          try {
+              await prisma.permission.upsert({
+                  where: {
+                      userId_resource_action: {
+                          userId: adminUser.id,
+                          resource: perm.resource,
+                          action: perm.action,
+                      },
+                  },
+                  update: {},
+                  create: {
+                      name: `${perm.action}_${perm.resource}`,
+                      resource: perm.resource,
+                      action: perm.action,
+                      userId: adminUser.id,
+                      createdById: adminUser.id, // Admin creates their own permissions here
+                  },
+              });
+          } catch (error) {
+              console.error(`Failed to create permission ${perm.action}_${perm.resource} for admin:`, error);
+          }
+      }
+      console.log('Finished setting up admin permissions.');
+  } else {
+      console.log('ADMIN user not found, skipping admin permission setup.');
   }
 
-  console.log('Created admin permissions');
-
-  // Create permissions for manager
-  const managerPermissions = [
-    { resource: 'user', action: 'read' },
-    { resource: 'user', action: 'update' },
-    { resource: 'team', action: 'read' },
-    { resource: 'team', action: 'update' },
-  ];
-
-  for (const perm of managerPermissions) {
-    await prisma.permission.upsert({
-      where: {
-        userId_resource_action: {
-          userId: manager.id,
-          resource: perm.resource,
-          action: perm.action,
-        },
-      },
-      update: {},
-      create: {
-        name: `${perm.action}_${perm.resource}`,
-        resource: perm.resource,
-        action: perm.action,
-        userId: manager.id,
-        createdById: admin.id,
-      },
-    });
-  }
-
-  console.log('Created manager permissions');
-
-  // Create permissions for regular user
-  const userPermissions = [
-    { resource: 'user', action: 'read' },
-    { resource: 'team', action: 'read' },
-  ];
-
-  for (const perm of userPermissions) {
-    await prisma.permission.upsert({
-      where: {
-        userId_resource_action: {
-          userId: user.id,
-          resource: perm.resource,
-          action: perm.action,
-        },
-      },
-      update: {},
-      create: {
-        name: `${perm.action}_${perm.resource}`,
-        resource: perm.resource,
-        action: perm.action,
-        userId: user.id,
-        createdById: admin.id,
-      },
-    });
-  }
-
-  console.log('Created user permissions');
+  // TODO: Define and create permissions for OWNER, RETAILER, ROASTER, BARISTA as needed
 
   console.log('✅ Seeding completed successfully');
 }

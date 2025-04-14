@@ -1,38 +1,28 @@
 import prisma from './prisma';
 
 /**
- * Get all shops with pagination and filtering
+ * Get shops with pagination and filtering (basic)
  */
-export async function getShops(page = 1, limit = 10, search = '', sortBy = 'name', sortOrder = 'asc') {
+export async function getShops(page = 1, limit = 10, search = '') {
   const skip = (page - 1) * limit;
-  
-  const where = search
-    ? {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { address: { contains: search, mode: 'insensitive' } },
-        ],
-      }
-    : {};
+
+  const where = {
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { address: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  };
 
   const [shops, total] = await Promise.all([
     prisma.shop.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { [sortBy]: sortOrder },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        _count: {
-          select: { users: true },
-        },
+      orderBy: { name: 'asc' },
+      include: { 
+        createdBy: { select: { id: true, username: true } } // Include basic creator info
       },
     }),
     prisma.shop.count({ where }),
@@ -56,31 +46,9 @@ export async function getShopById(id) {
   return prisma.shop.findUnique({
     where: { id },
     include: {
-      createdBy: {
-        select: {
-          id: true,
-          username: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-        },
-      },
-      users: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-              status: true,
-            },
-          },
-        },
-      },
-    },
+      createdBy: { select: { id: true, username: true } },
+      users: { include: { user: { select: { id: true, username: true, role: true } } } } // Include associated users
+    }
   });
 }
 
@@ -88,12 +56,14 @@ export async function getShopById(id) {
  * Create a new shop
  */
 export async function createShop(data, createdById) {
+  const { name, address, minCoffeeQuantityLarge, minCoffeeQuantitySmall } = data;
   return prisma.shop.create({
     data: {
-      ...data,
-      createdBy: {
-        connect: { id: createdById },
-      },
+      name,
+      address,
+      minCoffeeQuantityLarge: parseInt(minCoffeeQuantityLarge, 10) || 0,
+      minCoffeeQuantitySmall: parseInt(minCoffeeQuantitySmall, 10) || 0,
+      createdById: createdById,
     },
   });
 }
@@ -102,9 +72,16 @@ export async function createShop(data, createdById) {
  * Update an existing shop
  */
 export async function updateShop(id, data) {
-  return prisma.shop.update({
+   const { name, address, minCoffeeQuantityLarge, minCoffeeQuantitySmall } = data;
+   return prisma.shop.update({
     where: { id },
-    data,
+    data: {
+      name,
+      address,
+      minCoffeeQuantityLarge: parseInt(minCoffeeQuantityLarge, 10) || undefined, // Only update if provided
+      minCoffeeQuantitySmall: parseInt(minCoffeeQuantitySmall, 10) || undefined,
+      // Cannot change createdById
+    },
   });
 }
 
@@ -112,6 +89,8 @@ export async function updateShop(id, data) {
  * Delete a shop
  */
 export async function deleteShop(id) {
+  // Consider relations: deleting a shop might need to handle UserShop relations
+  // Depending on cascade settings in schema, this might be automatic or need manual steps
   return prisma.shop.delete({
     where: { id },
   });
@@ -119,17 +98,14 @@ export async function deleteShop(id) {
 
 /**
  * Add a user to a shop
+ * (Moved here from user-service for better organization)
  */
 export async function addUserToShop(userId, shopId, role = 'BARISTA') {
   return prisma.userShop.create({
     data: {
-      user: {
-        connect: { id: userId },
-      },
-      shop: {
-        connect: { id: shopId },
-      },
-      role,
+      userId,
+      shopId,
+      role, // Ensure this role matches the Role enum
     },
   });
 }
@@ -140,10 +116,7 @@ export async function addUserToShop(userId, shopId, role = 'BARISTA') {
 export async function removeUserFromShop(userId, shopId) {
   return prisma.userShop.delete({
     where: {
-      userId_shopId: {
-        userId,
-        shopId,
-      },
+      userId_shopId: { userId, shopId },
     },
   });
 }

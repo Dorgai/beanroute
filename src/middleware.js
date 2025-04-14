@@ -14,6 +14,7 @@ const publicPaths = [
   '/api/auth/login',
   '/api/auth/logout',
   '/api/admin/test-db', // Allow db testing
+  '/api/health',
 ];
 
 // Check if a path is public

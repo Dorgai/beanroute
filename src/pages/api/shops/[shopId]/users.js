@@ -1,25 +1,25 @@
-import { getUserFromRequest } from '../../../../lib/auth';
+import { verifyRequestAndGetUser } from '../../../../lib/auth';
 import { getShopById, addUserToShop, removeUserFromShop, updateUserRoleInShop } from '../../../../lib/shop-service';
 import { canManageShops } from '../../../../lib/user-service';
 
 export default async function handler(req, res) {
   try {
-    // Get current user
-    const user = await getUserFromRequest(req);
+    // Get current user with the correct function that works in API routes
+    const user = await verifyRequestAndGetUser(req);
     
     if (!user) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
     
-    // Get shop ID from query
-    const { id } = req.query;
+    // Get shop ID from query - using shopId to match the file naming
+    const { shopId } = req.query;
     
-    if (!id) {
+    if (!shopId) {
       return res.status(400).json({ message: 'Shop ID is required' });
     }
     
     // Verify shop exists
-    const shop = await getShopById(id);
+    const shop = await getShopById(shopId);
     if (!shop) {
       return res.status(404).json({ message: 'Shop not found' });
     }
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'User ID is required' });
       }
       
-      const userShop = await addUserToShop(userId, id, role || 'BARISTA');
+      const userShop = await addUserToShop(userId, shopId, role || 'BARISTA');
       
       return res.status(201).json({
         message: 'User added to shop successfully',
@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         });
       }
       
-      const updatedUserShop = await updateUserRoleInShop(userId, id, role);
+      const updatedUserShop = await updateUserRoleInShop(userId, shopId, role);
       
       return res.status(200).json({
         message: 'User role updated successfully',
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'User ID is required' });
       }
       
-      await removeUserFromShop(userId, id);
+      await removeUserFromShop(userId, shopId);
       
       return res.status(200).json({
         message: 'User removed from shop successfully',
@@ -85,6 +85,7 @@ export default async function handler(req, res) {
     }
     
     // Return 405 for other methods
+    res.setHeader('Allow', ['POST', 'PUT', 'DELETE']);
     return res.status(405).json({ message: 'Method not allowed' });
   } catch (error) {
     console.error('Error in shop users API:', error);
