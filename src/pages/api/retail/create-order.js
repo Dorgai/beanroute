@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from '@/lib/session';
-import { createActivityLog } from '@/lib/activity';
+import { createActivityLog } from '@/lib/activity-service';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

@@ -20,6 +20,7 @@ import {
   Button,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useSession } from '@/lib/session';
 import { format } from 'date-fns';

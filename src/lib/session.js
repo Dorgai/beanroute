@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { verifyRequestAndGetUser } from './auth';
 
 export function useSession() {
   const [session, setSession] = useState(null);
@@ -31,4 +32,15 @@ export function useSession() {
     loading,
     setSession
   };
+}
+
+export async function getServerSession(req, res) {
+  try {
+    const user = await verifyRequestAndGetUser(req);
+    if (!user) return null;
+    return { user };
+  } catch (error) {
+    console.error('Error getting server session:', error);
+    return null;
+  }
 } 

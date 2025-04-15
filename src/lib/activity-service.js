@@ -268,4 +268,14 @@ export async function getActivitySummary(days = 30) {
     topUsers,
     periodDays: days
   };
+}
+
+export async function createActivityLog(userId, action, resource, resourceId, details = {}) {
+  return logActivity({
+    userId,
+    action,
+    resource,
+    resourceId,
+    details: JSON.stringify(details)
+  });
 } 
