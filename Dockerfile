@@ -5,8 +5,9 @@ WORKDIR /app
 # Install dependencies needed for PostgreSQL client
 RUN apk add --no-cache postgresql-client
 
-# Copy package files
+# Copy package files and Prisma schema
 COPY package*.json ./
+COPY prisma ./prisma/
 RUN npm ci
 
 # Copy application code
