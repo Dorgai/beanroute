@@ -1,108 +1,85 @@
-# User Management System
+# BeanRoute
 
-A complete user management, authentication, and access rights management system with a beautiful UI.
+A specialty coffee management system for coffee shops and roasters to manage inventory, users, and activities.
 
 ## Features
 
-- User authentication with JWT tokens
-- Role-based access control
-- User management (create, update, delete users)
-- Team management for organizing users
-- Permission management for fine-grained access control
-- Audit trail for user activities
-- Session management
+- User management with role-based access control
+- Coffee inventory tracking and management
+- Shop and team organization
+- Activity monitoring and logging
+- Responsive UI for all devices
 
-## Tech Stack
+## Local Development
 
-- **Frontend**: Next.js, React, Tailwind CSS
-- **Backend**: Node.js, Express, Next.js API Routes
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT with bcrypt for password hashing
-- **Deployment**: Railway
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ and npm
-- PostgreSQL database
-
-### Installation
-
-1. Clone the repository:
-
-```bash
-git clone <your-repository-url>
-cd user-management-system
-```
-
+1. Clone the repository
 2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Set up environment variables:
-
-Copy the `.env.example` file to `.env` and update the values:
+3. Setup the local database:
 
 ```bash
-cp .env.example .env
+./setup-local-db.sh
 ```
 
-Update the `DATABASE_URL` and `JWT_SECRET` in the `.env` file.
-
-4. Set up the database:
+4. Start the development server:
 
 ```bash
-npx prisma migrate dev
+./start-dev.sh
 ```
 
-5. Seed the database:
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-```bash
-npx prisma db seed
-```
+## Default User Accounts
 
-6. Run the development server:
+- Admin: username: `admin`, password: `admin123`
+- Owner: username: `owner`, password: `owner123`
+- Retailer: username: `retailer`, password: `retailer123`
+- Roaster: username: `roaster`, password: `roaster123`
+- Barista: username: `barista`, password: `barista123`
 
-```bash
-npm run dev
-```
+## Railway Deployment Instructions
 
-7. Open [http://localhost:3000](http://localhost:3000) in your browser.
+This application is configured for easy deployment to Railway.
 
-## Default Users
+### Prerequisites
 
-After seeding the database, the following users will be available:
+1. A Railway account
+2. Railway CLI installed (optional, for local deployments)
 
-- Admin User:
-  - Username: `admin`
-  - Password: `admin123`
-  - Role: `ADMIN`
-
-- Manager User:
-  - Username: `manager`
-  - Password: `manager123`
-  - Role: `MANAGER`
-
-- Regular User:
-  - Username: `user`
-  - Password: `user123`
-  - Role: `USER`
-
-## Deployment to Railway
+### Deployment Steps
 
 1. Create a new project in Railway
-2. Add a PostgreSQL database to your project
-3. Connect your GitHub repository
-4. Configure environment variables in Railway:
-   - `DATABASE_URL` (provided by Railway PostgreSQL plugin)
-   - `DIRECT_DATABASE_URL` (provided by Railway PostgreSQL plugin)
-   - `JWT_SECRET` (generate a strong secret key)
-   - `NODE_ENV=production`
+2. Add a PostgreSQL database service
+3. Add a web service connected to your GitHub repository
+4. Set the following environment variables in the web service:
+
+```
+DATABASE_URL=postgresql://railway:password@hostname:port/railway
+JWT_SECRET=your-secure-random-string
+NODE_ENV=production
+SEED_DATABASE=true  # Set to 'true' only for initial deployment
+```
+
 5. Deploy the application
+
+### Database Migrations
+
+Database migrations are automatically applied during deployment through the `deploy-db.sh` script called from the `docker-entrypoint.sh` script. For manual migrations:
+
+```bash
+# For local use
+export DATABASE_URL=your-railway-db-url
+./deploy-railway-db.sh
+```
+
+### Health Checks
+
+The application provides a health check endpoint at `/api/health` which Railway uses to verify successful deployment.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+[MIT](LICENSE) 

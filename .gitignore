@@ -42,7 +42,9 @@ next-env.d.ts
 
 # Prisma
 /prisma/.env
-/prisma/migrations/*_init
+
+# Sample data scripts
+create-activity-logs.js
 
 # Reference project
 /reference 

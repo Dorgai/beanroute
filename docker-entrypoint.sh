@@ -11,10 +11,6 @@ fi
 
 echo "Starting with NODE_ENV: ${NODE_ENV:-development}"
 
-# Install PostgreSQL client for database setup
-echo "Installing PostgreSQL client..."
-apk add --no-cache postgresql-client
-
 # Generate Prisma client
 echo "Generating Prisma client..."
 npx prisma generate || {

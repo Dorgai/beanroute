@@ -22,12 +22,18 @@ npx prisma migrate deploy
 if [ $? -eq 0 ]; then
   echo "✅ Migrations successfully deployed to Railway!"
   
-  # Optional: seed the database
-  read -p "Do you want to seed the database with initial data? (y/n) " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Seeding the database..."
+  # Check if SEED_DATABASE is set to true
+  if [ "$SEED_DATABASE" = "true" ]; then
+    echo "SEED_DATABASE is set to true, seeding the database..."
     npx prisma db seed
+  else
+    # Optional: seed the database manually
+    read -p "Do you want to seed the database with initial data? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      echo "Seeding the database..."
+      npx prisma db seed
+    fi
   fi
 else
   echo "❌ Migration failed. Please check the error messages above."
