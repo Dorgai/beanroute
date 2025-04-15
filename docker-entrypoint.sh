@@ -5,6 +5,12 @@ set -e
 
 echo "Starting application deployment..."
 
+# Use the public database URL if available
+if [ -n "$DATABASE_PUBLIC_URL" ]; then
+  echo "Using public database URL..."
+  export DATABASE_URL="$DATABASE_PUBLIC_URL"
+fi
+
 # Generate Prisma Client
 echo "Generating Prisma Client..."
 npx prisma generate
