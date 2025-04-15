@@ -1,40 +1,20 @@
 #!/bin/bash
 
-# Deploy migrations to Railway database
-echo "Deploying database migrations to Railway..."
+# Exit on error
+set -e
 
-# Check if we have DATABASE_URL in the environment
-if [ -z "$DATABASE_URL" ]; then
-  echo "Error: DATABASE_URL environment variable is not set"
-  echo "Please ensure you're connected to Railway CLI or set the variable manually"
-  exit 1
-fi
+echo "Starting database deployment script..."
 
-# Show the database we're connecting to (masked)
-MASKED_URL=$(echo $DATABASE_URL | sed 's/postgresql:\/\/[^:]*:[^@]*@/postgresql:\/\/user:password@/')
-echo "Target database: $MASKED_URL"
+# Generate Prisma Client
+echo "Generating Prisma Client..."
+npx prisma generate
 
-# Try to run the migrations
-echo "Running Prisma migrations..."
+# Run database migrations
+echo "Running database migrations..."
 npx prisma migrate deploy
 
-# Check the result
-if [ $? -eq 0 ]; then
-  echo "✅ Migrations successfully deployed to Railway!"
-  
-  # Check if SEED_DATABASE is set to true
-  if [ "$SEED_DATABASE" = "true" ]; then
-    echo "SEED_DATABASE is set to true, seeding the database..."
-    npx prisma db seed
-  else
-    # Optional: seed the database manually
-    read -p "Do you want to seed the database with initial data? (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      echo "Seeding the database..."
-      npx prisma db seed
-    fi
-  fi
-else
-  echo "❌ Migration failed. Please check the error messages above."
-fi 
+# Seed the database if needed (optional)
+# echo "Seeding the database..."
+# npx prisma db seed
+
+echo "Database deployment completed successfully!" 

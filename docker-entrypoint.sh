@@ -1,30 +1,18 @@
-#!/bin/sh
+#!/bin/bash
 
-echo "Starting application in Docker container..."
-echo "Current directory: $(pwd)"
+# Exit on error
+set -e
 
-# Check if required environment variables are set
-if [ -z "$DATABASE_URL" ]; then
-  echo "ERROR: DATABASE_URL is not set."
-  exit 1
-fi
+echo "Starting application deployment..."
 
-echo "Starting with NODE_ENV: ${NODE_ENV:-development}"
+# Generate Prisma Client
+echo "Generating Prisma Client..."
+npx prisma generate
 
-# Generate Prisma client
-echo "Generating Prisma client..."
-npx prisma generate || {
-  echo "⚠️ Prisma client generation failed."
-  echo "⚠️ Continuing anyway... Some features may not work."
-}
-
-# Deploy database schema using our dedicated script
-echo "Deploying database schema..."
-./deploy-db.sh || {
-  echo "⚠️ Database schema deployment might not be complete."
-  echo "⚠️ Continuing anyway... Some features may not work."
-}
+# Run database migrations
+echo "Running database migrations..."
+npx prisma migrate deploy
 
 # Start the application
 echo "Starting the application..."
-node server.js 
+npm run start:server 
