@@ -1,5 +1,9 @@
 import prisma from '../../lib/prisma';
 
+// Track server start time
+const startTime = Date.now();
+const STARTUP_GRACE_PERIOD = 300000; // Increased to 5 minutes grace period
+
 /**
  * Health Check API
  * 
@@ -19,8 +23,15 @@ export default async function handler(req, res) {
     timestamp: new Date().toISOString(),
     api: 'operational',
     environment: process.env.NODE_ENV || 'development',
-    database: 'unknown'
+    database: 'unknown',
+    uptime: Date.now() - startTime
   };
+
+  // During startup grace period, always return healthy
+  if (Date.now() - startTime < STARTUP_GRACE_PERIOD) {
+    healthStatus.database = 'initializing';
+    return res.status(200).json(healthStatus);
+  }
 
   try {
     // Test database connection by executing a simple query
@@ -35,6 +46,9 @@ export default async function handler(req, res) {
     console.error('Database health check failed:', error);
     healthStatus.database = 'disconnected';
     healthStatus.dbError = process.env.NODE_ENV === 'development' ? error.message : 'Database connection error';
+    
+    // Still return 200 even if the database is not connected
+    // This allows the application to start even when database is temporarily unavailable
   }
 
   // Always return 200 to pass Railway's health check
