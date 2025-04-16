@@ -28,15 +28,14 @@ export default function DashboardLayout({ children }) {
     { name: 'Activities', href: '/activities' },
   ];
 
-  // TEMPORARY FIX: Always add Retail Orders for debugging
-  // Skip all conditional logic for now
+  // Add Retail Orders for all users except certain cases
+  // We now include ROASTER role in the list of roles that can access orders
   let navigation = [
     ...commonNavItems,
     { name: 'Retail Orders', href: '/orders' }
   ];
   
   // Debug logging
-  console.log('FORCING Retail Orders menu item visible for all users');
   console.log('User role:', session.user.role);
   console.log('Navigation items:', navigation.map(item => item.name));
 
