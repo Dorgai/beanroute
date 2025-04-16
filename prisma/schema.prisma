@@ -7,7 +7,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_PUBLIC_URL")
 }
 
 // User model - Core of our user management system
@@ -253,6 +252,8 @@ enum CoffeeGrade {
 enum OrderStatus {
   PENDING
   CONFIRMED
+  ROASTED
+  DISPATCHED
+  DELIVERED
   CANCELLED
-  COMPLETED
 } 

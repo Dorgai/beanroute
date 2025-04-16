@@ -92,7 +92,10 @@ export default function CoffeeListPage() {
     }
   };
 
-  const canManageCoffee = user && ['ADMIN', 'OWNER'].includes(user.role);
+  // Allow admin, owner and roaster to manage coffee
+  const canManageCoffee = user && ['ADMIN', 'OWNER', 'ROASTER'].includes(user.role);
+  // Only allow admin and owner to add new coffee
+  const canAddCoffee = user && ['ADMIN', 'OWNER'].includes(user.role);
 
   return (
     <div className="container mx-auto px-4 py-4">
@@ -102,7 +105,7 @@ export default function CoffeeListPage() {
           <Link href="/coffee/inventory" className="bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-3 rounded-md text-sm flex items-center">
             Inventory History
           </Link>
-          {canManageCoffee && (
+          {canAddCoffee && (
             <Link href="/coffee/create" className="bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 px-3 rounded-md text-sm flex items-center">
               <FiPlus className="mr-1" /> Add Coffee
             </Link>
@@ -162,6 +165,9 @@ export default function CoffeeListPage() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roaster</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origin</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                   {canManageCoffee && (
@@ -185,6 +191,15 @@ export default function CoffeeListPage() {
                       <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.producer || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.country || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.grade?.replace('_', ' ') || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
                       <div className={`text-sm ${coffee.quantity > 0 ? 'text-green-600 font-medium' : 'text-red-500'}`}>
                         {coffee.quantity ? `${coffee.quantity} kg` : 'Out of stock'}
                       </div>
@@ -205,19 +220,30 @@ export default function CoffeeListPage() {
                             View
                           </Link>
                           <Link
-                            href={`/coffee/edit/${coffee.id}`}
+                            href={`/coffee/${coffee.id}`}
                             className="text-indigo-600 hover:text-indigo-800"
-                            title="Edit coffee"
+                            title="Update inventory"
                           >
-                            <FiEdit2 className="inline" />
+                            Inventory
                           </Link>
-                          <button
-                            onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete coffee"
-                          >
-                            <FiTrash2 className="inline" />
-                          </button>
+                          {canAddCoffee && (
+                            <>
+                              <Link
+                                href={`/coffee/edit/${coffee.id}`}
+                                className="text-indigo-600 hover:text-indigo-800"
+                                title="Edit coffee"
+                              >
+                                <FiEdit2 className="inline" />
+                              </Link>
+                              <button
+                                onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
+                                className="text-red-600 hover:text-red-800"
+                                title="Delete coffee"
+                              >
+                                <FiTrash2 className="inline" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     )}

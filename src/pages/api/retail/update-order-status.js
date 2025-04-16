@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from '@/lib/session';
 import { createActivityLog } from '@/lib/activity-service';
+import { Prisma } from '@prisma/client';
 
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
@@ -33,6 +34,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Status is required' });
     }
 
+    const validStatusValues = ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
+    if (!validStatusValues.includes(status)) {
+      return res.status(400).json({ 
+        error: 'Invalid status value',
+        validValues: validStatusValues,
+        receivedValue: status
+      });
+    }
+
     // Check if order exists
     const existingOrder = await prisma.retailOrder.findUnique({
       where: { id: orderId },
@@ -56,12 +66,14 @@ export default async function handler(req, res) {
     const userRole = session.user.role;
     
     if (userRole === 'ROASTER') {
-      // Roasters can only update to specific statuses in a specific order
+      // Roasters can update PENDING to CONFIRMED to ROASTED to DISPATCHED
       const allowedTransitions = {
         'PENDING': ['CONFIRMED'],
         'CONFIRMED': ['ROASTED'],
         'ROASTED': ['DISPATCHED'],
-        'DISPATCHED': []  // Roasters cannot change from DISPATCHED status
+        'DISPATCHED': [], // Roasters cannot change from DISPATCHED status
+        'DELIVERED': [],
+        'CANCELLED': []
       };
       
       // Check if the current order status can be updated to the requested status
@@ -72,49 +84,60 @@ export default async function handler(req, res) {
           allowedNextStatuses: allowedTransitions[currentStatus] || []
         });
       }
-    } else if (userRole === 'RETAILER' || userRole === 'BARISTA') {
-      // Retailers and Baristas cannot change to DELIVERED directly from anything other than DISPATCHED
-      if (status === 'DELIVERED' && existingOrder.status !== 'DISPATCHED') {
+    } else if (userRole === 'RETAILER') {
+      // Retailers can change DISPATCHED to DELIVERED or CANCELLED, and can CANCEL from any status
+      const allowedTransitions = {
+        'PENDING': ['CANCELLED'],
+        'CONFIRMED': ['CANCELLED'],
+        'ROASTED': ['CANCELLED'],
+        'DISPATCHED': ['DELIVERED', 'CANCELLED'],
+        'DELIVERED': [],
+        'CANCELLED': []
+      };
+      
+      const currentStatus = existingOrder.status;
+      if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
         return res.status(403).json({ 
-          error: `${userRole}s can only mark orders as DELIVERED from DISPATCHED status`,
-          currentStatus: existingOrder.status
+          error: `Retailers cannot change order status from '${currentStatus}' to '${status}'`,
+          allowedNextStatuses: allowedTransitions[currentStatus] || []
+        });
+      }
+    } else if (userRole === 'BARISTA') {
+      // Baristas can change DISPATCHED to DELIVERED only
+      const allowedTransitions = {
+        'PENDING': [],
+        'CONFIRMED': [],
+        'ROASTED': [],
+        'DISPATCHED': ['DELIVERED'],
+        'DELIVERED': [],
+        'CANCELLED': []
+      };
+      
+      const currentStatus = existingOrder.status;
+      if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+        return res.status(403).json({ 
+          error: `Baristas cannot change order status from '${currentStatus}' to '${status}'`,
+          allowedNextStatuses: allowedTransitions[currentStatus] || []
         });
       }
     }
+    // Admin and Owner can change to any status - no restrictions needed
 
-    // Map the frontend status values to the database enum values
-    const statusMap = {
-      'PENDING': 'PENDING',
-      'CONFIRMED': 'CONFIRMED',
-      'ROASTED': 'ROASTED',
-      'DISPATCHED': 'DISPATCHED',
-      'DELIVERED': 'DELIVERED',
-      'CANCELLED': 'CANCELLED'
-    };
-
-    const dbStatus = statusMap[status];
-    if (!dbStatus) {
-      console.error(`Invalid status value: ${status}`);
-      return res.status(400).json({ 
-        error: 'Invalid status value',
-        validValues: Object.keys(statusMap),
-        receivedValue: status
-      });
-    }
-
-    // Start a transaction for the status update
     try {
       // Use a transaction to ensure all database operations are atomic
       const updatedOrder = await prisma.$transaction(async (tx) => {
-        console.log(`Updating order status to ${dbStatus}`);
+        console.log(`Updating order status to ${status}`);
         
-        // Update the order status
-        const orderUpdate = await tx.retailOrder.update({
+        // Use executeRaw with proper quoting for the enum value
+        await tx.$executeRaw`
+          UPDATE "RetailOrder"
+          SET status = ${status}::text::\"OrderStatus\", "updatedAt" = now()
+          WHERE id = ${orderId}
+        `;
+        
+        // Fetch the updated order
+        const result = await tx.retailOrder.findUnique({
           where: { id: orderId },
-          data: { 
-            status: dbStatus,
-            updatedAt: new Date() 
-          },
           include: {
             shop: true,
             items: {
@@ -125,7 +148,7 @@ export default async function handler(req, res) {
           }
         });
         
-        console.log(`Updated order ${orderId} status from ${existingOrder.status} to ${dbStatus}`);
+        console.log(`Updated order ${orderId} status from ${existingOrder.status} to ${status}`);
 
         // If the status is being changed to DELIVERED, update the inventory
         if (status === 'DELIVERED') {
@@ -190,7 +213,7 @@ export default async function handler(req, res) {
           }
         }
         
-        return orderUpdate;
+        return result;
       });
 
       // Create activity log

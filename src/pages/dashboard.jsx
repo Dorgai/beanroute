@@ -45,6 +45,13 @@ function Dashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Check if user is authorized to view dashboard (only ADMIN and OWNER)
+    if (user && !(user.role === 'ADMIN' || user.role === 'OWNER')) {
+      console.log('Unauthorized user trying to access dashboard, redirecting to orders page');
+      window.location.href = '/orders';
+      return;
+    }
+
     // Fetch dashboard statistics
     async function fetchStats() {
       try {
@@ -65,15 +72,23 @@ function Dashboard() {
       }
     }
 
-    fetchStats();
-  }, []);
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
 
-  if (loading) {
+  // If not loaded yet or no user, show loading
+  if (loading || !user) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
+  }
+
+  // Only ADMIN and OWNER can access dashboard
+  if (user && !(user.role === 'ADMIN' || user.role === 'OWNER')) {
+    return null; // This should never render as we redirect in the useEffect
   }
 
   return (

@@ -326,7 +326,12 @@ function StatusUpdateDialog({ open, onClose, order }) {
   // Get user role
   const userRole = session?.user?.role || '';
   const isRoaster = userRole === 'ROASTER';
-  const isRetailerOrBarista = userRole === 'RETAILER' || userRole === 'BARISTA';
+  const isRetailer = userRole === 'RETAILER';
+  const isBarista = userRole === 'BARISTA';
+  const isAdmin = userRole === 'ADMIN';
+  const isOwner = userRole === 'OWNER';
+  
+  console.log('StatusUpdateDialog - Current user role:', userRole, 'isAdmin:', isAdmin, 'isOwner:', isOwner);
 
   useEffect(() => {
     // Reset status when dialog opens with defensive check
@@ -344,28 +349,52 @@ function StatusUpdateDialog({ open, onClose, order }) {
   const getValidNextStatuses = () => {
     if (!order) return [];
     
+    // Admin and Owner can do any status change
+    if (isAdmin || isOwner) {
+      return ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
+    }
+    
     const currentStatus = order.status;
     
     if (isRoaster) {
-      // Roasters can only change status in specific sequence
+      // Roasters can update PENDING to CONFIRMED to ROASTED to DISPATCHED
       const allowedTransitions = {
         'PENDING': ['CONFIRMED'],
         'CONFIRMED': ['ROASTED'],
         'ROASTED': ['DISPATCHED'],
-        'DISPATCHED': [] // Roasters cannot change from DISPATCHED status
+        'DISPATCHED': [], // Roasters cannot change from DISPATCHED status
+        'DELIVERED': [],
+        'CANCELLED': []
       };
       return allowedTransitions[currentStatus] || [];
     } 
-    else if (isRetailerOrBarista) {
-      // Retailers/Baristas cannot change to DELIVERED except from DISPATCHED
-      if (currentStatus === 'DISPATCHED') {
-        return ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
-      } else {
-        return ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'CANCELLED'];
-      }
+    else if (userRole === 'RETAILER') {
+      // Retailers can change DISPATCHED to DELIVERED or CANCELLED, and can CANCEL from any status
+      const allowedTransitions = {
+        'PENDING': ['CANCELLED'],
+        'CONFIRMED': ['CANCELLED'],
+        'ROASTED': ['CANCELLED'],
+        'DISPATCHED': ['DELIVERED', 'CANCELLED'],
+        'DELIVERED': [],
+        'CANCELLED': []
+      };
+      return allowedTransitions[currentStatus] || [];
     }
-    // Admin and Owner can do any status change
-    return ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
+    else if (userRole === 'BARISTA') {
+      // Baristas can change DISPATCHED to DELIVERED only
+      const allowedTransitions = {
+        'PENDING': [],
+        'CONFIRMED': [],
+        'ROASTED': [],
+        'DISPATCHED': ['DELIVERED'],
+        'DELIVERED': [],
+        'CANCELLED': []
+      };
+      return allowedTransitions[currentStatus] || [];
+    }
+    
+    // Default empty array if no role matches
+    return [];
   };
 
   const handleSubmit = async () => {
@@ -460,7 +489,7 @@ function StatusUpdateDialog({ open, onClose, order }) {
                 : 'Unknown date'}
             </Typography>
             
-            {isRoaster && validNextStatuses.length === 0 && (
+            {validNextStatuses.length === 0 && (isRoaster || isRetailer || isBarista) && (
               <Alert severity="info" sx={{ mt: 2, mb: 1 }}>
                 You cannot change the status of this order from its current state: {order.status}
               </Alert>
@@ -476,26 +505,25 @@ function StatusUpdateDialog({ open, onClose, order }) {
                     setStatus(e.target.value);
                   }}
                   label="Status"
-                  disabled={isRoaster && validNextStatuses.length === 0}
+                  disabled={(isRoaster || isRetailer || isBarista) && validNextStatuses.length === 0}
                 >
-                  {isRoaster ? (
-                    // For roasters, only show allowed next statuses
-                    validNextStatuses.map((statusValue) => (
-                      <MenuItem key={statusValue} value={statusValue}>
-                        {statusValue.charAt(0) + statusValue.slice(1).toLowerCase()}
-                      </MenuItem>
-                    ))
-                  ) : (
-                    // For other roles, show all statuses (with restrictions handled by API)
+                  {isAdmin || isOwner ? (
+                    // For Admin and Owner, show all statuses
                     <>
                       <MenuItem value="PENDING">Pending</MenuItem>
                       <MenuItem value="CONFIRMED">Confirmed</MenuItem>
                       <MenuItem value="ROASTED">Roasted</MenuItem>
                       <MenuItem value="DISPATCHED">Dispatched</MenuItem>
-                      {/* Only show DELIVERED option for non-roasters */}
-                      {!isRoaster && <MenuItem value="DELIVERED">Delivered</MenuItem>}
+                      <MenuItem value="DELIVERED">Delivered</MenuItem>
                       <MenuItem value="CANCELLED">Cancelled</MenuItem>
                     </>
+                  ) : (
+                    // For other roles, only show allowed next statuses
+                    validNextStatuses.map((statusValue) => (
+                      <MenuItem key={statusValue} value={statusValue}>
+                        {statusValue.charAt(0) + statusValue.slice(1).toLowerCase()}
+                      </MenuItem>
+                    ))
                   )}
                 </Select>
               </FormControl>
@@ -508,7 +536,13 @@ function StatusUpdateDialog({ open, onClose, order }) {
         <Button 
           onClick={handleSubmit} 
           variant="contained" 
-          disabled={loading || !order || !order.id || !status || (isRoaster && validNextStatuses.length === 0)}
+          disabled={
+            loading || 
+            !order || 
+            !order.id || 
+            !status || 
+            ((isRoaster || isRetailer || isBarista) && validNextStatuses.length === 0)
+          }
         >
           {loading ? 'Updating...' : 'Update Status'}
         </Button>
@@ -533,11 +567,11 @@ function StatusChip({ status }) {
       break;
     case 'ROASTED':
       color = 'secondary';
-      tooltip = 'Coffee has been roasted. Coffee is reserved.';
+      tooltip = 'Coffee has been roasted. Ready for dispatch.';
       break;
     case 'DISPATCHED':
       color = 'primary';
-      tooltip = 'Order has been dispatched. Coffee is reserved.';
+      tooltip = 'Order has been dispatched. Awaiting delivery.';
       break;
     case 'DELIVERED':
       color = 'success';
@@ -564,24 +598,6 @@ function StatusChip({ status }) {
   );
 }
 
-// Add a help box about the order process to the Orders tab
-function OrderProcessInfo() {
-  return (
-    <Alert severity="info" sx={{ mb: 2 }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>Order Process:</Typography>
-      <Typography variant="body2">
-        1. <b>Pending</b>: Order created, coffee reserved from inventory<br />
-        2. <b>Confirmed</b>: Order confirmed, awaiting roasting<br />
-        3. <b>Roasted</b>: Coffee has been roasted<br />
-        4. <b>Dispatched</b>: Order has been shipped<br />
-        5. <b>Delivered</b>: Order has been delivered, shop inventory updated<br />
-        <br />
-        <b>Note:</b> Shop inventory is only updated when an order reaches the "Delivered" status. Cancelled orders return the reserved coffee to inventory.
-      </Typography>
-    </Alert>
-  );
-}
-
 export default function RetailOrders() {
   const { session } = useSession();
   const [loading, setLoading] = useState(true);
@@ -603,6 +619,7 @@ export default function RetailOrders() {
   const userRole = session?.user?.role || '';
   const isRoaster = userRole === 'ROASTER';
   const isRetailer = userRole === 'RETAILER';
+  const isBarista = userRole === 'BARISTA';
   const isAdmin = userRole === 'ADMIN';
   const isOwner = userRole === 'OWNER';
   
@@ -948,21 +965,6 @@ export default function RetailOrders() {
               {error}
             </Alert>
           )}
-
-          {isRoaster && (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>Roaster Workflow:</Typography>
-              <Typography variant="body2">
-                As a roaster, you can update order statuses through the following steps:
-                <ol style={{ marginTop: '0.5rem', marginLeft: '1.5rem' }}>
-                  <li>Change <b>Pending</b> orders to <b>Confirmed</b> once you've reviewed them</li>
-                  <li>Change <b>Confirmed</b> orders to <b>Roasted</b> after roasting the coffee</li>
-                  <li>Change <b>Roasted</b> orders to <b>Dispatched</b> when the order is shipped</li>
-                </ol>
-                Orders marked as <b>Dispatched</b> can be updated to <b>Delivered</b> by shop staff when received.
-              </Typography>
-            </Alert>
-          )}
           
           {/* Alert for pending orders */}
           {shouldShowPendingAlert && hasPendingOrders && (
@@ -972,8 +974,8 @@ export default function RetailOrders() {
               </Typography>
               <Typography variant="body2">
                 {isRoaster ? 
-                  'Please review and confirm these orders to start the roasting process.' : 
-                  'There are orders waiting for confirmation. Please review them.'}
+                  'Please review these orders.' : 
+                  'There are orders waiting for review.'}
               </Typography>
             </Alert>
           )}
@@ -986,7 +988,6 @@ export default function RetailOrders() {
               </Typography>
               <Typography variant="body2">
                 {recentlyChangedOrders.length} {recentlyChangedOrders.length === 1 ? 'order has' : 'orders have'} been updated.
-                {isRetailer && ' Check for orders ready for delivery.'}
               </Typography>
             </Alert>
           )}
@@ -1069,7 +1070,6 @@ export default function RetailOrders() {
             
             {/* Orders Tab */}
             <Box role="tabpanel" hidden={tabIndex !== 1} id="tabpanel-1" aria-labelledby="tab-1" sx={{ py: 2 }}>
-              <OrderProcessInfo />
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                   <Typography>Loading orders...</Typography>

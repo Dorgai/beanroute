@@ -1,46 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-
-// Simple flag to prevent multiple form submissions
-let isSubmitting = false;
+import { useRouter } from 'next/router';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('secret');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const { user, login } = useAuth();
+  
+  // If user is already authenticated, redirect
+  useEffect(() => {
+    if (user) {
+      router.push('/orders');
+    }
+  }, [user, router]);
   
   const handleLogin = async (e) => {
     e.preventDefault();
     
-    // Prevent multiple submissions
     if (isSubmitting) return;
-    isSubmitting = true;
+    setIsSubmitting(true);
+    setError('');
     
     try {
-      console.log(`Login attempt for: ${username}`);
+      const result = await login(username, password);
       
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+      if (!result.success) {
+        setError(result.error || 'Login failed');
       }
-      
-      // Store user data in localStorage
-      console.log('Storing user data and redirecting...');
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // Use direct navigation to dashboard
-      window.location.href = '/dashboard';
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Login failed');
-      isSubmitting = false;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -58,7 +53,7 @@ export default function Login() {
     
     // Save to localStorage and redirect
     localStorage.setItem('user', JSON.stringify(user));
-    window.location.href = '/dashboard';
+    router.push('/orders');
   };
 
   return (
@@ -118,9 +113,10 @@ export default function Login() {
             <div className="space-y-2">
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={isSubmitting}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                Sign in
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </button>
               
               <button

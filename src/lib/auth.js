@@ -172,19 +172,26 @@ export async function checkPermission(userId, resource, action) {
   }
 }
 
-export async function logUserActivity(userId, action, details = {}, req = null) {
+/**
+ * Log user activity
+ */
+export async function logUserActivity(userId, action, details = {}, req) {
   try {
-    return await prisma.userActivity.create({
+    const ipAddress = req?.headers['x-real-ip'] || req?.socket?.remoteAddress || null;
+    const userAgent = req?.headers['user-agent'] || null;
+    
+    await prisma.userActivity.create({
       data: {
         userId,
         action,
-        details,
-        ipAddress: req?.headers['x-forwarded-for'] || req?.socket.remoteAddress,
-        userAgent: req?.headers['user-agent'],
-      },
+        resource: 'USER',
+        details: typeof details === 'string' ? details : JSON.stringify(details),
+        ipAddress,
+        userAgent
+      }
     });
   } catch (error) {
     console.error('Error logging user activity:', error);
-    return null;
+    // Non-critical error, don't throw
   }
 } 

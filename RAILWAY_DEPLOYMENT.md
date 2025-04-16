@@ -4,7 +4,8 @@ This guide will help you deploy the database schema to Railway.
 
 ## Method 1: Using Railway Dashboard
 
-1. Log in to your Railway account at [railway.app](https://railway.app/)
+1. Log in to your Railway account at [
+   railway.app](https://railway.app/)
 2. Select your project
 3. Find your PostgreSQL database service
 4. Click on the "Data" tab

@@ -61,13 +61,16 @@ export default async function handler(req, res) {
 
     console.log(`Login successful for user: ${username}`);
 
+    // Always redirect to orders page
+    const redirectPath = '/orders';
+
     // Set the redirection header
-    res.setHeader('X-Auth-Redirect', '/dashboard');
+    res.setHeader('X-Auth-Redirect', redirectPath);
 
     // Return user data (excluding sensitive fields)
     return res.status(200).json({
       message: 'Login successful',
-      redirect: '/dashboard', // Include redirect URL in response
+      redirect: redirectPath, // Include redirect URL in response
       user: {
         id: user.id,
         username: user.username,

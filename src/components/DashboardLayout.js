@@ -21,29 +21,38 @@ export default function DashboardLayout({ children }) {
 
   // Create navigation items
   const commonNavItems = [
-    { name: 'Users', href: '/users' },
-    { name: 'Shops', href: '/shops' },
     { name: 'Coffee', href: '/coffee' },
     { name: 'Activities', href: '/activities' },
   ];
-
-  // Only show Dashboard for ADMIN and OWNER users
+  
+  // Check user roles for menu visibility
   const userRole = session.user.role;
-  const isDashboardVisible = userRole === 'ADMIN' || userRole === 'OWNER';
+  const isAdminOrOwner = userRole === 'ADMIN' || userRole === 'OWNER';
+  const canViewShops = isAdminOrOwner || userRole === 'RETAILER';
   
   // Build the navigation items based on user role
   let navigation = [];
   
-  // Add Dashboard conditionally
-  if (isDashboardVisible) {
+  // Add Dashboard conditionally - only for admin and owner
+  if (isAdminOrOwner) {
     navigation.push({ name: 'Dashboard', href: '/dashboard' });
+  }
+  
+  // Add Users menu only for admin and owner
+  if (isAdminOrOwner) {
+    navigation.push({ name: 'Users', href: '/users' });
+  }
+  
+  // Add Shops menu only for admin, owner and retailer
+  if (canViewShops) {
+    navigation.push({ name: 'Shops', href: '/shops' });
   }
   
   // Add common navigation items
   navigation = [...navigation, ...commonNavItems];
   
-  // Add Retail Orders for all users
-  navigation.push({ name: 'Retail Orders', href: '/orders' });
+  // Add Orders for all users
+  navigation.push({ name: 'Orders', href: '/orders' });
   
   // Debug logging
   console.log('User role:', session.user.role);

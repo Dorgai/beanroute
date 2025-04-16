@@ -97,6 +97,9 @@ export default function Layout({ children }) {
   
   // Check if user can view coffee inventory in header
   const canViewCoffeeInventory = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
+  
+  // Check if user can access analytics
+  const canViewAnalytics = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -118,18 +121,24 @@ export default function Layout({ children }) {
                 />
               </Link>
               <nav className="hidden md:flex space-x-8">
+                {user && (user.role === 'ADMIN' || user.role === 'OWNER') && (
                 <Link href="/dashboard"
                    className={`text-sm ${router.pathname === '/dashboard' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
                   Dashboard
                 </Link>
+                )}
+                {user && (user.role === 'ADMIN' || user.role === 'OWNER') && (
                 <Link href="/users"
                    className={`text-sm ${router.pathname.startsWith('/users') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
                   Users
                 </Link>
+                )}
+                {user && (user.role === 'ADMIN' || user.role === 'OWNER' || user.role === 'RETAILER') && (
                 <Link href="/shops"
                    className={`text-sm ${router.pathname.startsWith('/shops') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
                   Shops
                 </Link>
+                )}
                 <Link href="/coffee"
                    className={`text-sm ${router.pathname.startsWith('/coffee') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
                   Coffee
@@ -140,11 +149,15 @@ export default function Layout({ children }) {
                     Activities
                   </Link>
                 )}
-                {/* Add Retail Orders menu item for all users except roasters */}
-                {user && user.role !== 'ROASTER' && (
-                  <Link href="/orders"
-                     className={`text-sm ${router.pathname === '/orders' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                    Retail Orders
+                {/* Orders menu item for all users */}
+                <Link href="/orders"
+                   className={`text-sm ${router.pathname === '/orders' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
+                  Orders
+                </Link>
+                {canViewAnalytics && (
+                  <Link href="/analytics"
+                     className={`text-sm ${router.pathname === '/analytics' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
+                    Analytics
                   </Link>
                 )}
               </nav>

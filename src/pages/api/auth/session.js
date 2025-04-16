@@ -14,6 +14,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ user: null });
     }
 
+    // Debug logging for role information
+    console.log('API session handler - user role:', user.role);
+    console.log('API session handler - user role type:', typeof user.role);
+    console.log('API session handler - full user:', JSON.stringify(user, null, 2));
+
     // Return user data (excluding sensitive fields)
     return res.status(200).json({
       user: {
