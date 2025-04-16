@@ -7,45 +7,62 @@ export default async function handler(req, res) {
   }
 
   try {
-    const session = await getServerSession(req, res);
-    if (!session) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    // Get user session with error handling
+    let session;
+    try {
+      session = await getServerSession(req, res);
+      if (!session) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      console.log('Session user role:', session.user.role);
+    } catch (sessionError) {
+      console.error('Session error:', sessionError);
+      return res.status(401).json({ error: 'Session validation failed' });
     }
 
-    // Check if user has permission to view available coffee
-    if (session.user.role === 'ROASTER') {
-      return res.status(403).json({ error: 'Roasters cannot access retail ordering' });
-    }
+    // We are now allowing roaster users to view coffee availability
+    // Roasters need access to see what coffee is available for orders
+
+    console.log('Fetching available coffee');
 
     // Get all available green coffee with quantity > 0
-    const coffee = await prisma.greenCoffee.findMany({
-      where: {
-        quantity: {
-          gt: 0
-        }
-      },
-      orderBy: [
-        {
-          grade: 'asc'
+    let coffee;
+    try {
+      coffee = await prisma.greenCoffee.findMany({
+        where: {
+          quantity: {
+            gt: 0
+          }
         },
-        {
-          name: 'asc'
-        }
-      ]
-    });
+        orderBy: [
+          {
+            grade: 'asc'
+          },
+          {
+            name: 'asc'
+          }
+        ]
+      });
+      console.log(`Found ${coffee.length} available coffee items`);
+    } catch (dbError) {
+      console.error('Database error fetching available coffee:', dbError);
+      return res.status(500).json({ 
+        error: 'Database error fetching available coffee',
+        details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+      });
+    }
 
-    // Group coffee by grade
-    const groupedCoffee = coffee.reduce((acc, item) => {
-      if (!acc[item.grade]) {
-        acc[item.grade] = [];
-      }
-      acc[item.grade].push(item);
-      return acc;
-    }, {});
+    if (!coffee || !Array.isArray(coffee)) {
+      console.log('Invalid coffee data, returning empty result');
+      return res.status(200).json({});
+    }
 
-    return res.status(200).json(groupedCoffee);
+    return res.status(200).json(coffee);
   } catch (error) {
-    console.error('Error fetching available coffee:', error);
-    return res.status(500).json({ error: 'Failed to fetch available coffee' });
+    console.error('Unhandled error in available coffee API:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch available coffee',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 } 
