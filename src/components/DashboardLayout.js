@@ -21,19 +21,29 @@ export default function DashboardLayout({ children }) {
 
   // Create navigation items
   const commonNavItems = [
-    { name: 'Dashboard', href: '/dashboard' },
     { name: 'Users', href: '/users' },
     { name: 'Shops', href: '/shops' },
     { name: 'Coffee', href: '/coffee' },
     { name: 'Activities', href: '/activities' },
   ];
 
-  // Add Retail Orders for all users except certain cases
-  // We now include ROASTER role in the list of roles that can access orders
-  let navigation = [
-    ...commonNavItems,
-    { name: 'Retail Orders', href: '/orders' }
-  ];
+  // Only show Dashboard for ADMIN and OWNER users
+  const userRole = session.user.role;
+  const isDashboardVisible = userRole === 'ADMIN' || userRole === 'OWNER';
+  
+  // Build the navigation items based on user role
+  let navigation = [];
+  
+  // Add Dashboard conditionally
+  if (isDashboardVisible) {
+    navigation.push({ name: 'Dashboard', href: '/dashboard' });
+  }
+  
+  // Add common navigation items
+  navigation = [...navigation, ...commonNavItems];
+  
+  // Add Retail Orders for all users
+  navigation.push({ name: 'Retail Orders', href: '/orders' });
   
   // Debug logging
   console.log('User role:', session.user.role);
