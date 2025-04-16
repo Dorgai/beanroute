@@ -596,6 +596,21 @@ export default function RetailOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [tabIndex, setTabIndex] = useState(0);
   const [expandedRows, setExpandedRows] = useState({});
+  const [hasPendingOrders, setHasPendingOrders] = useState(false);
+  const [recentlyChangedOrders, setRecentlyChangedOrders] = useState([]);
+  
+  // Check user role for conditional UI elements
+  const userRole = session?.user?.role || '';
+  const isRoaster = userRole === 'ROASTER';
+  const isRetailer = userRole === 'RETAILER';
+  const isAdmin = userRole === 'ADMIN';
+  const isOwner = userRole === 'OWNER';
+  
+  // Should show pending orders alert for certain user roles
+  const shouldShowPendingAlert = isRoaster || isAdmin || isOwner;
+  
+  // Should show changed orders alert for certain user roles
+  const shouldShowChangedOrdersAlert = isRetailer || isAdmin || isOwner;
   
   // Toggle expanded state of a row
   const toggleRowExpanded = (orderId) => {
@@ -761,6 +776,31 @@ export default function RetailOrders() {
     fetchAvailableCoffee();
   }, []);
 
+  // Process orders to check for pending orders and recent changes
+  useEffect(() => {
+    if (!orders || !orders.length) return;
+    
+    // Check for pending orders
+    const pendingOrders = orders.filter(order => order.status === 'PENDING');
+    setHasPendingOrders(pendingOrders.length > 0);
+    
+    // Check for orders that changed since last login
+    // Using localStorage to store last login time as a simple solution
+    const lastLoginTime = localStorage.getItem('lastOrderCheckTime');
+    const currentTime = new Date().toISOString();
+    
+    // If we have a last login time, check for orders updated since then
+    if (lastLoginTime) {
+      const changedOrders = orders.filter(order => {
+        return order.updatedAt && new Date(order.updatedAt) > new Date(lastLoginTime);
+      });
+      setRecentlyChangedOrders(changedOrders);
+    }
+    
+    // Update the last check time
+    localStorage.setItem('lastOrderCheckTime', currentTime);
+  }, [orders]);
+
   const handleCreateOrder = () => {
     setOrderDialogOpen(true);
   };
@@ -872,9 +912,6 @@ export default function RetailOrders() {
     return null;
   }
 
-  // Check if user is a roaster
-  const isRoaster = session.user.role === 'ROASTER';
-
   return (
     <>
       <Head>
@@ -923,6 +960,33 @@ export default function RetailOrders() {
                   <li>Change <b>Roasted</b> orders to <b>Dispatched</b> when the order is shipped</li>
                 </ol>
                 Orders marked as <b>Dispatched</b> can be updated to <b>Delivered</b> by shop staff when received.
+              </Typography>
+            </Alert>
+          )}
+          
+          {/* Alert for pending orders */}
+          {shouldShowPendingAlert && hasPendingOrders && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                Attention: There are pending orders that need your review!
+              </Typography>
+              <Typography variant="body2">
+                {isRoaster ? 
+                  'Please review and confirm these orders to start the roasting process.' : 
+                  'There are orders waiting for confirmation. Please review them.'}
+              </Typography>
+            </Alert>
+          )}
+          
+          {/* Alert for recently changed orders */}
+          {shouldShowChangedOrdersAlert && recentlyChangedOrders.length > 0 && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                Order Updates Since Your Last Visit
+              </Typography>
+              <Typography variant="body2">
+                {recentlyChangedOrders.length} {recentlyChangedOrders.length === 1 ? 'order has' : 'orders have'} been updated.
+                {isRetailer && ' Check for orders ready for delivery.'}
               </Typography>
             </Alert>
           )}
