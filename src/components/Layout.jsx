@@ -106,8 +106,16 @@ export default function Layout({ children }) {
           <div className="flex h-16 items-center justify-between">
             {/* Logo and Nav */}
             <div className="flex items-center space-x-8">
-              <Link href="/dashboard" className="font-normal text-lg tracking-tight">
-                BeanRoute
+              <Link href="/dashboard" className="flex items-center">
+                <img 
+                  src="/images/sonic-beans-logo.jpg"
+                  alt="Sonic Beans"
+                  className="h-8"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "/images/sonic-beans-logo.svg";
+                  }}
+                />
               </Link>
               <nav className="hidden md:flex space-x-8">
                 <Link href="/dashboard"
@@ -130,6 +138,13 @@ export default function Layout({ children }) {
                   <Link href="/activities"
                      className={`text-sm ${router.pathname.startsWith('/activities') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
                     Activities
+                  </Link>
+                )}
+                {/* Add Retail Orders menu item for all users except roasters */}
+                {user && user.role !== 'ROASTER' && (
+                  <Link href="/orders"
+                     className={`text-sm ${router.pathname === '/orders' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
+                    Retail Orders
                   </Link>
                 )}
               </nav>
