@@ -41,6 +41,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import { format } from 'date-fns';
 import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
 import IconlessAlert from '../components/ui/IconlessAlert';
+import ShopStockSummary from '../components/retail/ShopStockSummary';
 
 // Simple Order Dialog Component
 function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
@@ -594,54 +595,31 @@ function StatusChip({ status }) {
 function StockLevelAlert({ inventory, shopMinQuantities }) {
   if (!inventory || !shopMinQuantities) return null;
   
-  // Calculate stock level percentages
-  const smallBagPercentage = shopMinQuantities.minCoffeeQuantitySmall > 0 
-    ? (inventory.smallBags / shopMinQuantities.minCoffeeQuantitySmall) * 100 
-    : 100;
+  // Calculate if this individual inventory item is low or critically low
+  const isSmallBagsLow = shopMinQuantities.minCoffeeQuantitySmall > 0 && 
+                         inventory.smallBags < 5;
   
-  const largeBagPercentage = shopMinQuantities.minCoffeeQuantityLarge > 0 
-    ? (inventory.largeBags / shopMinQuantities.minCoffeeQuantityLarge) * 100 
-    : 100;
+  const isLargeBagsLow = shopMinQuantities.minCoffeeQuantityLarge > 0 && 
+                         inventory.largeBags < 3;
   
-  // Determine if we need to show alerts
-  const showCriticalSmallBags = smallBagPercentage < 50;
-  const showWarningSmallBags = !showCriticalSmallBags && smallBagPercentage < 75;
-  
-  const showCriticalLargeBags = largeBagPercentage < 50;
-  const showWarningLargeBags = !showCriticalLargeBags && largeBagPercentage < 75;
-  
-  // If no alerts needed, return null
-  if (!showCriticalSmallBags && !showWarningSmallBags && !showCriticalLargeBags && !showWarningLargeBags) {
+  // If no issues with this specific inventory item, don't show anything
+  if (!isSmallBagsLow && !isLargeBagsLow) {
     return null;
   }
   
   return (
     <Box sx={{ mt: 1 }}>
-      {showCriticalSmallBags && (
-        <Typography variant="caption" sx={{ color: 'error.main', display: 'flex', alignItems: 'center' }}>
-          <ErrorIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Critical: Small bags below 50% of minimum ({inventory.smallBags}/{shopMinQuantities.minCoffeeQuantitySmall})
-        </Typography>
-      )}
-      
-      {showWarningSmallBags && (
+      {isSmallBagsLow && (
         <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center' }}>
           <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Low: Small bags below 75% of minimum ({inventory.smallBags}/{shopMinQuantities.minCoffeeQuantitySmall})
+          Low stock: {inventory.smallBags} small bags
         </Typography>
       )}
       
-      {showCriticalLargeBags && (
-        <Typography variant="caption" sx={{ color: 'error.main', display: 'flex', alignItems: 'center', mt: 0.5 }}>
-          <ErrorIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Critical: Large bags below 50% of minimum ({inventory.largeBags}/{shopMinQuantities.minCoffeeQuantityLarge})
-        </Typography>
-      )}
-      
-      {showWarningLargeBags && (
-        <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', mt: 0.5 }}>
+      {isLargeBagsLow && (
+        <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', mt: isSmallBagsLow ? 0.5 : 0 }}>
           <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Low: Large bags below 75% of minimum ({inventory.largeBags}/{shopMinQuantities.minCoffeeQuantityLarge})
+          Low stock: {inventory.largeBags} large bags
         </Typography>
       )}
     </Box>
@@ -1076,9 +1054,23 @@ export default function RetailOrders() {
   return (
     <>
       <Head>
-        <title>Retail Orders - Bean Route</title>
+        <title>Retail - Bean Route</title>
       </Head>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        {/* Shop Stock Summary displayed prominently at the top */}
+        {!loading && selectedShopDetails && inventory.length > 0 && (
+          <ShopStockSummary 
+            inventory={inventory} 
+            shopDetails={selectedShopDetails} 
+            sx={{ 
+              mb: 4, 
+              border: '1px solid #e0e0e0',
+              borderLeft: '4px solid #f44336',
+              boxShadow: '0px 2px 8px rgba(0,0,0,0.1)'
+            }}
+          />
+        )}
+        
         <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h5" component="h1">
@@ -1162,6 +1154,9 @@ export default function RetailOrders() {
                 value={tabIndex} 
                 onChange={handleTabChange} 
                 aria-label="retail management tabs"
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
               >
                 <Tab label="Inventory" id="tab-0" />
                 <Tab label="Inventory History" id="tab-1" />
@@ -1214,22 +1209,6 @@ export default function RetailOrders() {
                             <TableRow 
                               key={item.id} 
                               hover
-                              sx={
-                                // Add warning background for low stock items
-                                selectedShopDetails && (
-                                  (selectedShopDetails.minCoffeeQuantitySmall > 0 && 
-                                   item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.5) ||
-                                  (selectedShopDetails.minCoffeeQuantityLarge > 0 && 
-                                   item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.5)
-                                ) ? { backgroundColor: 'rgba(211, 47, 47, 0.05)' } : // Critical
-                                selectedShopDetails && (
-                                  (selectedShopDetails.minCoffeeQuantitySmall > 0 && 
-                                   item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.75) ||
-                                  (selectedShopDetails.minCoffeeQuantityLarge > 0 && 
-                                   item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.75)
-                                ) ? { backgroundColor: 'rgba(237, 108, 2, 0.05)' } : // Warning
-                                {}
-                              }
                             >
                               <TableCell>
                                 <strong>{item.coffee?.name || 'Unknown'}</strong>

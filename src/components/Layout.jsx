@@ -70,7 +70,7 @@ function CoffeeInventory() {
     <div className="text-sm px-3 py-1 bg-green-50 text-green-600 rounded-md">
       <Link href="/coffee" className="flex items-center">
         <span className="font-medium">{Number(totalInventory).toFixed(1)} kg</span>
-        <span className="ml-1">Coffee in Stock</span>
+        <span className="ml-1">Green Stock</span>
       </Link>
     </div>
   );
@@ -111,9 +111,9 @@ export default function Layout({ children }) {
     { href: '/dashboard', label: 'Dashboard', roles: ['ADMIN', 'OWNER'] },
     { href: '/users', label: 'Users', roles: ['ADMIN', 'OWNER'] },
     { href: '/shops', label: 'Shops', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
-    { href: '/coffee', label: 'Coffee', roles: [] }, // Empty array means available to all authenticated users
+    { href: '/coffee', label: 'Green Coffee', roles: [] }, // Empty array means available to all authenticated users
     { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
-    { href: '/orders', label: 'Orders', roles: [] }, // Available to all
+    { href: '/orders', label: 'Retail', roles: [] }, // Available to all
     { href: '/analytics', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
   ];
 

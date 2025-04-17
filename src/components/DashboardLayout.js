@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }) {
 
   // Create navigation items
   const commonNavItems = [
-    { name: 'Coffee', href: '/coffee' },
+    { name: 'Green Coffee', href: '/coffee' },
     { name: 'Activities', href: '/activities' },
   ];
   
@@ -52,7 +52,7 @@ export default function DashboardLayout({ children }) {
   navigation = [...navigation, ...commonNavItems];
   
   // Add Orders for all users
-  navigation.push({ name: 'Orders', href: '/orders' });
+  navigation.push({ name: 'Retail', href: '/orders' });
   
   // Debug logging
   console.log('User role:', session.user.role);
