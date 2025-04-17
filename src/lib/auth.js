@@ -8,8 +8,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-developmen
 const JWT_EXPIRES_IN = '7d'; // Token expires in 7 days
 
 // Cookie configuration from environment variables
-// Reverted to original logic based on NODE_ENV
-const COOKIE_SECURE = process.env.COOKIE_SECURE === 'false' ? false : process.env.NODE_ENV === 'production';
+// Update to be more explicit about production vs development
+const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true' || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false');
 const COOKIE_SAMESITE = process.env.COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax');
 
 export async function hashPassword(password) {
@@ -44,18 +44,23 @@ export function verifyToken(token) {
 }
 
 export function setAuthCookie(res, token) {
-  // Use the original NODE_ENV dependent variables
-  console.log(`Setting auth cookie with secure=${COOKIE_SECURE}, sameSite=${COOKIE_SAMESITE}`);
+  // Enhanced cookie setup with better logging
+  console.log(`[setAuthCookie] Environment: ${process.env.NODE_ENV}`);
+  console.log(`[setAuthCookie] Setting auth cookie with secure=${COOKIE_SECURE}, sameSite=${COOKIE_SAMESITE}`);
+  
+  const cookieOptions = {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAMESITE,
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: '/',
+  };
+  
+  console.log(`[setAuthCookie] Cookie options:`, cookieOptions);
   
   res.setHeader(
     'Set-Cookie',
-    cookie.serialize('auth', token, {
-      httpOnly: true,
-      secure: COOKIE_SECURE, 
-      sameSite: COOKIE_SAMESITE,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    })
+    cookie.serialize('auth', token, cookieOptions)
   );
 }
 
@@ -90,12 +95,45 @@ export function getTokenFromRequestCookie(req) {
 export async function verifyRequestAndGetUser(req) {
   console.log('[verifyRequestAndGetUser] Verifying request...');
   try {
+    // Enhanced cookie reading with better logging
+    console.log('[verifyRequestAndGetUser] Request cookies:', req.cookies ? Object.keys(req.cookies) : 'none');
+    console.log('[verifyRequestAndGetUser] Cookie headers:', req.headers?.cookie);
+    
     // Read cookie directly from the API route's req.cookies object
     const token = req.cookies?.auth; 
     console.log('[verifyRequestAndGetUser] Auth token from req.cookies:', token ? '<present>' : '<missing>');
 
     if (!token) {
-      console.log('[verifyRequestAndGetUser] No token found in req.cookies, returning null.');
+      // Try to parse cookies from headers as fallback
+      if (req.headers?.cookie) {
+        const cookies = cookie.parse(req.headers.cookie);
+        const headerToken = cookies.auth;
+        console.log('[verifyRequestAndGetUser] Auth token from headers:', headerToken ? '<present>' : '<missing>');
+        
+        if (headerToken) {
+          // Verify this token from headers
+          const decoded = verifyToken(headerToken);
+          if (decoded) {
+            console.log('[verifyRequestAndGetUser] Token from headers is valid');
+            
+            // Continue with user lookup using this token
+            const user = await prisma.user.findUnique({
+              where: { id: decoded.id },
+              select: {
+                id: true, username: true, email: true, firstName: true,
+                lastName: true, role: true, status: true,
+              },
+            });
+            
+            if (user && user.status === 'ACTIVE') {
+              console.log('[verifyRequestAndGetUser] User from header token validated successfully:', { id: user.id });
+              return user;
+            }
+          }
+        }
+      }
+      
+      console.log('[verifyRequestAndGetUser] No valid token found, returning null.');
       return null;
     }
 

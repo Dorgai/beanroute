@@ -11,127 +11,223 @@ import ErrorIcon from '@mui/icons-material/Error';
  * @param {Object} props.sx - Custom sx styling to be passed to the Paper component
  */
 export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
-  if (!inventory || !Array.isArray(inventory) || inventory.length === 0 || !shopDetails) {
+  console.log('ShopStockSummary RENDERING with:', {
+    inventoryExists: !!inventory,
+    inventoryArray: Array.isArray(inventory),
+    inventoryLength: inventory?.length || 0,
+    shopDetailsExists: !!shopDetails,
+    shopDetailsName: shopDetails?.name || 'none',
+    minSmallBags: shopDetails?.minCoffeeQuantitySmall || 'none',
+    minLargeBags: shopDetails?.minCoffeeQuantityLarge || 'none'
+  });
+
+  // Only return null if shopDetails is missing
+  if (!shopDetails) {
+    console.log('ShopStockSummary RETURNING NULL - missing shopDetails');
     return null;
   }
 
+  // Ensure inventory is at least an empty array
+  const safeInventory = Array.isArray(inventory) ? inventory : [];
+  
   // Calculate total quantities
-  const totalSmallBags = inventory.reduce((sum, item) => sum + (item.smallBags || 0), 0);
-  const totalLargeBags = inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0);
+  const totalSmallBags = safeInventory.reduce((sum, item) => sum + (item?.smallBags || 0), 0);
+  const totalLargeBags = safeInventory.reduce((sum, item) => sum + (item?.largeBags || 0), 0);
   
   // Get minimum requirements
-  const minSmallBags = shopDetails.minCoffeeQuantitySmall || 0;
-  const minLargeBags = shopDetails.minCoffeeQuantityLarge || 0;
+  const minSmallBags = shopDetails.minCoffeeQuantitySmall || 10;
+  const minLargeBags = shopDetails.minCoffeeQuantityLarge || 5;
   
   // Calculate percentages (with max 100%)
-  const smallBagsPercentage = minSmallBags > 0 
-    ? Math.min(100, Math.round((totalSmallBags / minSmallBags) * 100)) 
-    : 100;
-  
-  const largeBagsPercentage = minLargeBags > 0 
-    ? Math.min(100, Math.round((totalLargeBags / minLargeBags) * 100)) 
-    : 100;
+  const smallBagsPercentage = Math.min(100, (totalSmallBags / minSmallBags) * 100);
+  const largeBagsPercentage = Math.min(100, (totalLargeBags / minLargeBags) * 100);
   
   // Determine alert levels
-  const isSmallBagsCritical = smallBagsPercentage < 50;
-  const isSmallBagsWarning = smallBagsPercentage >= 50 && smallBagsPercentage < 75;
+  const isSmallBagsCritical = totalSmallBags < minSmallBags * 0.3;
+  const isSmallBagsWarning = totalSmallBags < minSmallBags * 0.7 && !isSmallBagsCritical;
   
-  const isLargeBagsCritical = largeBagsPercentage < 50;
-  const isLargeBagsWarning = largeBagsPercentage >= 50 && largeBagsPercentage < 75;
+  const isLargeBagsCritical = totalLargeBags < minLargeBags * 0.3;
+  const isLargeBagsWarning = totalLargeBags < minLargeBags * 0.7 && !isLargeBagsCritical;
   
-  // Determine if we should show alerts
-  const showAlert = isSmallBagsCritical || isLargeBagsCritical || isSmallBagsWarning || isLargeBagsWarning;
+  // Determine overall status
+  const hasCritical = isSmallBagsCritical || isLargeBagsCritical;
+  const hasWarning = (isSmallBagsWarning || isLargeBagsWarning) && !hasCritical;
+  
+  // If inventory is empty, always show critical alert
+  const isEmpty = safeInventory.length === 0;
+  const showCritical = hasCritical || isEmpty;
+  
+  console.log('ShopStockSummary STATUS:', {
+    totalSmallBags,
+    totalLargeBags,
+    minSmallBags,
+    minLargeBags,
+    smallBagsPercentage,
+    largeBagsPercentage,
+    isSmallBagsCritical,
+    isSmallBagsWarning,
+    isLargeBagsCritical,
+    isLargeBagsWarning,
+    hasCritical,
+    hasWarning,
+    isEmpty,
+    showCritical
+  });
   
   // Get progress bar colors
   const getProgressColor = (percentage) => {
-    if (percentage < 50) return 'error';
-    if (percentage < 75) return 'warning';
+    if (percentage < 30) return 'error';
+    if (percentage < 70) return 'warning';
     return 'success';
   };
 
+  // Text colors for inventory numbers
+  const getTextColor = (quantity, minimum, percentage) => {
+    if (percentage < 30) return 'error.main';
+    if (percentage < 70) return 'warning.main';
+    return 'success.main';
+  };
+
   return (
-    <Paper elevation={1} sx={{ p: 2, mb: 3, ...sx }}>
-      <Typography variant="h6" gutterBottom sx={{ 
-        display: 'flex', 
-        alignItems: 'center',
-        color: showAlert ? (isSmallBagsCritical || isLargeBagsCritical ? '#d32f2f' : '#ed6c02') : 'inherit'
-      }}>
-        {showAlert && (
-          isSmallBagsCritical || isLargeBagsCritical ? 
-            <ErrorIcon sx={{ mr: 1, color: '#d32f2f' }} /> : 
-            <WarningIcon sx={{ mr: 1, color: '#ed6c02' }} />
-        )}
-        Shop Stock Summary
-      </Typography>
-      
-      {/* Small Bags Stock */}
-      <Box sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-          <Typography variant="body2">
-            Small Bags (250g)
-          </Typography>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              fontWeight: 'medium',
-              color: isSmallBagsCritical ? '#d32f2f' : isSmallBagsWarning ? '#ed6c02' : 'inherit'
-            }}
-          >
-            {totalSmallBags} / {minSmallBags} min required ({smallBagsPercentage}%)
-          </Typography>
-        </Box>
-        <LinearProgress 
-          variant="determinate" 
-          value={smallBagsPercentage} 
-          color={getProgressColor(smallBagsPercentage)}
-          sx={{ height: 10, borderRadius: 1 }}
-        />
-      </Box>
-      
-      {/* Large Bags Stock */}
-      <Box sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-          <Typography variant="body2">
-            Large Bags (1kg)
-          </Typography>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              fontWeight: 'medium',
-              color: isLargeBagsCritical ? '#d32f2f' : isLargeBagsWarning ? '#ed6c02' : 'inherit'
-            }}
-          >
-            {totalLargeBags} / {minLargeBags} min required ({largeBagsPercentage}%)
-          </Typography>
-        </Box>
-        <LinearProgress 
-          variant="determinate" 
-          value={largeBagsPercentage} 
-          color={getProgressColor(largeBagsPercentage)}
-          sx={{ height: 10, borderRadius: 1 }}
-        />
-      </Box>
-      
-      {/* Stock Alert */}
-      {showAlert && (
+    <Paper 
+      elevation={showCritical ? 8 : hasWarning ? 6 : 2} 
+      sx={{ 
+        p: 3, 
+        borderLeft: showCritical ? '12px solid #f44336' : hasWarning ? '12px solid #ff9800' : '1px solid #e0e0e0',
+        borderRadius: '4px',
+        boxShadow: showCritical ? '0px 8px 24px rgba(244,67,54,0.4)' : 
+                   hasWarning ? '0px 6px 20px rgba(255,152,0,0.4)' : 
+                   '0px 2px 4px rgba(0,0,0,0.1)',
+        backgroundColor: showCritical ? '#fff5f5' : hasWarning ? '#fff8f0' : '#fcfcfc',
+        ...sx 
+      }}
+    >
+      {showCritical && (
         <Alert 
-          severity={isSmallBagsCritical || isLargeBagsCritical ? 'error' : 'warning'}
-          icon={isSmallBagsCritical || isLargeBagsCritical ? <ErrorIcon /> : <WarningIcon />}
-          sx={{ mt: 2, fontWeight: 'medium' }}
+          severity="error" 
+          icon={<ErrorIcon fontSize="large" />}
+          sx={{ 
+            mb: 2, 
+            fontWeight: 'bold',
+            fontSize: '1.25rem',
+            padding: '20px 24px',
+            backgroundColor: 'rgba(244,67,54,0.25)',
+            border: '2px solid rgba(244,67,54,0.45)',
+            '& .MuiAlert-icon': {
+              fontSize: '2.4rem',
+              color: '#d32f2f'
+            }
+          }}
         >
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-            {isSmallBagsCritical || isLargeBagsCritical 
-              ? 'Critical Low Stock Alert! Inventory levels are below 50% of minimum requirements.'
-              : 'Low Stock Warning! Inventory levels are below 75% of minimum requirements.'}
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5 }}>
-            {isSmallBagsCritical && 'Small bags are critically low. '}
-            {isLargeBagsCritical && 'Large bags are critically low. '}
-            {!isSmallBagsCritical && isSmallBagsWarning && 'Small bags are running low. '}
-            {!isLargeBagsCritical && isLargeBagsWarning && 'Large bags are running low. '}
-            Please consider placing an order soon.
+          <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.35rem', letterSpacing: '0.01em' }}>
+            {isEmpty ? 'CRITICAL: No retail inventory found!' : 'CRITICAL: Retail inventory levels are dangerously low!'}
           </Typography>
         </Alert>
+      )}
+      
+      {hasWarning && !showCritical && (
+        <Alert 
+          severity="warning" 
+          icon={<WarningIcon fontSize="large" />}
+          sx={{ 
+            mb: 2, 
+            fontWeight: 'bold',
+            fontSize: '1.25rem',
+            padding: '20px 24px',
+            backgroundColor: 'rgba(255,152,0,0.25)',
+            border: '2px solid rgba(255,152,0,0.45)',
+            '& .MuiAlert-icon': {
+              fontSize: '2.4rem',
+              color: '#ed6c02'
+            }
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.35rem', letterSpacing: '0.01em' }}>
+            WARNING: Retail inventory levels are running low
+          </Typography>
+        </Alert>
+      )}
+      
+      <Typography variant="h6" sx={{ 
+        fontWeight: 'bold', 
+        mb: 2, 
+        color: showCritical ? 'error.main' : hasWarning ? 'warning.main' : 'inherit',
+        fontSize: '1.4rem',
+        textShadow: showCritical || hasWarning ? '0px 0px 1px rgba(0,0,0,0.15)' : 'none'
+      }}>
+        {shopDetails.name} - Inventory Summary
+      </Typography>
+      
+      {isEmpty ? (
+        <Alert severity="error" sx={{ mb: 2, fontWeight: 'medium' }}>
+          No inventory data is available. Please check the inventory records.
+        </Alert>
+      ) : (
+        <>
+          <Box sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body1" sx={{ fontWeight: 'medium', fontSize: '1.2rem' }}>Small Bags</Typography>
+              <Typography variant="body1" sx={{ 
+                fontWeight: 'bold', 
+                color: getTextColor(totalSmallBags, minSmallBags, smallBagsPercentage),
+                fontSize: isSmallBagsCritical || isSmallBagsWarning ? '1.25rem' : '1.2rem',
+                textShadow: isSmallBagsCritical ? '0px 0px 1px rgba(244,67,54,0.3)' : 
+                           isSmallBagsWarning ? '0px 0px 1px rgba(255,152,0,0.3)' : 'none'
+              }}>
+                {totalSmallBags} in stock
+              </Typography>
+            </Box>
+            <LinearProgress 
+              variant="determinate" 
+              value={smallBagsPercentage} 
+              color={getProgressColor(smallBagsPercentage)}
+              sx={{ 
+                height: 16, 
+                borderRadius: 8,
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 8
+                }
+              }}
+            />
+            {isSmallBagsCritical && (
+              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.9rem' }}>
+                Critical: Minimum requirement is {minSmallBags} bags
+              </Typography>
+            )}
+          </Box>
+          
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body1" sx={{ fontWeight: 'medium', fontSize: '1.2rem' }}>Large Bags</Typography>
+              <Typography variant="body1" sx={{ 
+                fontWeight: 'bold', 
+                color: getTextColor(totalLargeBags, minLargeBags, largeBagsPercentage),
+                fontSize: isLargeBagsCritical || isLargeBagsWarning ? '1.25rem' : '1.2rem',
+                textShadow: isLargeBagsCritical ? '0px 0px 1px rgba(244,67,54,0.3)' : 
+                           isLargeBagsWarning ? '0px 0px 1px rgba(255,152,0,0.3)' : 'none'
+              }}>
+                {totalLargeBags} in stock
+              </Typography>
+            </Box>
+            <LinearProgress 
+              variant="determinate" 
+              value={largeBagsPercentage} 
+              color={getProgressColor(largeBagsPercentage)}
+              sx={{ 
+                height: 16, 
+                borderRadius: 8,
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 8
+                }
+              }}
+            />
+            {isLargeBagsCritical && (
+              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.9rem' }}>
+                Critical: Minimum requirement is {minLargeBags} bags
+              </Typography>
+            )}
+          </Box>
+        </>
       )}
     </Paper>
   );

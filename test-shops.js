@@ -1,0 +1,1 @@
+const fetch = require("node-fetch"); async function testShops() { try { console.log("Testing /api/shops endpoint..."); const res = await fetch("http://localhost:3005/api/shops"); console.log("Status:", res.status); const data = await res.json(); console.log("Data:", JSON.stringify(data).substring(0, 500)); } catch(err) { console.error("Error:", err); } } testShops();

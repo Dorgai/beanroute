@@ -83,7 +83,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
     // Update validation errors
     setValidationErrors(prev => ({
       ...prev,
-      [coffeeId]: isValid ? null : `Exceeds available quantity (${coffee.quantity}kg)`
+      [coffeeId]: isValid ? null : `Exceeds available quantity (${coffee.quantity.toFixed(2)}kg)`
     }));
     
     return isValid;
@@ -183,18 +183,16 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
           // Format the error message to be more user-friendly
           const matches = errorMessage.match(/Insufficient quantity for coffee (.*?) \(ID: (.*?)\)\. Available: (.*?)kg, Requested: (.*?)kg/);
           if (matches && matches.length >= 5) {
-            const [_, coffeeName, coffeeId, available, requested] = matches;
-            errorMessage = `Not enough coffee available: ${coffeeName} - Available: ${available}kg, You requested: ${requested}kg`;
+            const [_, coffeeName, coffeeId, availableStr, requestedStr] = matches;
+            const availableInKg = parseFloat(availableStr);
+            const requestedInKg = parseFloat(requestedStr);
             
-            // Add suggestions for the user
-            const availableInKg = parseFloat(available);
             const maxLargeBags = Math.floor(availableInKg);
             const maxSmallBags = Math.floor(availableInKg / 0.25);
             
-            errorMessage += `\n\nYou can order up to:
-- ${maxLargeBags} large bags (1kg each)
-- ${maxSmallBags} small bags (250g each)
-- Or a combination that totals ${availableInKg}kg or less`;
+            setError(`Insufficient quantity for ${coffeeName}. Available: ${availableInKg.toFixed(2)}kg, Requested: ${requestedInKg.toFixed(2)}kg. Maximum possible order:
+            - ${maxLargeBags} large bags (1kg each)
+            - ${maxSmallBags} small bags (250g each)`);
           }
         } else if (responseData.details) {
           // Include additional error details if available
@@ -264,7 +262,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
                         {coffee.grade ? coffee.grade.replace('_', ' ') : 'Unknown grade'}
                       </Typography>
                     </TableCell>
-                    <TableCell>{typeof coffee.quantity === 'number' ? `${coffee.quantity} kg` : 'Unknown'}</TableCell>
+                    <TableCell>{typeof coffee.quantity === 'number' ? `${coffee.quantity.toFixed(2)} kg` : 'Unknown'}</TableCell>
                     <TableCell>
                       <TextField
                         type="number"
@@ -436,6 +434,7 @@ function StatusUpdateDialog({ open, onClose, order }) {
       });
 
       const responseData = await response.json();
+      console.log('Status update response:', responseData);
       
       if (!response.ok) {
         setApiResponse(responseData);
@@ -443,6 +442,12 @@ function StatusUpdateDialog({ open, onClose, order }) {
       }
 
       console.log('Order status updated successfully');
+      
+      // Force a refresh of the data
+      setTimeout(() => {
+        refreshData();
+      }, 500);
+      
       onClose(true); // Pass true to indicate successful update
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -612,14 +617,14 @@ function StockLevelAlert({ inventory, shopMinQuantities }) {
       {isSmallBagsLow && (
         <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center' }}>
           <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Low stock: {inventory.smallBags} small bags
+          Low stock: {inventory.smallBags.toFixed(2)} small bags
         </Typography>
       )}
       
       {isLargeBagsLow && (
         <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', mt: isSmallBagsLow ? 0.5 : 0 }}>
           <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Low stock: {inventory.largeBags} large bags
+          Low stock: {inventory.largeBags.toFixed(2)} large bags
         </Typography>
       )}
     </Box>
@@ -665,6 +670,13 @@ export default function RetailOrders() {
   // Should show changed orders alert for certain user roles
   const shouldShowChangedOrdersAlert = isRetailer || isAdmin || isOwner;
   
+  // For roaster users, always set the tab to Orders (index 0 for them)
+  useEffect(() => {
+    if (isRoaster) {
+      setTabIndex(0); // For roasters, Orders is the only tab at index 0
+    }
+  }, [isRoaster]);
+
   // Toggle expanded state of a row
   const toggleRowExpanded = (orderId) => {
     setExpandedRows(prev => ({
@@ -683,10 +695,46 @@ export default function RetailOrders() {
 
   // Fetch shops
   useEffect(() => {
-    const fetchShops = async () => {
+    const fetchShops = async (retryCount = 0, useDirectMode = false) => {
       try {
-        const response = await fetch('/api/retail/shops');
+        console.log(`Attempting to fetch shops, attempt: ${retryCount + 1}${useDirectMode ? ' (direct mode)' : ''}`);
+        
+        // Construct URL with direct mode parameter if needed
+        const url = useDirectMode 
+          ? '/api/retail/shops?direct=true' 
+          : '/api/retail/shops';
+        
+        const response = await fetch(url, {
+          credentials: 'include', // Explicitly include credentials
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
         if (!response.ok) {
+          // Log error details
+          console.error(`Failed to fetch shops (${response.status})`);
+          try {
+            const errorData = await response.json();
+            console.error('Error details:', errorData);
+          } catch (e) {
+            console.error('Could not parse error response');
+          }
+          
+          // Try direct mode if normal mode fails with authentication errors
+          if (!useDirectMode && response.status === 401 && retryCount < 1) {
+            console.log('Authentication failed, trying direct mode...');
+            return fetchShops(retryCount, true);
+          }
+          
+          // Retry logic for server errors
+          if (response.status === 500 && retryCount < 3) {
+            console.log(`Retrying fetch shops in ${(retryCount + 1) * 2} seconds...`);
+            setTimeout(() => fetchShops(retryCount + 1, useDirectMode), (retryCount + 1) * 2000);
+            return;
+          }
+          
           throw new Error(`Failed to fetch shops (${response.status})`);
         }
         
@@ -695,21 +743,83 @@ export default function RetailOrders() {
         
         // Ensure shops is always an array
         const shopArray = Array.isArray(data) ? data : [];
+        
+        // Save shops to localStorage as a fallback mechanism
+        if (shopArray.length > 0) {
+          try {
+            localStorage.setItem('cachedShops', JSON.stringify(shopArray));
+            console.log('Saved shops to localStorage cache');
+          } catch (cacheError) {
+            console.error('Failed to cache shops:', cacheError);
+          }
+        }
+        
         setShops(shopArray);
         
+        // If we have shop data and no selected shop, select the first one
         if (shopArray.length > 0 && !selectedShop) {
           const shopId = shopArray[0].id;
           setSelectedShop(shopId);
           localStorage.setItem('selectedShopId', shopId);
+        } else if (shopArray.length === 0) {
+          console.log('No shops returned from API, checking localStorage cache');
+          
+          // Try to get shops from localStorage if API returned empty
+          try {
+            const cachedShopsJson = localStorage.getItem('cachedShops');
+            if (cachedShopsJson) {
+              const cachedShops = JSON.parse(cachedShopsJson);
+              if (Array.isArray(cachedShops) && cachedShops.length > 0) {
+                console.log('Using cached shops from localStorage:', cachedShops.length);
+                setShops(cachedShops);
+                
+                // If we still need to select a shop, use the first cached one
+                if (!selectedShop) {
+                  const shopId = cachedShops[0].id;
+                  setSelectedShop(shopId);
+                  localStorage.setItem('selectedShopId', shopId);
+                }
+                
+                // Don't show error when using cached shops
+                return;
+              }
+            }
+          } catch (cacheError) {
+            console.error('Error reading cached shops:', cacheError);
+          }
+          
+          // Show error message only if we couldn't get shops from API or cache
+          setError('No shops available. Please contact an administrator.');
         }
       } catch (error) {
         console.error('Error fetching shops:', error);
-        setError('Failed to load shops');
+        setError('Failed to load shops. Please try refreshing the page.');
+        
+        // Try to get shops from localStorage as emergency fallback
+        try {
+          const cachedShopsJson = localStorage.getItem('cachedShops');
+          if (cachedShopsJson) {
+            const cachedShops = JSON.parse(cachedShopsJson);
+            if (Array.isArray(cachedShops) && cachedShops.length > 0) {
+              console.log('Using cached shops from localStorage as error fallback');
+              setShops(cachedShops);
+              
+              // If we need to select a shop, use the first cached one
+              if (!selectedShop) {
+                const shopId = cachedShops[0].id;
+                setSelectedShop(shopId);
+                // Don't update localStorage here as it might overwrite a valid ID
+              }
+            }
+          }
+        } catch (cacheError) {
+          console.error('Error reading cached shops during error recovery:', cacheError);
+        }
       }
     };
 
     fetchShops();
-  }, []);
+  }, [selectedShop]);
 
   // Fetch shop details when the selected shop changes
   useEffect(() => {
@@ -742,7 +852,7 @@ export default function RetailOrders() {
     // Store selected shop in localStorage for persistence
     localStorage.setItem('selectedShopId', selectedShop);
     
-    const fetchData = async () => {
+    const fetchData = async (useDirectMode = false) => {
       setLoading(true);
       setError(null);
       
@@ -750,9 +860,27 @@ export default function RetailOrders() {
         // Fetch inventory data
         let inventoryResponse;
         try {
-          console.log('Fetching inventory for shop:', selectedShop);
-          inventoryResponse = await fetch(`/api/retail/inventory?shopId=${selectedShop}`);
+          // Construct URL with direct mode parameter if needed
+          const url = useDirectMode 
+            ? `/api/retail/inventory?shopId=${selectedShop}&direct=true` 
+            : `/api/retail/inventory?shopId=${selectedShop}`;
+          
+          console.log(`Fetching inventory for shop: ${selectedShop}${useDirectMode ? ' (direct mode)' : ''}`);
+          inventoryResponse = await fetch(url, {
+            credentials: 'include',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          });
+          
           if (!inventoryResponse.ok) {
+            if (!useDirectMode && inventoryResponse.status === 401) {
+              console.log('Authentication failed for inventory, trying direct mode...');
+              // Stop current attempt and retry with direct mode
+              return fetchData(true);
+            }
+            
             throw new Error(`Failed to fetch inventory (${inventoryResponse.status})`);
           }
         } catch (err) {
@@ -774,10 +902,30 @@ export default function RetailOrders() {
             const flatInventory = Object.values(inventoryData).flat().filter(Boolean);
             console.log('Processed inventory:', flatInventory);
             setInventory(Array.isArray(flatInventory) ? flatInventory : []);
+            
+            // Cache inventory data for emergency fallback
+            try {
+              localStorage.setItem('cachedInventory', JSON.stringify(flatInventory));
+              console.log('Saved inventory to localStorage cache');
+            } catch (cacheError) {
+              console.error('Failed to cache inventory:', cacheError);
+            }
           }
         } catch (jsonError) {
           console.error('Error parsing inventory JSON:', jsonError);
           setInventory([]);
+          
+          // Try to load from cache as fallback
+          try {
+            const cachedInventoryJson = localStorage.getItem('cachedInventory');
+            if (cachedInventoryJson) {
+              const cachedInventory = JSON.parse(cachedInventoryJson);
+              console.log('Using cached inventory as fallback');
+              setInventory(cachedInventory);
+            }
+          } catch (cacheError) {
+            console.error('Error reading cached inventory:', cacheError);
+          }
         }
         
         // Fetch orders for the selected shop
@@ -812,6 +960,18 @@ export default function RetailOrders() {
         console.error('Error in fetchData:', error);
         setError('An unexpected error occurred. Please try again later.');
         setLoading(false);
+        
+        // Try to load cached data
+        try {
+          const cachedInventoryJson = localStorage.getItem('cachedInventory');
+          if (cachedInventoryJson) {
+            const cachedInventory = JSON.parse(cachedInventoryJson);
+            console.log('Using cached inventory after error');
+            setInventory(cachedInventory);
+          }
+        } catch (cacheError) {
+          console.error('Error reading cached inventory during error recovery:', cacheError);
+        }
       }
     };
 
@@ -932,6 +1092,8 @@ export default function RetailOrders() {
   };
   
   const handleTabChange = (event, newValue) => {
+    // For roaster users, only the Orders tab is visible and it's at index 0
+    // For other users, the tabs are: 0=Inventory, 1=Inventory History, 2=Orders
     setTabIndex(newValue);
   };
   
@@ -1056,25 +1218,51 @@ export default function RetailOrders() {
       <Head>
         <title>Retail - Bean Route</title>
       </Head>
+      
+      {/* Debug for troubleshooting */}
+      {console.log('DEBUG - ShopStockSummary values:', {
+        isRoaster,
+        loading,
+        selectedShopDetails,
+        inventoryExists: !!inventory,
+        inventoryLength: inventory?.length || 0,
+        shopDetailsExists: !!selectedShopDetails,
+        shopDetailsName: selectedShopDetails?.name || 'none',
+        minSmallBags: selectedShopDetails?.minCoffeeQuantitySmall || 'none',
+        minLargeBags: selectedShopDetails?.minCoffeeQuantityLarge || 'none'
+      })}
+      
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        {/* Shop Stock Summary displayed prominently at the top */}
-        {!loading && selectedShopDetails && inventory.length > 0 && (
-          <ShopStockSummary 
-            inventory={inventory} 
-            shopDetails={selectedShopDetails} 
-            sx={{ 
-              mb: 4, 
-              border: '1px solid #e0e0e0',
-              borderLeft: '4px solid #f44336',
-              boxShadow: '0px 2px 8px rgba(0,0,0,0.1)'
-            }}
-          />
+        {/* Shop Stock Summary displayed prominently at the top - ALWAYS show for non-roasters if shop details exist */}
+        {!isRoaster && selectedShopDetails && (
+          <div>
+            <Box sx={{ mb: 4, mt: 2 }}>
+              <ShopStockSummary 
+                inventory={inventory || []} 
+                shopDetails={selectedShopDetails} 
+                sx={{ 
+                  mb: 3,
+                  border: '2px solid #e0e0e0',
+                  boxShadow: '0px 4px 12px rgba(0,0,0,0.15)',
+                  borderRadius: '8px',
+                }}
+              />
+              {/* Debug information */}
+              {/* {console.log('DEBUG - ShopStockSummary Values:', {
+                inventoryLength: inventory?.length,
+                shopDetailsName: selectedShopDetails?.name,
+                minSmallBags: selectedShopDetails?.minCoffeeQuantitySmall,
+                minLargeBags: selectedShopDetails?.minCoffeeQuantityLarge,
+                hasInventory: Boolean(inventory?.length)
+              })} */}
+            </Box>
+          </div>
         )}
         
         <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h5" component="h1">
-              Retail Management
+              {isRoaster ? "Orders Management" : "Retail Management"}
             </Typography>
             <Box>
               <Tooltip title="Refresh Data">
@@ -1158,186 +1346,222 @@ export default function RetailOrders() {
                 scrollButtons="auto"
                 allowScrollButtonsMobile
               >
-                <Tab label="Inventory" id="tab-0" />
-                <Tab label="Inventory History" id="tab-1" />
-                <Tab label="Orders" id="tab-2" />
+                {!isRoaster && <Tab label="Inventory" id="tab-0" />}
+                {!isRoaster && <Tab label="Inventory History" id="tab-1" />}
+                <Tab label="Orders" id={isRoaster ? "tab-0" : "tab-2"} />
               </Tabs>
             </Box>
             
-            {/* Inventory Tab */}
-            <Box role="tabpanel" hidden={tabIndex !== 0} id="tabpanel-0" aria-labelledby="tab-0" sx={{ py: 2 }}>
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                  <Typography>Loading inventory...</Typography>
-                </Box>
-              ) : inventory.length === 0 ? (
-                <IconlessAlert severity="info">No inventory data available for this shop</IconlessAlert>
-              ) : (
-                <>
-                  {/* Shop minimum quantities info alert */}
-                  {selectedShopDetails && (canUpdateInventory || isAdmin || isOwner) && (
-                    <IconlessAlert severity="info" sx={{ mb: 2 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        Shop Minimum Inventory Requirements
-                      </Typography>
-                      <Typography variant="body2">
-                        Small bags: {selectedShopDetails.minCoffeeQuantitySmall} |
-                        Large bags: {selectedShopDetails.minCoffeeQuantityLarge} 
-                      </Typography>
-                    </IconlessAlert>
-                  )}
-                
+            {/* Inventory Tab - Only visible for non-roaster users */}
+            {!isRoaster && (
+              <Box role="tabpanel" hidden={tabIndex !== 0} id="tabpanel-0" aria-labelledby="tab-0" sx={{ py: 2 }}>
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <Typography>Loading inventory...</Typography>
+                  </Box>
+                ) : inventory.length === 0 ? (
+                  <IconlessAlert severity="info">No inventory data available for this shop</IconlessAlert>
+                ) : (
+                  <>
+                    {/* Shop minimum quantities info alert */}
+                    {selectedShopDetails && (canUpdateInventory || isAdmin || isOwner) && (
+                      <IconlessAlert severity="info" sx={{ mb: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          Shop Minimum Inventory Requirements
+                        </Typography>
+                        <Typography variant="body2">
+                          Small bags: {selectedShopDetails.minCoffeeQuantitySmall} |
+                          Large bags: {selectedShopDetails.minCoffeeQuantityLarge} 
+                        </Typography>
+                      </IconlessAlert>
+                    )}
+                  
+                    <Paper elevation={1}>
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                            <TableRow>
+                              <TableCell>Coffee</TableCell>
+                              <TableCell>Grade</TableCell>
+                              <TableCell align="right">Small Bags (250g)</TableCell>
+                              <TableCell align="right">Large Bags (1kg)</TableCell>
+                              <TableCell align="right">Total Quantity (kg)</TableCell>
+                              <TableCell>Last Order Date</TableCell>
+                              <TableCell>Stock Status</TableCell>
+                              {canUpdateInventory && (
+                                <TableCell align="right">Actions</TableCell>
+                              )}
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {inventory.map((item) => (
+                              <TableRow 
+                                key={item.id} 
+                                hover
+                              >
+                                <TableCell>
+                                  <strong>{item.coffee?.name || 'Unknown'}</strong>
+                                </TableCell>
+                                <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
+                                <TableCell align="right">{item.smallBags ? item.smallBags.toFixed(2) : '0.00'}</TableCell>
+                                <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
+                                <TableCell align="right">{item.totalQuantity ? item.totalQuantity.toFixed(2) : '0.00'} kg</TableCell>
+                                <TableCell>
+                                  {item.lastOrderDate
+                                    ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
+                                    : 'Never'}
+                                </TableCell>
+                                <TableCell>
+                                  {(canUpdateInventory || isAdmin || isOwner) && selectedShopDetails && (
+                                    <StockLevelAlert
+                                      inventory={item}
+                                      shopMinQuantities={selectedShopDetails}
+                                    />
+                                  )}
+                                </TableCell>
+                                {canUpdateInventory && (
+                                  <TableCell align="right">
+                                    <Tooltip title="Update Inventory">
+                                      <IconButton 
+                                        size="small" 
+                                        onClick={() => handleOpenInventoryDialog(item)}
+                                        aria-label="update inventory"
+                                      >
+                                        <EditIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                            ))}
+                            
+                            {/* Summary row with totals */}
+                            {inventory.length > 0 && (
+                              <TableRow sx={{ 
+                                backgroundColor: '#f5f5f5', 
+                                fontWeight: 'bold',
+                                '& .MuiTableCell-root': { 
+                                  fontWeight: 'bold',
+                                  borderTop: '2px solid #e0e0e0' 
+                                }
+                              }}>
+                                <TableCell colSpan={2}>
+                                  <Typography variant="subtitle2">TOTAL</Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  {inventory.reduce((sum, item) => sum + (item.smallBags || 0), 0)}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0)}
+                                </TableCell>
+                                <TableCell align="right">
+                                  {inventory.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
+                                </TableCell>
+                                <TableCell colSpan={canUpdateInventory ? 3 : 2} />
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Paper>
+                  </>
+                )}
+              </Box>
+            )}
+            
+            {/* Inventory History Tab - Only visible for non-roaster users */}
+            {!isRoaster && (
+              <Box role="tabpanel" hidden={tabIndex !== 1} id="tabpanel-1" aria-labelledby="tab-1" sx={{ py: 2 }}>
+                {inventoryHistoryLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress size={24} sx={{ mr: 1 }} />
+                    <Typography>Loading inventory history...</Typography>
+                  </Box>
+                ) : inventoryHistory.length === 0 ? (
+                  <IconlessAlert severity="info">No inventory history available for this shop in the last 3 months</IconlessAlert>
+                ) : (
                   <Paper elevation={1}>
                     <TableContainer>
                       <Table size="small">
                         <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                           <TableRow>
+                            <TableCell>Date</TableCell>
                             <TableCell>Coffee</TableCell>
-                            <TableCell>Grade</TableCell>
-                            <TableCell align="right">Small Bags (250g)</TableCell>
-                            <TableCell align="right">Large Bags (1kg)</TableCell>
-                            <TableCell align="right">Total Quantity (kg)</TableCell>
-                            <TableCell>Last Order Date</TableCell>
-                            <TableCell>Stock Status</TableCell>
-                            {canUpdateInventory && (
-                              <TableCell align="right">Actions</TableCell>
-                            )}
+                            <TableCell>Updated By</TableCell>
+                            <TableCell align="right">Previous Qty</TableCell>
+                            <TableCell align="right">New Qty</TableCell>
+                            <TableCell align="right">Change</TableCell>
+                            <TableCell>Details</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {inventory.map((item) => (
-                            <TableRow 
-                              key={item.id} 
-                              hover
-                            >
+                          {inventoryHistory.map((item) => (
+                            <TableRow key={item.id} hover>
+                              <TableCell>
+                                {item.timestamp 
+                                  ? format(new Date(item.timestamp), 'MMM d, yyyy HH:mm')
+                                  : 'Unknown'}
+                              </TableCell>
                               <TableCell>
                                 <strong>{item.coffee?.name || 'Unknown'}</strong>
-                              </TableCell>
-                              <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
-                              <TableCell align="right">{item.smallBags || 0}</TableCell>
-                              <TableCell align="right">{item.largeBags || 0}</TableCell>
-                              <TableCell align="right">{item.totalQuantity ? item.totalQuantity.toFixed(2) : '0.00'}</TableCell>
-                              <TableCell>
-                                {item.lastOrderDate
-                                  ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
-                                  : 'Never'}
+                                {item.coffee?.grade && 
+                                  <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                                    {item.coffee.grade.replace('_', ' ')}
+                                  </Typography>
+                                }
                               </TableCell>
                               <TableCell>
-                                {(canUpdateInventory || isAdmin || isOwner) && selectedShopDetails && (
-                                  <StockLevelAlert
-                                    inventory={item}
-                                    shopMinQuantities={selectedShopDetails}
-                                  />
-                                )}
+                                {item.user?.name || 'Unknown'}
+                                <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                                  {item.user?.role || ''}
+                                </Typography>
                               </TableCell>
-                              {canUpdateInventory && (
-                                <TableCell align="right">
-                                  <Tooltip title="Update Inventory">
-                                    <IconButton 
-                                      size="small" 
-                                      onClick={() => handleOpenInventoryDialog(item)}
-                                      aria-label="update inventory"
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </TableCell>
-                              )}
+                              <TableCell align="right">
+                                {item.changes?.previousValues?.totalQuantity?.toFixed(2) || '0.00'} kg
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.changes?.newValues?.totalQuantity?.toFixed(2) || '0.00'} kg
+                              </TableCell>
+                              <TableCell align="right">
+                                <Typography 
+                                  sx={{ 
+                                    color: item.changes?.quantityChange > 0 
+                                      ? 'success.main' 
+                                      : item.changes?.quantityChange < 0 
+                                        ? 'error.main' 
+                                        : 'text.primary',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  {item.changes?.quantityChange > 0 ? '+' : ''}
+                                  {item.changes?.quantityChange?.toFixed(2) || '0.00'} kg
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="caption">
+                                  Small bags: {item.changes?.previousValues?.smallBags || 0} → {item.changes?.newValues?.smallBags || 0}
+                                  <br />
+                                  Large bags: {item.changes?.previousValues?.largeBags || 0} → {item.changes?.newValues?.largeBags || 0}
+                                </Typography>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </TableContainer>
                   </Paper>
-                </>
-              )}
-            </Box>
+                )}
+              </Box>
+            )}
             
-            {/* Inventory History Tab */}
-            <Box role="tabpanel" hidden={tabIndex !== 1} id="tabpanel-1" aria-labelledby="tab-1" sx={{ py: 2 }}>
-              {inventoryHistoryLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                  <CircularProgress size={24} sx={{ mr: 1 }} />
-                  <Typography>Loading inventory history...</Typography>
-                </Box>
-              ) : inventoryHistory.length === 0 ? (
-                <IconlessAlert severity="info">No inventory history available for this shop in the last 3 months</IconlessAlert>
-              ) : (
-                <Paper elevation={1}>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableRow>
-                          <TableCell>Date</TableCell>
-                          <TableCell>Coffee</TableCell>
-                          <TableCell>Updated By</TableCell>
-                          <TableCell align="right">Previous Qty</TableCell>
-                          <TableCell align="right">New Qty</TableCell>
-                          <TableCell align="right">Change</TableCell>
-                          <TableCell>Details</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {inventoryHistory.map((item) => (
-                          <TableRow key={item.id} hover>
-                            <TableCell>
-                              {item.timestamp 
-                                ? format(new Date(item.timestamp), 'MMM d, yyyy HH:mm')
-                                : 'Unknown'}
-                            </TableCell>
-                            <TableCell>
-                              <strong>{item.coffee?.name || 'Unknown'}</strong>
-                              {item.coffee?.grade && 
-                                <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
-                                  {item.coffee.grade.replace('_', ' ')}
-                                </Typography>
-                              }
-                            </TableCell>
-                            <TableCell>
-                              {item.user?.name || 'Unknown'}
-                              <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
-                                {item.user?.role || ''}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.changes?.previousValues?.totalQuantity?.toFixed(2) || '0.00'} kg
-                            </TableCell>
-                            <TableCell align="right">
-                              {item.changes?.newValues?.totalQuantity?.toFixed(2) || '0.00'} kg
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography 
-                                sx={{ 
-                                  color: item.changes?.quantityChange > 0 
-                                    ? 'success.main' 
-                                    : item.changes?.quantityChange < 0 
-                                      ? 'error.main' 
-                                      : 'text.primary',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                {item.changes?.quantityChange > 0 ? '+' : ''}
-                                {item.changes?.quantityChange?.toFixed(2) || '0.00'} kg
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="caption">
-                                Small bags: {item.changes?.previousValues?.smallBags || 0} → {item.changes?.newValues?.smallBags || 0}
-                                <br />
-                                Large bags: {item.changes?.previousValues?.largeBags || 0} → {item.changes?.newValues?.largeBags || 0}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
-              )}
-            </Box>
-            
-            {/* Orders Tab */}
-            <Box role="tabpanel" hidden={tabIndex !== 2} id="tabpanel-2" aria-labelledby="tab-2" sx={{ py: 2 }}>
+            {/* Orders Tab - Visible for all users */}
+            <Box 
+              role="tabpanel" 
+              hidden={isRoaster ? tabIndex !== 0 : tabIndex !== 2} 
+              id={isRoaster ? "tabpanel-0" : "tabpanel-2"} 
+              aria-labelledby={isRoaster ? "tab-0" : "tab-2"} 
+              sx={{ py: 2 }}
+            >
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                   <Typography>Loading orders...</Typography>
@@ -1432,8 +1656,8 @@ export default function RetailOrders() {
                                             <TableCell>
                                               {item.coffee?.grade?.replace('_', ' ') || 'Unknown'}
                                             </TableCell>
-                                            <TableCell align="right">{item.smallBags || 0}</TableCell>
-                                            <TableCell align="right">{item.largeBags || 0}</TableCell>
+                                            <TableCell align="right">{item.smallBags ? item.smallBags.toFixed(2) : '0.00'}</TableCell>
+                                            <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
                                             <TableCell align="right">{item.totalQuantity?.toFixed(2) || '0.00'} kg</TableCell>
                                           </TableRow>
                                         ))}
@@ -1473,6 +1697,7 @@ export default function RetailOrders() {
           open={inventoryDialogOpen}
           onClose={handleCloseInventoryDialog}
           inventoryItem={selectedInventoryItem}
+          refreshData={refreshData}
         />
       </Container>
     </>

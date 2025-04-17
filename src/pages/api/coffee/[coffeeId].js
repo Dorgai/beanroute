@@ -10,21 +10,21 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { id } = req.query;
+    const { coffeeId } = req.query;
     
-    if (!id) {
+    if (!coffeeId) {
       return res.status(400).json({ error: 'Coffee ID is required' });
     }
 
     // Handle different HTTP methods
     switch (req.method) {
       case 'GET':
-        return handleGet(req, res, id);
+        return handleGet(req, res, coffeeId);
       case 'PUT':
       case 'PATCH':
-        return handleUpdate(req, res, user, id);
+        return handleUpdate(req, res, user, coffeeId);
       case 'DELETE':
-        return handleDelete(req, res, user, id);
+        return handleDelete(req, res, user, coffeeId);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'PATCH', 'DELETE']);
         return res.status(405).json({ error: `Method ${req.method} not allowed` });
@@ -38,9 +38,9 @@ export default async function handler(req, res) {
 /**
  * Handle GET request to fetch a specific coffee
  */
-async function handleGet(req, res, id) {
+async function handleGet(req, res, coffeeId) {
   try {
-    const coffee = await getCoffeeById(id);
+    const coffee = await getCoffeeById(coffeeId);
     return res.status(200).json(coffee);
   } catch (error) {
     console.error('Error fetching coffee:', error);
@@ -56,7 +56,7 @@ async function handleGet(req, res, id) {
 /**
  * Handle PUT or PATCH request to update a coffee
  */
-async function handleUpdate(req, res, user, id) {
+async function handleUpdate(req, res, user, coffeeId) {
   try {
     // Check permissions
     if (!['ADMIN', 'OWNER', 'ROASTER'].includes(user.role)) {
@@ -71,7 +71,7 @@ async function handleUpdate(req, res, user, id) {
     }
     
     // Update the coffee
-    const updatedCoffee = await updateCoffee(id, {
+    const updatedCoffee = await updateCoffee(coffeeId, {
       name,
       grade,
       origin: country,
@@ -84,7 +84,7 @@ async function handleUpdate(req, res, user, id) {
       userId: user.id,
       action: 'UPDATE',
       resourceType: 'COFFEE',
-      resourceId: id,
+      resourceId: coffeeId,
       details: `Updated coffee "${name}"`
     });
     
@@ -107,7 +107,7 @@ async function handleUpdate(req, res, user, id) {
 /**
  * Handle DELETE request to remove a coffee
  */
-async function handleDelete(req, res, user, id) {
+async function handleDelete(req, res, user, coffeeId) {
   try {
     // Check permissions
     if (!['ADMIN', 'OWNER'].includes(user.role)) {
@@ -115,17 +115,17 @@ async function handleDelete(req, res, user, id) {
     }
     
     // Get the coffee to log its name
-    const coffee = await getCoffeeById(id);
+    const coffee = await getCoffeeById(coffeeId);
     
     // Delete the coffee
-    await deleteCoffee(id);
+    await deleteCoffee(coffeeId);
     
     // Log the activity
     await logActivity({
       userId: user.id,
       action: 'DELETE',
       resourceType: 'COFFEE',
-      resourceId: id,
+      resourceId: coffeeId,
       details: `Deleted coffee "${coffee.name}"`
     });
     

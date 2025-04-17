@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import IconlessAlert from '../ui/IconlessAlert';
 
-export default function InventoryUpdateDialog({ open, onClose, inventoryItem }) {
+export default function InventoryUpdateDialog({ open, onClose, inventoryItem, refreshData }) {
   const [smallBags, setSmallBags] = useState('');
   const [largeBags, setLargeBags] = useState('');
   const [loading, setLoading] = useState(false);
@@ -95,8 +95,14 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem }) 
         throw new Error(data.error || 'Failed to update inventory');
       }
 
-      // Close the dialog and refresh data
-      onClose(true);
+      // Force a refresh of the data
+      setTimeout(() => {
+        if (refreshData && typeof refreshData === 'function') {
+          refreshData();
+        }
+      }, 500);
+      
+      onClose(true); // Pass true to indicate successful update
     } catch (err) {
       setError(err.message || 'An error occurred while updating inventory');
     } finally {

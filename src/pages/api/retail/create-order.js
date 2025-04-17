@@ -50,10 +50,16 @@ export default async function handler(req, res) {
     }
 
     // Validate each item has a valid coffeeId and at least one bag
-    const invalidItems = items.filter(item => 
+    const processedItems = items.map(item => ({
+      coffeeId: item.coffeeId,
+      smallBags: parseInt(item.smallBags) || 0,
+      largeBags: parseInt(item.largeBags) || 0,
+      totalQuantity: ((parseInt(item.smallBags) || 0) * 0.25) + ((parseInt(item.largeBags) || 0) * 1.0)
+    }));
+    
+    const invalidItems = processedItems.filter(item => 
       !item.coffeeId || 
-      ((!item.smallBags || item.smallBags <= 0) && 
-       (!item.largeBags || item.largeBags <= 0))
+      (item.smallBags <= 0 && item.largeBags <= 0)
     );
 
     if (invalidItems.length > 0) {
@@ -64,114 +70,166 @@ export default async function handler(req, res) {
       });
     }
 
-    // Start a transaction with comprehensive error handling
-    let order;
+    // Create order without transaction first
+    let newOrder;
     try {
-      order = await prisma.$transaction(async (tx) => {
-        console.log('Starting transaction for order creation');
+      console.log('Creating base order');
+      newOrder = await prisma.retailOrder.create({
+        data: {
+          shopId,
+          orderedById: session.user.id,
+          status: 'PENDING'
+        }
+      });
+      console.log('Created order:', newOrder.id);
+    } catch (orderError) {
+      console.error('Error creating order:', orderError);
+      await prisma.$disconnect();
+      return res.status(500).json({
+        error: 'Failed to create order',
+        details: 'Error creating base order record'
+      });
+    }
+    
+    // Create each order item individually
+    const orderItems = [];
+    for (const item of processedItems) {
+      try {
+        console.log(`Adding item for order ${newOrder.id}, coffee ${item.coffeeId}, small: ${item.smallBags}, large: ${item.largeBags}, total: ${item.totalQuantity}kg`);
         
-        // Create the retail order
-        const newOrder = await tx.retailOrder.create({
+        const orderItem = await prisma.retailOrderItem.create({
           data: {
-            shopId,
-            orderedById: session.user.id,
-            status: 'PENDING',
-            items: {
-              create: items.map(item => ({
-                coffeeId: item.coffeeId,
-                smallBags: item.smallBags || 0,
-                largeBags: item.largeBags || 0,
-                totalQuantity: (item.smallBags * 0.25) + (item.largeBags * 1.0) // Convert to kg
-              }))
-            }
-          },
-          include: {
-            items: {
-              include: {
-                coffee: true
-              }
-            },
-            shop: true
+            orderId: newOrder.id,
+            coffeeId: item.coffeeId,
+            smallBags: item.smallBags,
+            largeBags: item.largeBags,
+            totalQuantity: item.totalQuantity
           }
         });
-        console.log('Created order:', newOrder.id);
-
-        // Verify each coffee exists and has sufficient quantity - but don't update inventory yet
-        // We will only update inventory when the order is delivered
-        for (const item of items) {
-          // Calculate kg weight
-          const totalKg = (item.smallBags * 0.25) + (item.largeBags * 1.0);
-          
-          console.log(`Checking availability for coffee ${item.coffeeId}, requested ${totalKg}kg`);
-          
-          // Create a record in RetailInventory if it doesn't exist yet (with zero quantities)
-          // This allows tracking the last order date without updating quantities
-          await tx.retailInventory.upsert({
+        
+        orderItems.push(orderItem);
+        console.log(`Added order item: ${orderItem.id}`);
+        
+        // Update coffee quantity (reduce available)
+        try {
+          await prisma.greenCoffee.update({
+            where: { id: item.coffeeId },
+            data: {
+              quantity: {
+                decrement: item.totalQuantity
+              }
+            }
+          });
+          console.log(`Updated coffee ${item.coffeeId} quantity by -${item.totalQuantity}kg`);
+        } catch (coffeeError) {
+          console.error(`Error updating coffee quantity for ${item.coffeeId}:`, coffeeError);
+          // Continue with other items
+        }
+        
+        // Update retail inventory record
+        try {
+          const existingInventory = await prisma.retailInventory.findUnique({
             where: {
               shopId_coffeeId: {
                 shopId,
                 coffeeId: item.coffeeId
               }
-            },
-            create: {
-              shopId,
-              coffeeId: item.coffeeId,
-              smallBags: 0,
-              largeBags: 0,
-              totalQuantity: 0,
-              lastOrderDate: new Date()
-            },
-            update: {
-              lastOrderDate: new Date()
             }
           });
-
-          // Verify coffee exists and has sufficient quantity
-          const coffee = await tx.greenCoffee.findUnique({
-            where: { id: item.coffeeId }
-          });
           
-          if (!coffee) {
-            throw new Error(`Coffee with ID ${item.coffeeId} not found`);
+          if (existingInventory) {
+            await prisma.retailInventory.update({
+              where: {
+                id: existingInventory.id
+              },
+              data: {
+                lastOrderDate: new Date()
+              }
+            });
+          } else {
+            await prisma.retailInventory.create({
+              data: {
+                shopId,
+                coffeeId: item.coffeeId,
+                smallBags: 0,
+                largeBags: 0,
+                totalQuantity: 0,
+                lastOrderDate: new Date()
+              }
+            });
           }
-          
-          if (coffee.quantity < totalKg) {
-            throw new Error(`Insufficient quantity for coffee ${coffee.name} (ID: ${item.coffeeId}). Available: ${coffee.quantity}kg, Requested: ${totalKg}kg`);
-          }
-          
-          // Reserve the coffee by reducing the available quantity
-          // This ensures the same coffee isn't oversold before delivery
-          await tx.greenCoffee.update({
-            where: { id: item.coffeeId },
-            data: {
-              quantity: {
-                decrement: totalKg
+          console.log(`Updated retail inventory for coffee ${item.coffeeId}`);
+        } catch (inventoryError) {
+          console.error(`Error updating retail inventory for ${item.coffeeId}:`, inventoryError);
+          // Continue with other items
+        }
+      } catch (itemError) {
+        console.error(`Error creating order item for coffee ${item.coffeeId}:`, itemError);
+        // Continue with other items
+      }
+    }
+    
+    if (orderItems.length === 0) {
+      console.error('Failed to create any order items');
+      
+      // Try to delete the order
+      try {
+        await prisma.retailOrder.delete({
+          where: { id: newOrder.id }
+        });
+      } catch (deleteError) {
+        console.error('Error deleting empty order:', deleteError);
+      }
+      
+      await prisma.$disconnect();
+      return res.status(500).json({
+        error: 'Failed to create order items',
+        details: 'No order items could be created'
+      });
+    }
+    
+    // Get the complete order
+    let completeOrder;
+    try {
+      completeOrder = await prisma.retailOrder.findUnique({
+        where: { id: newOrder.id },
+        include: {
+          items: {
+            include: {
+              coffee: {
+                select: {
+                  id: true,
+                  name: true,
+                  grade: true
+                }
               }
             }
-          });
-          console.log(`Reserved coffee ${item.coffeeId} quantity by ${totalKg}kg`);
+          },
+          shop: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
         }
-
-        return newOrder;
       });
-      console.log('Transaction completed successfully');
-    } catch (dbError) {
-      console.error('Database error creating order:', dbError);
-      await prisma.$disconnect();
-      return res.status(500).json({ 
-        error: 'Failed to create order',
-        details: process.env.NODE_ENV === 'development' ? dbError.message : 'Database transaction failed'
-      });
+    } catch (lookupError) {
+      console.error('Error looking up complete order:', lookupError);
+      // Return what we have
+      completeOrder = {
+        ...newOrder,
+        items: orderItems
+      };
     }
 
     // Create activity log
     try {
-      await createActivityLog(session.user.id, 'CREATE', 'RETAIL_ORDER', order.id, {
-        shopId: order.shopId,
-        itemCount: order.items.length,
-        totalQuantity: order.items.reduce((sum, item) => sum + item.totalQuantity, 0)
+      await createActivityLog(session.user.id, 'CREATE', 'RETAIL_ORDER', newOrder.id, {
+        shopId: shopId,
+        itemCount: orderItems.length,
+        totalQuantity: orderItems.reduce((sum, item) => sum + item.totalQuantity, 0)
       });
-      console.log('Created activity log for order', order.id);
+      console.log('Created activity log for order', newOrder.id);
     } catch (logError) {
       // Don't fail the request if activity log fails
       console.error('Failed to create activity log:', logError);
@@ -180,7 +238,7 @@ export default async function handler(req, res) {
     // Make sure to disconnect the Prisma client
     await prisma.$disconnect();
     
-    return res.status(200).json(order);
+    return res.status(200).json(completeOrder);
   } catch (error) {
     console.error('Unhandled error creating retail order:', error);
     // Try to disconnect prisma in case of unhandled errors

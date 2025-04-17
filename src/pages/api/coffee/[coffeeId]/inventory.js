@@ -11,18 +11,18 @@ export default async function handler(req, res) {
     }
 
     // Get the coffee ID from the URL parameter
-    const { id } = req.query;
+    const { coffeeId } = req.query;
     
-    if (!id) {
+    if (!coffeeId) {
       return res.status(400).json({ error: 'Coffee ID is required' });
     }
 
     // Handle different HTTP methods
     switch (req.method) {
       case 'GET':
-        return handleGet(req, res, user, id);
+        return handleGet(req, res, user, coffeeId);
       case 'POST':
-        return handlePost(req, res, user, id);
+        return handlePost(req, res, user, coffeeId);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
         return res.status(405).json({ error: 'Method not allowed' });
@@ -36,17 +36,17 @@ export default async function handler(req, res) {
 /**
  * Handle GET request to fetch inventory logs for a coffee
  */
-async function handleGet(req, res, user, id) {
+async function handleGet(req, res, user, coffeeId) {
   try {
     // Check if coffee exists
-    const coffee = await getCoffeeById(id);
+    const coffee = await getCoffeeById(coffeeId);
     
     // Get pagination parameters
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     
     // Get inventory logs
-    const { logs, meta } = await getCoffeeInventoryLogs(id, page, limit);
+    const { logs, meta } = await getCoffeeInventoryLogs(coffeeId, page, limit);
     
     return res.status(200).json({ 
       coffee: {
@@ -71,7 +71,7 @@ async function handleGet(req, res, user, id) {
 /**
  * Handle POST request to update inventory for a coffee
  */
-async function handlePost(req, res, user, id) {
+async function handlePost(req, res, user, coffeeId) {
   try {
     // Check if user has permission to update coffee inventory
     if (!['ADMIN', 'OWNER', 'ROASTER'].includes(user.role)) {
@@ -86,14 +86,14 @@ async function handlePost(req, res, user, id) {
     }
     
     // Add inventory
-    const result = await addCoffeeInventory(id, amount, user.id, notes);
+    const result = await addCoffeeInventory(coffeeId, amount, user.id, notes);
     
     // Log activity
     await logActivity({
       userId: user.id,
       action: parseFloat(amount) > 0 ? 'ADD_INVENTORY' : 'REMOVE_INVENTORY',
       resourceType: 'COFFEE',
-      resourceId: id,
+      resourceId: coffeeId,
       details: `${parseFloat(amount) > 0 ? 'Added' : 'Removed'} ${Math.abs(parseFloat(amount))} kg to coffee inventory (${result.coffee.name})`
     });
     
