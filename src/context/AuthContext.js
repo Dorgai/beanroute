@@ -23,24 +23,38 @@ export function AuthProvider({ children }) {
         const response = await fetch('/api/auth/session');
         if (response.ok) {
           const data = await response.json();
-          if (data.user) {
+          if (data && data.user) {
             console.log('Session loaded from server', data.user.role);
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
           } else {
+            console.log('No user in server session, falling back to localStorage');
             // Fallback to localStorage if server session not available
             const userData = localStorage.getItem('user');
             if (userData) {
-              console.log('Session loaded from localStorage');
-              setUser(JSON.parse(userData));
+              try {
+                const parsedUser = JSON.parse(userData);
+                console.log('Session loaded from localStorage');
+                setUser(parsedUser);
+              } catch (parseError) {
+                console.error('Error parsing user data from localStorage:', parseError);
+                localStorage.removeItem('user'); // Clear invalid data
+              }
             }
           }
         } else {
+          console.warn('Session API returned error:', response.status);
           // Fallback to localStorage if API fails
           const userData = localStorage.getItem('user');
           if (userData) {
-            console.log('Session loaded from localStorage (API error)');
-            setUser(JSON.parse(userData));
+            try {
+              const parsedUser = JSON.parse(userData);
+              console.log('Session loaded from localStorage (API error)');
+              setUser(parsedUser);
+            } catch (parseError) {
+              console.error('Error parsing user data from localStorage:', parseError);
+              localStorage.removeItem('user'); // Clear invalid data
+            }
           }
         }
       } catch (error) {
@@ -48,8 +62,14 @@ export function AuthProvider({ children }) {
         // Fallback to localStorage
         const userData = localStorage.getItem('user');
         if (userData) {
-          console.log('Session loaded from localStorage (error fallback)');
-          setUser(JSON.parse(userData));
+          try {
+            const parsedUser = JSON.parse(userData);
+            console.log('Session loaded from localStorage (error fallback)');
+            setUser(parsedUser);
+          } catch (parseError) {
+            console.error('Error parsing user data from localStorage:', parseError);
+            localStorage.removeItem('user'); // Clear invalid data
+          }
         }
       } finally {
         setLoading(false);
