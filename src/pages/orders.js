@@ -349,9 +349,11 @@ function StatusUpdateDialog({ open, onClose, order }) {
   const getValidNextStatuses = () => {
     if (!order) return [];
     
+    const allPossibleStatuses = ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
+    
     // Admin and Owner can do any status change
     if (isAdmin || isOwner) {
-      return ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
+      return allPossibleStatuses;
     }
     
     const currentStatus = order.status;
@@ -507,24 +509,11 @@ function StatusUpdateDialog({ open, onClose, order }) {
                   label="Status"
                   disabled={(isRoaster || isRetailer || isBarista) && validNextStatuses.length === 0}
                 >
-                  {isAdmin || isOwner ? (
-                    // For Admin and Owner, show all statuses
-                    <>
-                      <MenuItem value="PENDING">Pending</MenuItem>
-                      <MenuItem value="CONFIRMED">Confirmed</MenuItem>
-                      <MenuItem value="ROASTED">Roasted</MenuItem>
-                      <MenuItem value="DISPATCHED">Dispatched</MenuItem>
-                      <MenuItem value="DELIVERED">Delivered</MenuItem>
-                      <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                    </>
-                  ) : (
-                    // For other roles, only show allowed next statuses
-                    validNextStatuses.map((statusValue) => (
-                      <MenuItem key={statusValue} value={statusValue}>
-                        {statusValue.charAt(0) + statusValue.slice(1).toLowerCase()}
-                      </MenuItem>
-                    ))
-                  )}
+                  {validNextStatuses.map((statusValue) => (
+                    <MenuItem key={statusValue} value={statusValue}>
+                      {statusValue.charAt(0) + statusValue.slice(1).toLowerCase()}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Box>

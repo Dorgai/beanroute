@@ -1,8 +1,13 @@
-import { prisma } from '@/lib/prisma';
+// Direct Prisma client implementation for better reliability
+import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
 export default async function handler(req, res) {
+  // Create a dedicated prisma instance for this request
+  const prisma = new PrismaClient();
+  
   if (req.method !== 'GET') {
+    await prisma.$disconnect();
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -12,18 +17,21 @@ export default async function handler(req, res) {
     try {
       session = await getServerSession(req, res);
       if (!session) {
+        await prisma.$disconnect();
         return res.status(401).json({ error: 'Unauthorized' });
       }
       
       // Check user role - only ADMIN, OWNER and RETAILER can access this endpoint
       const userRole = session.user.role;
       if (userRole !== 'ADMIN' && userRole !== 'OWNER' && userRole !== 'RETAILER') {
+        await prisma.$disconnect();
         return res.status(403).json({ error: 'Forbidden - Insufficient permissions' });
       }
       
       console.log('Analytics API - session user role:', userRole);
     } catch (sessionError) {
       console.error('Session error:', sessionError);
+      await prisma.$disconnect();
       return res.status(401).json({ error: 'Session validation failed' });
     }
 
@@ -31,6 +39,7 @@ export default async function handler(req, res) {
     const { startDate, endDate } = req.query;
     
     if (!startDate || !endDate) {
+      await prisma.$disconnect();
       return res.status(400).json({ error: 'Start date and end date are required' });
     }
 
@@ -38,6 +47,7 @@ export default async function handler(req, res) {
     const parsedEndDate = new Date(endDate);
     
     if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+      await prisma.$disconnect();
       return res.status(400).json({ error: 'Invalid date format' });
     }
 
@@ -87,9 +97,15 @@ export default async function handler(req, res) {
     // Convert to array and sort by grade
     const result = Object.values(groupedData);
     
+    // Make sure to disconnect the Prisma client
+    await prisma.$disconnect();
+    
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error in analytics API:', error);
+    // Try to disconnect prisma in case of errors
+    await prisma.$disconnect().catch(console.error);
+    
     return res.status(500).json({ 
       error: 'Failed to fetch analytics data',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

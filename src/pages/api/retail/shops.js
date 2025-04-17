@@ -1,7 +1,11 @@
-import { prisma } from '@/lib/prisma';
+// Direct Prisma client implementation for better reliability
+import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
 export default async function handler(req, res) {
+  // Create a dedicated prisma instance for this request
+  const prisma = new PrismaClient();
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -40,6 +44,9 @@ export default async function handler(req, res) {
         error: 'Database error fetching shops',
         details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
       });
+    } finally {
+      // Always disconnect to prevent connection pool issues
+      await prisma.$disconnect();
     }
 
     if (!shops || !Array.isArray(shops)) {
@@ -50,6 +57,9 @@ export default async function handler(req, res) {
     return res.status(200).json(shops);
   } catch (error) {
     console.error('Unhandled error in shops API:', error);
+    // Make sure to disconnect prisma in case of errors too
+    await prisma.$disconnect().catch(console.error);
+    
     return res.status(500).json({ 
       error: 'Failed to fetch shops',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

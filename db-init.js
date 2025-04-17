@@ -5,6 +5,14 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
+// Print database connection information for debugging (hiding password)
+console.log('🔄 Database connection info:');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 
+  process.env.DATABASE_URL.replace(/\/\/[^:]+:[^@]+@/, '//******:******@') : 
+  'Not defined'
+);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
 async function runCommand(command, retries = 3, delay = 5000) {
   let attempt = 0;
   while (attempt <= retries) {
@@ -33,6 +41,11 @@ async function runCommand(command, retries = 3, delay = 5000) {
 
 async function initializeDatabase() {
   console.log('🔄 Starting database initialization...');
+
+  if (!process.env.DATABASE_URL) {
+    console.error('❌ DATABASE_URL environment variable is not set!');
+    return false;
+  }
 
   // Generate Prisma client
   const generateResult = await runCommand('npx prisma generate');

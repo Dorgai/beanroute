@@ -1,10 +1,13 @@
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { createActivityLog } from '@/lib/activity-service';
-import { Prisma } from '@prisma/client';
 
 export default async function handler(req, res) {
+  // Create a dedicated prisma instance for this request
+  const prisma = new PrismaClient();
+  
   if (req.method !== 'PUT') {
+    await prisma.$disconnect();
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -14,11 +17,13 @@ export default async function handler(req, res) {
     try {
       session = await getServerSession(req, res);
       if (!session) {
+        await prisma.$disconnect();
         return res.status(401).json({ error: 'Unauthorized' });
       }
       console.log('Update order status - session user role:', session.user.role);
     } catch (sessionError) {
       console.error('Session error:', sessionError);
+      await prisma.$disconnect();
       return res.status(401).json({ error: 'Session validation failed' });
     }
 
@@ -27,15 +32,18 @@ export default async function handler(req, res) {
 
     // Validate request data
     if (!orderId) {
+      await prisma.$disconnect();
       return res.status(400).json({ error: 'Order ID is required' });
     }
 
     if (!status) {
+      await prisma.$disconnect();
       return res.status(400).json({ error: 'Status is required' });
     }
 
     const validStatusValues = ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
     if (!validStatusValues.includes(status)) {
+      await prisma.$disconnect();
       return res.status(400).json({ 
         error: 'Invalid status value',
         validValues: validStatusValues,
@@ -57,6 +65,7 @@ export default async function handler(req, res) {
     });
 
     if (!existingOrder) {
+      await prisma.$disconnect();
       return res.status(404).json({ error: 'Order not found' });
     }
 
@@ -79,6 +88,7 @@ export default async function handler(req, res) {
       // Check if the current order status can be updated to the requested status
       const currentStatus = existingOrder.status;
       if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+        await prisma.$disconnect();
         return res.status(403).json({ 
           error: `Roasters cannot change order status from '${currentStatus}' to '${status}'`,
           allowedNextStatuses: allowedTransitions[currentStatus] || []
@@ -97,6 +107,7 @@ export default async function handler(req, res) {
       
       const currentStatus = existingOrder.status;
       if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+        await prisma.$disconnect();
         return res.status(403).json({ 
           error: `Retailers cannot change order status from '${currentStatus}' to '${status}'`,
           allowedNextStatuses: allowedTransitions[currentStatus] || []
@@ -115,6 +126,7 @@ export default async function handler(req, res) {
       
       const currentStatus = existingOrder.status;
       if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+        await prisma.$disconnect();
         return res.status(403).json({ 
           error: `Baristas cannot change order status from '${currentStatus}' to '${status}'`,
           allowedNextStatuses: allowedTransitions[currentStatus] || []
@@ -128,16 +140,13 @@ export default async function handler(req, res) {
       const updatedOrder = await prisma.$transaction(async (tx) => {
         console.log(`Updating order status to ${status}`);
         
-        // Use executeRaw with proper quoting for the enum value
-        await tx.$executeRaw`
-          UPDATE "RetailOrder"
-          SET status = ${status}::text::\"OrderStatus\", "updatedAt" = now()
-          WHERE id = ${orderId}
-        `;
-        
-        // Fetch the updated order
-        const result = await tx.retailOrder.findUnique({
+        // Update order status
+        const updatedOrder = await tx.retailOrder.update({
           where: { id: orderId },
+          data: {
+            status: status,
+            updatedAt: new Date()
+          },
           include: {
             shop: true,
             items: {
@@ -213,7 +222,7 @@ export default async function handler(req, res) {
           }
         }
         
-        return result;
+        return updatedOrder;
       });
 
       // Create activity log
@@ -228,9 +237,13 @@ export default async function handler(req, res) {
         console.error('Failed to create activity log:', logError);
       }
 
+      // Make sure to disconnect the Prisma client
+      await prisma.$disconnect();
+      
       return res.status(200).json(updatedOrder);
     } catch (dbError) {
       console.error('Database error updating order status:', dbError);
+      await prisma.$disconnect();
       return res.status(500).json({ 
         error: 'Failed to update order status',
         details: process.env.NODE_ENV === 'development' ? dbError.message : 'Database update failed'
@@ -238,6 +251,9 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('Unhandled error updating order status:', error);
+    // Make sure to disconnect prisma in case of unhandled errors
+    await prisma.$disconnect().catch(console.error);
+    
     return res.status(500).json({ 
       error: 'Failed to update order status',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

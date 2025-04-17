@@ -1,9 +1,14 @@
-import { prisma } from '@/lib/prisma';
+// Direct Prisma client implementation for better reliability
+import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { createActivityLog } from '@/lib/activity-service';
 
 export default async function handler(req, res) {
+  // Create a dedicated prisma instance for this request
+  const prisma = new PrismaClient();
+  
   if (req.method !== 'POST') {
+    await prisma.$disconnect();
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -13,17 +18,20 @@ export default async function handler(req, res) {
     try {
       session = await getServerSession(req, res);
       if (!session) {
+        await prisma.$disconnect();
         return res.status(401).json({ error: 'Unauthorized' });
       }
       console.log('Create order - session user role:', session.user.role);
     } catch (sessionError) {
       console.error('Session error:', sessionError);
+      await prisma.$disconnect();
       return res.status(401).json({ error: 'Session validation failed' });
     }
 
     // Check if user has permission to create retail orders
     if (session.user.role === 'ROASTER') {
       console.log('Roaster attempted to create retail order');
+      await prisma.$disconnect();
       return res.status(403).json({ error: 'Roasters cannot create retail orders' });
     }
 
@@ -32,10 +40,12 @@ export default async function handler(req, res) {
 
     // Validate request data
     if (!shopId) {
+      await prisma.$disconnect();
       return res.status(400).json({ error: 'Shop ID is required' });
     }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
+      await prisma.$disconnect();
       return res.status(400).json({ error: 'Order must contain at least one item' });
     }
 
@@ -47,6 +57,7 @@ export default async function handler(req, res) {
     );
 
     if (invalidItems.length > 0) {
+      await prisma.$disconnect();
       return res.status(400).json({ 
         error: 'Invalid items in order', 
         details: invalidItems.map(item => item.coffeeId || 'unknown')
@@ -146,6 +157,7 @@ export default async function handler(req, res) {
       console.log('Transaction completed successfully');
     } catch (dbError) {
       console.error('Database error creating order:', dbError);
+      await prisma.$disconnect();
       return res.status(500).json({ 
         error: 'Failed to create order',
         details: process.env.NODE_ENV === 'development' ? dbError.message : 'Database transaction failed'
@@ -165,9 +177,15 @@ export default async function handler(req, res) {
       console.error('Failed to create activity log:', logError);
     }
 
+    // Make sure to disconnect the Prisma client
+    await prisma.$disconnect();
+    
     return res.status(200).json(order);
   } catch (error) {
     console.error('Unhandled error creating retail order:', error);
+    // Try to disconnect prisma in case of unhandled errors
+    await prisma.$disconnect().catch(console.error);
+    
     return res.status(500).json({ 
       error: 'Failed to create retail order',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

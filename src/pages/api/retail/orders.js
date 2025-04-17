@@ -1,5 +1,8 @@
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
+
+// Create a dedicated connection for this API route
+const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -41,6 +44,7 @@ export default async function handler(req, res) {
 
     // Get retail orders with filtering
     try {
+      console.log('Executing database query with prisma.retailOrder.findMany()...');
       const orders = await prisma.retailOrder.findMany({
         where: whereCondition,
         include: {
@@ -72,6 +76,9 @@ export default async function handler(req, res) {
         error: 'Database error fetching retail orders',
         details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
       });
+    } finally {
+      // Make sure to disconnect to avoid connection pool issues
+      await prisma.$disconnect();
     }
   } catch (error) {
     console.error('Unhandled error in retail orders API:', error);

@@ -7,6 +7,7 @@ const nextConfig = {
   // Configure your environment variables here
   env: {
     APP_NAME: 'User Management System',
+    DATABASE_URL: process.env.DATABASE_URL,
   },
   // Configure redirects if needed
   async redirects() {
