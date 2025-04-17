@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Exit on error
-set -e
+# Don't exit on error, as we want to continue even if steps fail
+set +e
 
 echo "Starting database reset and initialization..."
 
@@ -9,22 +9,12 @@ echo "Starting database reset and initialization..."
 echo "Generating Prisma Client..."
 npx prisma generate
 
-# Clear failed migrations (delete _prisma_migrations table)
-echo "Clearing failed migrations from database..."
-DB_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL}
-DB_URL_SAFE=$(echo $DB_URL | sed 's/\/\/[^:]*:[^@]*@/\/\/USERNAME:PASSWORD@/')
-echo "Using database URL: $DB_URL_SAFE"
+# Skip trying to use psql since it's not installed in the container
+echo "Skipping database migration reset (no psql available)..."
 
-# Try to connect to the database and drop the migrations table if it exists
-echo "Attempting to drop _prisma_migrations table..."
-psql $DB_URL -c "DROP TABLE IF EXISTS _prisma_migrations;" || {
-  echo "Failed to drop _prisma_migrations table. Database might not be accessible yet."
-  echo "Will continue with migrations anyway."
-}
-
-# Skip the reset since it might fail and just go directly to deploying migrations
+# Try a simple migration deploy without any options
 echo "Running database migrations..."
-npx prisma migrate deploy --create-only || {
+npx prisma migrate deploy || {
   echo "Migration deployment failed, but continuing..."
 }
 
@@ -36,6 +26,6 @@ else
   echo "Skipping database seeding (SEED_DATABASE is not set to true)..."
 fi
 
-# Start the application
+# Start the application (use the custom server.js)
 echo "Database setup complete. Starting application..."
-npm start 
+node server.js 
