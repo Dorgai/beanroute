@@ -5,18 +5,53 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('secret');
+  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoLoginEnabled, setAutoLoginEnabled] = useState(false);
+  const [autoLoginStatus, setAutoLoginStatus] = useState('');
   const router = useRouter();
-  const { user, login } = useAuth();
+  const { user, login, isAuthenticated } = useAuth();
+  
+  // Auto-login effect that respects the server authentication
+  useEffect(() => {
+    if (!autoLoginEnabled) return;
+    
+    const attemptAutoLogin = async () => {
+      try {
+        setAutoLoginStatus('Attempting auto-login...');
+        const result = await login(username, password);
+        
+        if (result.success) {
+          setAutoLoginStatus('Auto-login successful! Redirecting...');
+          // Redirect happens automatically via the useAuth hook
+        } else {
+          setAutoLoginStatus('Auto-login failed. Please log in manually.');
+          setError(result.error || 'Auto-login failed');
+          setAutoLoginEnabled(false);
+        }
+      } catch (err) {
+        console.error('Auto-login error:', err);
+        setAutoLoginStatus('Auto-login error. Please log in manually.');
+        setError(err.message || 'Auto-login failed');
+        setAutoLoginEnabled(false);
+      }
+    };
+    
+    // Delay auto-login to give time for page to render
+    const timer = setTimeout(() => {
+      attemptAutoLogin();
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [login, username, password, autoLoginEnabled]);
   
   // If user is already authenticated, redirect
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated) {
       router.push('/orders');
     }
-  }, [user, router]);
+  }, [isAuthenticated, router]);
   
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -39,21 +74,31 @@ export default function Login() {
     }
   };
 
-  // For direct access without API call
-  const handleDirectAccess = () => {
-    // Create a basic admin user
-    const user = {
-      id: 'direct-' + Date.now(),
-      username: 'admin',
-      email: 'admin@example.com',
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'ADMIN'
-    };
-    
-    // Save to localStorage and redirect
-    localStorage.setItem('user', JSON.stringify(user));
-    router.push('/orders');
+  // Emergency Access
+  const handleEmergencyAccess = () => {
+    try {
+      // Create a basic admin user
+      const user = {
+        id: 'emergency-' + Date.now(),
+        username: 'admin',
+        email: 'admin@example.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'ADMIN'
+      };
+      
+      // Save to localStorage and redirect
+      localStorage.setItem('user', JSON.stringify(user));
+      setAutoLoginStatus('Emergency access granted. Redirecting...');
+      
+      // Give time for status message to display before redirecting
+      setTimeout(() => {
+        router.push('/orders');
+      }, 1000);
+    } catch (err) {
+      console.error('Emergency access error:', err);
+      setError('Failed to grant emergency access');
+    }
   };
 
   return (
@@ -67,6 +112,11 @@ export default function Login() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Sign in to access the dashboard
         </p>
+        {autoLoginEnabled && autoLoginStatus && (
+          <p className="mt-2 text-center text-sm font-bold text-green-600">
+            {autoLoginStatus}
+          </p>
+        )}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -121,7 +171,7 @@ export default function Login() {
               
               <button
                 type="button"
-                onClick={handleDirectAccess}
+                onClick={handleEmergencyAccess}
                 className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Emergency Access
