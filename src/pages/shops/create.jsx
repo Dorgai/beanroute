@@ -42,9 +42,15 @@ export default function CreateShopPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || `Error: ${response.status}`);
+        console.error('Shop creation response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data
+        });
+        throw new Error(data.message || data.details || `Error: ${response.status}`);
       }
 
+      console.log('Shop created successfully:', data);
       // Redirect to shops list on success
       router.push('/shops'); 
 

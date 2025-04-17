@@ -56,16 +56,42 @@ export async function getShopById(id) {
  * Create a new shop
  */
 export async function createShop(data, createdById) {
-  const { name, address, minCoffeeQuantityLarge, minCoffeeQuantitySmall } = data;
-  return prisma.shop.create({
-    data: {
-      name,
-      address,
-      minCoffeeQuantityLarge: parseInt(minCoffeeQuantityLarge, 10) || 0,
-      minCoffeeQuantitySmall: parseInt(minCoffeeQuantitySmall, 10) || 0,
-      createdById: createdById,
-    },
-  });
+  console.log('Creating shop with data:', { data, createdById });
+  
+  try {
+    const { name, address, minCoffeeQuantityLarge, minCoffeeQuantitySmall } = data;
+    
+    // Validate inputs
+    if (!name) {
+      throw new Error('Shop name is required');
+    }
+    
+    if (!createdById) {
+      throw new Error('Creator ID is required');
+    }
+    
+    // Ensure numbers are properly parsed
+    const largeQty = parseInt(minCoffeeQuantityLarge, 10) || 0;
+    const smallQty = parseInt(minCoffeeQuantitySmall, 10) || 0;
+    
+    console.log('Parsed shop quantities:', { largeQty, smallQty });
+    
+    const shop = await prisma.shop.create({
+      data: {
+        name,
+        address,
+        minCoffeeQuantityLarge: largeQty,
+        minCoffeeQuantitySmall: smallQty,
+        createdById: createdById,
+      },
+    });
+    
+    console.log('Shop created successfully:', shop.id);
+    return shop;
+  } catch (error) {
+    console.error('Error in createShop service function:', error);
+    throw error;
+  }
 }
 
 /**

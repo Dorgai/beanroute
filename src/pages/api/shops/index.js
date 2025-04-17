@@ -34,6 +34,12 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: 'Forbidden: Insufficient permissions to create shops.' });
       }
 
+      console.log('User attempting to create shop:', { 
+        userId: user.id, 
+        role: user.role,
+        shopData: req.body 
+      });
+
       const shopData = req.body;
       // Basic validation
       if (!shopData.name) {
@@ -50,11 +56,22 @@ export default async function handler(req, res) {
 
     } catch (error) {
        console.error('Error creating shop:', error);
+       console.error('Detailed shop creation error:', {
+         message: error.message,
+         stack: error.stack,
+         code: error.code,
+         meta: error.meta,
+         name: error.name
+       });
+       
        // Handle potential unique constraint errors, etc.
        if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
            return res.status(409).json({ message: 'A shop with this name already exists.' });
        }
-       return res.status(500).json({ message: 'Internal server error creating shop' });
+       return res.status(500).json({ 
+         message: 'Internal server error creating shop',
+         details: process.env.NODE_ENV === 'development' ? error.message : undefined
+       });
     }
   }
 
