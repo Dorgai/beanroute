@@ -595,6 +595,8 @@ export default function RetailOrders() {
   const [shops, setShops] = useState([]);
   const [selectedShop, setSelectedShop] = useState('');
   const [inventory, setInventory] = useState([]);
+  const [inventoryHistory, setInventoryHistory] = useState([]);
+  const [inventoryHistoryLoading, setInventoryHistoryLoading] = useState(false);
   const [availableCoffee, setAvailableCoffee] = useState([]);
   const [orders, setOrders] = useState([]);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
@@ -813,6 +815,33 @@ export default function RetailOrders() {
     localStorage.setItem('lastOrderCheckTime', currentTime);
   }, [orders]);
 
+  // Fetch inventory history when shop changes
+  useEffect(() => {
+    if (!selectedShop) return;
+    
+    const fetchInventoryHistory = async () => {
+      setInventoryHistoryLoading(true);
+      
+      try {
+        const response = await fetch(`/api/retail/inventory-history?shopId=${selectedShop}`);
+        
+        if (!response.ok) {
+          console.error('Error response from inventory history API:', response.status);
+          throw new Error(`Failed to fetch inventory history (${response.status})`);
+        }
+        
+        const data = await response.json();
+        setInventoryHistory(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error fetching inventory history:', error);
+      } finally {
+        setInventoryHistoryLoading(false);
+      }
+    };
+    
+    fetchInventoryHistory();
+  }, [selectedShop]);
+
   const handleCreateOrder = () => {
     setOrderDialogOpen(true);
   };
@@ -886,6 +915,25 @@ export default function RetailOrders() {
         console.error('Error refreshing inventory:', error);
       }
       
+      // Fetch inventory history with error handling
+      try {
+        console.log('Refreshing inventory history for shop:', selectedShop);
+        const historyResponse = await fetch(`/api/retail/inventory-history?shopId=${selectedShop}`);
+        
+        if (!historyResponse.ok) {
+          console.error('Error response from inventory history API:', historyResponse.status);
+        } else {
+          try {
+            const historyData = await historyResponse.json();
+            setInventoryHistory(Array.isArray(historyData) ? historyData : []);
+          } catch (jsonError) {
+            console.error('Error parsing inventory history JSON:', jsonError);
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing inventory history:', error);
+      }
+      
       // Fetch orders with error handling
       try {
         console.log('Refreshing orders for shop:', selectedShop);
@@ -899,10 +947,12 @@ export default function RetailOrders() {
             setOrders(Array.isArray(ordersData) ? ordersData.filter(Boolean) : []);
           } catch (jsonError) {
             console.error('Error parsing orders JSON:', jsonError);
+            setOrders([]);
           }
         }
       } catch (error) {
         console.error('Error refreshing orders:', error);
+        setOrders([]);
       }
       
       // Refresh available coffee with error handling
@@ -1029,7 +1079,8 @@ export default function RetailOrders() {
                 aria-label="retail management tabs"
               >
                 <Tab label="Inventory" id="tab-0" />
-                <Tab label="Orders" id="tab-1" />
+                <Tab label="Inventory History" id="tab-1" />
+                <Tab label="Orders" id="tab-2" />
               </Tabs>
             </Box>
             
@@ -1093,8 +1144,91 @@ export default function RetailOrders() {
               )}
             </Box>
             
-            {/* Orders Tab */}
+            {/* Inventory History Tab */}
             <Box role="tabpanel" hidden={tabIndex !== 1} id="tabpanel-1" aria-labelledby="tab-1" sx={{ py: 2 }}>
+              {inventoryHistoryLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                  <CircularProgress size={24} sx={{ mr: 1 }} />
+                  <Typography>Loading inventory history...</Typography>
+                </Box>
+              ) : inventoryHistory.length === 0 ? (
+                <IconlessAlert severity="info">No inventory history available for this shop in the last 3 months</IconlessAlert>
+              ) : (
+                <Paper elevation={1}>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableRow>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Coffee</TableCell>
+                          <TableCell>Updated By</TableCell>
+                          <TableCell align="right">Previous Qty</TableCell>
+                          <TableCell align="right">New Qty</TableCell>
+                          <TableCell align="right">Change</TableCell>
+                          <TableCell>Details</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {inventoryHistory.map((item) => (
+                          <TableRow key={item.id} hover>
+                            <TableCell>
+                              {item.timestamp 
+                                ? format(new Date(item.timestamp), 'MMM d, yyyy HH:mm')
+                                : 'Unknown'}
+                            </TableCell>
+                            <TableCell>
+                              <strong>{item.coffee?.name || 'Unknown'}</strong>
+                              {item.coffee?.grade && 
+                                <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                                  {item.coffee.grade.replace('_', ' ')}
+                                </Typography>
+                              }
+                            </TableCell>
+                            <TableCell>
+                              {item.user?.name || 'Unknown'}
+                              <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                                {item.user?.role || ''}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.changes?.previousValues?.totalQuantity?.toFixed(2) || '0.00'} kg
+                            </TableCell>
+                            <TableCell align="right">
+                              {item.changes?.newValues?.totalQuantity?.toFixed(2) || '0.00'} kg
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography 
+                                sx={{ 
+                                  color: item.changes?.quantityChange > 0 
+                                    ? 'success.main' 
+                                    : item.changes?.quantityChange < 0 
+                                      ? 'error.main' 
+                                      : 'text.primary',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {item.changes?.quantityChange > 0 ? '+' : ''}
+                                {item.changes?.quantityChange?.toFixed(2) || '0.00'} kg
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption">
+                                Small bags: {item.changes?.previousValues?.smallBags || 0} → {item.changes?.newValues?.smallBags || 0}
+                                <br />
+                                Large bags: {item.changes?.previousValues?.largeBags || 0} → {item.changes?.newValues?.largeBags || 0}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
+              )}
+            </Box>
+            
+            {/* Orders Tab */}
+            <Box role="tabpanel" hidden={tabIndex !== 2} id="tabpanel-2" aria-labelledby="tab-2" sx={{ py: 2 }}>
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                   <Typography>Loading orders...</Typography>
