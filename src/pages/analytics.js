@@ -15,10 +15,10 @@ import {
   TableRow,
   TextField,
   Button,
-  Alert,
   CircularProgress
 } from '@mui/material';
 import { format } from 'date-fns';
+import IconlessAlert from '../components/ui/IconlessAlert';
 
 export default function Analytics() {
   const router = useRouter();
@@ -104,9 +104,9 @@ export default function Analytics() {
           </Typography>
           
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <IconlessAlert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
+            </IconlessAlert>
           )}
           
           <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>

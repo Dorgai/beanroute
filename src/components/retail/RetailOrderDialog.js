@@ -14,9 +14,9 @@ import {
   Tab,
   Box,
   Typography,
-  Alert,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
+import IconlessAlert from '../ui/IconlessAlert';
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -142,9 +142,9 @@ export default function RetailOrderDialog({ open, onClose }) {
       <DialogTitle>Create Retail Order</DialogTitle>
       <DialogContent>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <IconlessAlert severity="error" sx={{ mb: 2 }}>
             {error}
-          </Alert>
+          </IconlessAlert>
         )}
 
         <FormControl fullWidth sx={{ mb: 3 }}>

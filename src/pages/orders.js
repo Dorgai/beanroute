@@ -28,7 +28,6 @@ import {
   TextField,
   Typography,
   CircularProgress,
-  Alert,
   Tooltip,
   IconButton,
 } from '@mui/material';
@@ -39,6 +38,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { format } from 'date-fns';
 import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
+import IconlessAlert from '../components/ui/IconlessAlert';
 
 // Simple Order Dialog Component
 function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
@@ -214,7 +214,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
     <Dialog open={open} onClose={() => onClose(false)} maxWidth="md">
       <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>Create Order</DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <IconlessAlert severity="info" sx={{ mb: 3 }}>
           <Typography variant="subtitle2" gutterBottom>Order Information</Typography>
           <ul style={{ paddingLeft: '20px', margin: '0' }}>
             <li>Small bags = 250g each (0.25kg)</li>
@@ -222,10 +222,10 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
             <li>Orders cannot exceed available coffee quantity</li>
             <li>Enter the number of bags you want to order</li>
           </ul>
-        </Alert>
+        </IconlessAlert>
         
         {error && (
-          <Alert 
+          <IconlessAlert 
             severity="error" 
             sx={{ 
               mb: 2,
@@ -236,11 +236,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
           >
             <Typography variant="subtitle2" gutterBottom>Error Creating Order</Typography>
             {error}
-          </Alert>
+          </IconlessAlert>
         )}
         
         {!Array.isArray(coffeeItems) || coffeeItems.length === 0 ? (
-          <Alert severity="info">No coffee available for ordering</Alert>
+          <IconlessAlert severity="info">No coffee available for ordering</IconlessAlert>
         ) : (
           <TableContainer component={Paper} sx={{ mt: 2 }}>
             <Table size="small">
@@ -459,20 +459,20 @@ function StatusUpdateDialog({ open, onClose, order }) {
       </DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <IconlessAlert severity="error" sx={{ mb: 2 }}>
             {error}
             {apiResponse && process.env.NODE_ENV === 'development' && (
               <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
                 API Response: {JSON.stringify(apiResponse, null, 2)}
               </Typography>
             )}
-          </Alert>
+          </IconlessAlert>
         )}
         
         {!order && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <IconlessAlert severity="warning" sx={{ mb: 2 }}>
             No order data available
-          </Alert>
+          </IconlessAlert>
         )}
         
         {order && (
@@ -493,9 +493,9 @@ function StatusUpdateDialog({ open, onClose, order }) {
             </Typography>
             
             {validNextStatuses.length === 0 && (isRoaster || isRetailer || isBarista) && (
-              <Alert severity="info" sx={{ mt: 2, mb: 1 }}>
+              <IconlessAlert severity="info" sx={{ mt: 2, mb: 1 }}>
                 You cannot change the status of this order from its current state: {order.status}
-              </Alert>
+              </IconlessAlert>
             )}
             
             <Box sx={{ mt: 3 }}>
@@ -970,14 +970,14 @@ export default function RetailOrders() {
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <IconlessAlert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
+            </IconlessAlert>
           )}
           
           {/* Alert for pending orders */}
           {shouldShowPendingAlert && hasPendingOrders && (
-            <Alert severity="warning" sx={{ mb: 3 }}>
+            <IconlessAlert severity="warning" sx={{ mb: 3 }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 Attention: There are pending orders that need your review!
               </Typography>
@@ -986,19 +986,19 @@ export default function RetailOrders() {
                   'Please review these orders.' : 
                   'There are orders waiting for review.'}
               </Typography>
-            </Alert>
+            </IconlessAlert>
           )}
           
           {/* Alert for recently changed orders */}
           {shouldShowChangedOrdersAlert && recentlyChangedOrders.length > 0 && (
-            <Alert severity="info" sx={{ mb: 3 }}>
+            <IconlessAlert severity="info" sx={{ mb: 3 }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 Order Updates Since Your Last Visit
               </Typography>
               <Typography variant="body2">
                 {recentlyChangedOrders.length} {recentlyChangedOrders.length === 1 ? 'order has' : 'orders have'} been updated.
               </Typography>
-            </Alert>
+            </IconlessAlert>
           )}
 
           <FormControl fullWidth sx={{ mb: 3 }}>
@@ -1040,7 +1040,7 @@ export default function RetailOrders() {
                   <Typography>Loading inventory...</Typography>
                 </Box>
               ) : inventory.length === 0 ? (
-                <Alert severity="info">No inventory data available for this shop</Alert>
+                <IconlessAlert severity="info">No inventory data available for this shop</IconlessAlert>
               ) : (
                 <Paper elevation={1}>
                   <TableContainer>
@@ -1100,7 +1100,7 @@ export default function RetailOrders() {
                   <Typography>Loading orders...</Typography>
                 </Box>
               ) : orders.length === 0 ? (
-                <Alert severity="info">No orders available for this shop</Alert>
+                <IconlessAlert severity="info">No orders available for this shop</IconlessAlert>
               ) : (
                 <Paper elevation={1}>
                   <TableContainer>

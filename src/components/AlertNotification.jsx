@@ -8,7 +8,7 @@ import React, { useState } from 'react';
  * @param {string} props.message The main message to display
  * @param {string} [props.title] Optional title for the alert
  * @param {boolean} [props.dismissible=false] Whether the alert can be dismissed
- * @param {boolean} [props.icon=true] Whether to show the severity icon
+ * @param {boolean} [props.icon=false] Whether to show the severity icon
  * @param {Object} [props.sx] Additional styles to apply to the alert container
  * @param {function} [props.onClose] Callback when alert is closed (if dismissible)
  */
@@ -17,7 +17,7 @@ export default function AlertNotification({
   message,
   title,
   dismissible = false,
-  icon = true,
+  icon = false,
   sx = {},
   onClose,
 }) {

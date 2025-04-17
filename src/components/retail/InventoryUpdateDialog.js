@@ -6,11 +6,11 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
-  Alert,
   Typography,
   Box,
   CircularProgress
 } from '@mui/material';
+import IconlessAlert from '../ui/IconlessAlert';
 
 export default function InventoryUpdateDialog({ open, onClose, inventoryItem }) {
   const [smallBags, setSmallBags] = useState('');
@@ -115,9 +115,9 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem }) 
       </DialogTitle>
       <DialogContent>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <IconlessAlert severity="error" sx={{ mb: 2 }}>
             {error}
-          </Alert>
+          </IconlessAlert>
         )}
 
         <Box sx={{ mb: 2, mt: 1 }}>
