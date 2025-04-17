@@ -14,70 +14,66 @@ export default function EditShopPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    minCoffeeQuantitySmall: '0',
+    minCoffeeQuantityLarge: '0',
+  });
 
   // Fetch existing shop data
   useEffect(() => {
-    if (!shopId) return; // Don't fetch if shopId isn't available yet
-
-    const fetchShopData = async () => {
-      setFetchLoading(true);
-      setError('');
+    const fetchShop = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(`/api/shops/${shopId}`, { credentials: 'same-origin' });
+        const response = await fetch(`/api/shops/shop-details?id=${shopId}`, { credentials: 'same-origin' });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Error: ${response.status}`);
+          throw new Error(`Failed to fetch shop: ${response.status}`);
         }
-
+        
         const data = await response.json();
         
-        // Debug log to check the response structure
-        console.log('Shop data received:', data);
+        // Set form values based on fetched shop
+        setFormData({
+          name: data.name || '',
+          address: data.address || '',
+          minCoffeeQuantitySmall: data.minCoffeeQuantitySmall?.toString() || '0',
+          minCoffeeQuantityLarge: data.minCoffeeQuantityLarge?.toString() || '0',
+        });
         
-        // Pre-populate form fields with shop data
-        if (data.shop) {
-          setName(data.shop.name || '');
-          setAddress(data.shop.address || '');
-          setMinSmall(data.shop.minCoffeeQuantitySmall?.toString() || '0');
-          setMinLarge(data.shop.minCoffeeQuantityLarge?.toString() || '0');
-        } else {
-          throw new Error('Shop data not found in response');
-        }
-
-      } catch (err) {
-        console.error('Fetch shop data error:', err);
-        setError(err.message || 'Could not load shop data.');
+      } catch (error) {
+        console.error('Error fetching shop details:', error);
+        setError(error.message || 'Failed to load shop details');
       } finally {
-        setFetchLoading(false);
+        setLoading(false);
       }
     };
-
-    fetchShopData();
-  }, [shopId]); // Re-fetch if shopId changes
+    
+    if (shopId) {
+      fetchShop();
+    }
+  }, [shopId]);
 
   // Handle form submission (update)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
 
-    if (!name) {
+    if (!formData.name) {
       setError('Shop name is required.');
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`/api/shops/${shopId}`, {
+      const response = await fetch(`/api/shops/shop-details?id=${shopId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name,
-          address,
-          minCoffeeQuantitySmall: parseInt(minSmall, 10),
-          minCoffeeQuantityLarge: parseInt(minLarge, 10)
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
         credentials: 'same-origin',
       });
 
@@ -111,7 +107,7 @@ export default function EditShopPage() {
   return (
     <>
       <Head>
-        <title>Edit Shop: {name || '...'}</title>
+        <title>Edit Shop: {formData.name || '...'}</title>
       </Head>
 
       <div className="space-y-6">
@@ -130,22 +126,22 @@ export default function EditShopPage() {
           {/* Name */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">Shop Name</label>
-            <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
+            <input type="text" id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
           </div>
           {/* Address */}
           <div>
             <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address (Optional)</label>
-            <input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
+            <input type="text" id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
           </div>
           {/* Min Small */}
           <div>
             <label htmlFor="minSmall" className="block text-sm font-medium text-gray-700">Min Small Bags (250g)</label>
-            <input type="number" id="minSmall" value={minSmall} onChange={(e) => setMinSmall(e.target.value)} min="0" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
+            <input type="number" id="minSmall" value={formData.minCoffeeQuantitySmall} onChange={(e) => setFormData({ ...formData, minCoffeeQuantitySmall: e.target.value })} min="0" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
           </div>
           {/* Min Large */}
           <div>
             <label htmlFor="minLarge" className="block text-sm font-medium text-gray-700">Min Large Bags (1kg)</label>
-            <input type="number" id="minLarge" value={minLarge} onChange={(e) => setMinLarge(e.target.value)} min="0" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
+            <input type="number" id="minLarge" value={formData.minCoffeeQuantityLarge} onChange={(e) => setFormData({ ...formData, minCoffeeQuantityLarge: e.target.value })} min="0" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
           </div>
           
           {/* Buttons */}

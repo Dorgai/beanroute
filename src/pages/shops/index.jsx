@@ -47,40 +47,29 @@ export default function ShopsPage() {
   }, [fetchShops]);
 
   // Handler for deleting a shop
-  const handleDeleteShop = async (shopId, shopName) => {
-    if (!window.confirm(`Are you sure you want to delete the shop "${shopName}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteShop = async (shopId) => {
+    if (window.confirm('Are you sure you want to delete this shop?')) {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/shops/shop-details?id=${shopId}`, {
+          method: 'DELETE',
+        });
 
-    // Optimistically remove shop from list
-    const originalShops = [...shops];
-    setShops(prevShops => prevShops.filter(s => s.id !== shopId));
-    setError(''); // Clear previous errors
+        if (!response.ok) {
+          throw new Error('Failed to delete shop');
+        }
 
-    try {
-      const response = await fetch(`/api/shops/${shopId}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-      });
-
-      if (!response.ok) {
-        let errorMsg = 'Failed to delete shop';
-        try {
-          // If API returns JSON error on failure (e.g., 404, 403)
-          const errorData = await response.json(); 
-          errorMsg = errorData.message || errorMsg;
-        } catch (jsonError) {}
-        // Revert optimistic update
-        setShops(originalShops);
-        setError(`Error: ${response.status} ${errorMsg}`);
-        // TODO: Display error more prominently
+        // Optimistically remove shop from list
+        const originalShops = [...shops];
+        setShops(prevShops => prevShops.filter(s => s.id !== shopId));
+        setError(''); // Clear previous errors
+      } catch (err) {
+        console.error('Delete shop error:', err);
+        setShops(originalShops); // Revert optimistic update
+        setError(err.message || 'Could not delete shop.');
+      } finally {
+        setLoading(false);
       }
-      // On successful 204, no action needed, shop already removed from state
-      // Optionally show a success message: e.g., setSuccess('Shop deleted successfully');
-    } catch (err) {
-      console.error('Delete shop error:', err);
-      setShops(originalShops); // Revert optimistic update
-      setError(err.message || 'Could not delete shop.');
     }
   };
 
@@ -159,7 +148,7 @@ export default function ShopsPage() {
                             {/* Delete Button */}
                             {/* Consider adding permission check here if needed: && currentUser?.canDeleteShops */}
                             <button
-                              onClick={() => handleDeleteShop(shop.id, shop.name)}
+                              onClick={() => handleDeleteShop(shop.id)}
                               className="text-red-600 hover:text-red-800 text-xs"
                             >
                               Delete

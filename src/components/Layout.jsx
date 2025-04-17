@@ -79,9 +79,14 @@ function CoffeeInventory() {
 export default function Layout({ children }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
   };
 
   if (loading) {
@@ -100,6 +105,17 @@ export default function Layout({ children }) {
   
   // Check if user can access analytics
   const canViewAnalytics = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
+
+  // Navigation links array for reuse in both desktop and mobile menus
+  const navLinks = [
+    { href: '/dashboard', label: 'Dashboard', roles: ['ADMIN', 'OWNER'] },
+    { href: '/users', label: 'Users', roles: ['ADMIN', 'OWNER'] },
+    { href: '/shops', label: 'Shops', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+    { href: '/coffee', label: 'Coffee', roles: [] }, // Empty array means available to all authenticated users
+    { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+    { href: '/orders', label: 'Orders', roles: [] }, // Available to all
+    { href: '/analytics', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+  ];
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -120,51 +136,40 @@ export default function Layout({ children }) {
                   }}
                 />
               </Link>
+              
+              {/* Desktop Navigation */}
               <nav className="hidden md:flex space-x-8">
-                {user && (user.role === 'ADMIN' || user.role === 'OWNER') && (
-                <Link href="/dashboard"
-                   className={`text-sm ${router.pathname === '/dashboard' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                  Dashboard
-                </Link>
-                )}
-                {user && (user.role === 'ADMIN' || user.role === 'OWNER') && (
-                <Link href="/users"
-                   className={`text-sm ${router.pathname.startsWith('/users') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                  Users
-                </Link>
-                )}
-                {user && (user.role === 'ADMIN' || user.role === 'OWNER' || user.role === 'RETAILER') && (
-                <Link href="/shops"
-                   className={`text-sm ${router.pathname.startsWith('/shops') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                  Shops
-                </Link>
-                )}
-                <Link href="/coffee"
-                   className={`text-sm ${router.pathname.startsWith('/coffee') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                  Coffee
-                </Link>
-                {canViewActivities && (
-                  <Link href="/activities"
-                     className={`text-sm ${router.pathname.startsWith('/activities') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                    Activities
-                  </Link>
-                )}
-                {/* Orders menu item for all users */}
-                <Link href="/orders"
-                   className={`text-sm ${router.pathname === '/orders' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                  Orders
-                </Link>
-                {canViewAnalytics && (
-                  <Link href="/analytics"
-                     className={`text-sm ${router.pathname === '/analytics' ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}>
-                    Analytics
-                  </Link>
-                )}
+                {navLinks.map((link) => {
+                  // Only show links if user has permission
+                  if (user && (link.roles.length === 0 || link.roles.includes(user.role))) {
+                    return (
+                      <Link 
+                        key={link.href}
+                        href={link.href}
+                        className={`text-sm ${router.pathname === link.href || router.pathname.startsWith(link.href + '/') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  }
+                  return null;
+                })}
               </nav>
             </div>
             
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden flex items-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
+              onClick={toggleMobileMenu}
+              aria-label="Menu"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+              </svg>
+            </button>
+            
             {/* User Info / Logout */}
-            <div className="flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-4">
               {canViewCoffeeInventory && <CoffeeInventory />}
               
               {user ? (
@@ -184,6 +189,60 @@ export default function Layout({ children }) {
               )}
             </div>
           </div>
+          
+          {/* Mobile Navigation Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden bg-white border-t border-gray-200 py-2 transition-all">
+              <nav className="flex flex-col space-y-3 px-2 pb-3 pt-2">
+                {navLinks.map((link) => {
+                  // Only show links if user has permission
+                  if (user && (link.roles.length === 0 || link.roles.includes(user.role))) {
+                    return (
+                      <Link 
+                        key={link.href} 
+                        href={link.href}
+                        className={`px-3 py-2 rounded-md text-sm ${
+                          router.pathname === link.href || router.pathname.startsWith(link.href + '/') 
+                            ? 'font-medium bg-gray-100' 
+                            : 'font-normal text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  }
+                  return null;
+                })}
+                
+                {/* Mobile user info and logout */}
+                <div className="border-t border-gray-200 pt-3 mt-2">
+                  {canViewCoffeeInventory && (
+                    <div className="px-3 py-2">
+                      <CoffeeInventory />
+                    </div>
+                  )}
+                  
+                  {user && (
+                    <>
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        {user.username}
+                      </div>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setMobileMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                      >
+                        Logout
+                      </button>
+                    </>
+                  )}
+                </div>
+              </nav>
+            </div>
+          )}
         </div>
       </header>
       

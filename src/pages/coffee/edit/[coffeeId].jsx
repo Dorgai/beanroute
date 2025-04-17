@@ -16,48 +16,51 @@ export default function EditCoffeePage() {
     process: '',
     notes: '',
     grade: 'SPECIALTY',
+    price: '',
+    isActive: false,
   });
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  const [success, setSuccess] = useState('');
 
   // Check if user has permission to edit coffee
   const canManageCoffee = user && ['ADMIN', 'OWNER', 'ROASTER'].includes(user.role);
 
   // Fetch coffee data
   useEffect(() => {
-    if (!coffeeId) return;
-    
-    const fetchCoffee = async () => {
+    const fetchCoffeeData = async () => {
+      setLoading(true);
+      setError('');
+      
       try {
-        const response = await fetch(`/api/coffee/${coffeeId}`);
+        const response = await fetch(`/api/coffee/coffee-details?id=${coffeeId}`);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch coffee data');
+          throw new Error(`Failed to fetch coffee data: ${response.status}`);
         }
         
-        const coffee = await response.json();
-        
-        // Map the coffee data to form fields
+        const data = await response.json();
         setFormData({
-          name: coffee.name || '',
-          roaster: coffee.producer || '', // Map producer to roaster
-          origin: coffee.country || '',   // Map country to origin
-          process: coffee.process || '',
-          notes: coffee.notes || '',
-          grade: coffee.grade || 'SPECIALTY',
+          name: data.name || '',
+          grade: data.grade || '',
+          origin: data.origin || '',
+          price: data.price?.toString() || '',
+          isActive: data.isActive || false,
         });
-      } catch (err) {
-        console.error('Error fetching coffee:', err);
-        setFetchError('Failed to load coffee data. Please try again later.');
+      } catch (error) {
+        console.error('Error fetching coffee data:', error);
+        setError('Failed to load coffee data. Please try again.');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchCoffee();
+    if (coffeeId) {
+      fetchCoffeeData();
+    }
   }, [coffeeId]);
 
   // Redirect if not authorized
@@ -91,27 +94,28 @@ export default function EditCoffeePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
-
+    setError('');
+    setSuccess('');
+    
     try {
-      const response = await fetch(`/api/coffee/${coffeeId}`, {
+      const response = await fetch(`/api/coffee/coffee-details?id=${coffeeId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
-
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update coffee');
       }
-
-      // Redirect to coffee details page
-      router.push(`/coffee/${coffeeId}`);
-    } catch (err) {
-      console.error('Error updating coffee:', err);
-      setError(err.message || 'An error occurred while updating the coffee');
+      
+      setSuccess('Coffee updated successfully!');
+      // You may want to redirect to coffee details page here
+    } catch (error) {
+      console.error('Error updating coffee:', error);
+      setError(error.message || 'Failed to update coffee. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -154,6 +158,12 @@ export default function EditCoffeePage() {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+          {success}
         </div>
       )}
 

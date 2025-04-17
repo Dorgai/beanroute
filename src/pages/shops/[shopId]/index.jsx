@@ -24,15 +24,15 @@ export default function ShopDetails() {
       
       try {
         // Fetch shop details
-        const shopResponse = await fetch(`/api/shops/${shopId}`);
+        const shopResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/shops/shop-details?id=${shopId}`);
         if (!shopResponse.ok) {
-          throw new Error(`Failed to fetch shop: ${shopResponse.statusText}`);
+          throw new Error(`Failed to fetch shop: ${shopResponse.status}`);
         }
         const shopData = await shopResponse.json();
         setShop(shopData);
         
         // Fetch shop users
-        const usersResponse = await fetch(`/api/shops/${shopId}/users`);
+        const usersResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/shops/${shopId}/users`);
         if (!usersResponse.ok) {
           throw new Error(`Failed to fetch shop users: ${usersResponse.statusText}`);
         }
@@ -165,4 +165,31 @@ export default function ShopDetails() {
       </div>
     </Layout>
   );
+}
+
+export async function getServerSideProps(context) {
+  const { shopId } = context.params;
+  
+  try {
+    // Fetch shop details
+    const shopResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/shops/shop-details?id=${shopId}`);
+    
+    if (!shopResponse.ok) {
+      throw new Error(`Failed to fetch shop: ${shopResponse.status}`);
+    }
+    
+    const shop = await shopResponse.json();
+    
+    // Fetch users assigned to the shop
+    const usersResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/shops/${shopId}/users`);
+    
+    // Process users data...
+  } catch (err) {
+    console.error('Error fetching shop data:', err);
+    return {
+      props: {
+        error: err.message || 'Failed to load shop data',
+      },
+    };
+  }
 } 

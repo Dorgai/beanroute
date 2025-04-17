@@ -36,6 +36,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import WarningIcon from '@mui/icons-material/Warning';
+import ErrorIcon from '@mui/icons-material/Error';
 import { format } from 'date-fns';
 import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
 import IconlessAlert from '../components/ui/IconlessAlert';
@@ -588,12 +590,71 @@ function StatusChip({ status }) {
   );
 }
 
+// Stock Level Alert component
+function StockLevelAlert({ inventory, shopMinQuantities }) {
+  if (!inventory || !shopMinQuantities) return null;
+  
+  // Calculate stock level percentages
+  const smallBagPercentage = shopMinQuantities.minCoffeeQuantitySmall > 0 
+    ? (inventory.smallBags / shopMinQuantities.minCoffeeQuantitySmall) * 100 
+    : 100;
+  
+  const largeBagPercentage = shopMinQuantities.minCoffeeQuantityLarge > 0 
+    ? (inventory.largeBags / shopMinQuantities.minCoffeeQuantityLarge) * 100 
+    : 100;
+  
+  // Determine if we need to show alerts
+  const showCriticalSmallBags = smallBagPercentage < 50;
+  const showWarningSmallBags = !showCriticalSmallBags && smallBagPercentage < 75;
+  
+  const showCriticalLargeBags = largeBagPercentage < 50;
+  const showWarningLargeBags = !showCriticalLargeBags && largeBagPercentage < 75;
+  
+  // If no alerts needed, return null
+  if (!showCriticalSmallBags && !showWarningSmallBags && !showCriticalLargeBags && !showWarningLargeBags) {
+    return null;
+  }
+  
+  return (
+    <Box sx={{ mt: 1 }}>
+      {showCriticalSmallBags && (
+        <Typography variant="caption" sx={{ color: 'error.main', display: 'flex', alignItems: 'center' }}>
+          <ErrorIcon fontSize="small" sx={{ mr: 0.5 }} />
+          Critical: Small bags below 50% of minimum ({inventory.smallBags}/{shopMinQuantities.minCoffeeQuantitySmall})
+        </Typography>
+      )}
+      
+      {showWarningSmallBags && (
+        <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center' }}>
+          <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
+          Low: Small bags below 75% of minimum ({inventory.smallBags}/{shopMinQuantities.minCoffeeQuantitySmall})
+        </Typography>
+      )}
+      
+      {showCriticalLargeBags && (
+        <Typography variant="caption" sx={{ color: 'error.main', display: 'flex', alignItems: 'center', mt: 0.5 }}>
+          <ErrorIcon fontSize="small" sx={{ mr: 0.5 }} />
+          Critical: Large bags below 50% of minimum ({inventory.largeBags}/{shopMinQuantities.minCoffeeQuantityLarge})
+        </Typography>
+      )}
+      
+      {showWarningLargeBags && (
+        <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', mt: 0.5 }}>
+          <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
+          Low: Large bags below 75% of minimum ({inventory.largeBags}/{shopMinQuantities.minCoffeeQuantityLarge})
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
 export default function RetailOrders() {
   const { session } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [shops, setShops] = useState([]);
   const [selectedShop, setSelectedShop] = useState('');
+  const [selectedShopDetails, setSelectedShopDetails] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [inventoryHistory, setInventoryHistory] = useState([]);
   const [inventoryHistoryLoading, setInventoryHistoryLoading] = useState(false);
@@ -671,6 +732,30 @@ export default function RetailOrders() {
 
     fetchShops();
   }, []);
+
+  // Fetch shop details when the selected shop changes
+  useEffect(() => {
+    const fetchShopDetails = async () => {
+      if (!selectedShop) return;
+      
+      try {
+        console.log('Fetching shop details for:', selectedShop);
+        const response = await fetch(`/api/shops/shop-details?id=${selectedShop}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch shop details (${response.status})`);
+        }
+        
+        const shopData = await response.json();
+        console.log('Shop details:', shopData);
+        setSelectedShopDetails(shopData);
+      } catch (error) {
+        console.error('Error fetching shop details:', error);
+      }
+    };
+    
+    fetchShopDetails();
+  }, [selectedShop]);
 
   // Fetch inventory and available coffee when shop changes
   useEffect(() => {
@@ -1093,54 +1178,99 @@ export default function RetailOrders() {
               ) : inventory.length === 0 ? (
                 <IconlessAlert severity="info">No inventory data available for this shop</IconlessAlert>
               ) : (
-                <Paper elevation={1}>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableRow>
-                          <TableCell>Coffee</TableCell>
-                          <TableCell>Grade</TableCell>
-                          <TableCell align="right">Small Bags (250g)</TableCell>
-                          <TableCell align="right">Large Bags (1kg)</TableCell>
-                          <TableCell align="right">Total Quantity (kg)</TableCell>
-                          <TableCell>Last Order Date</TableCell>
-                          {canUpdateInventory && (
-                            <TableCell align="right">Actions</TableCell>
-                          )}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {inventory.map((item) => (
-                          <TableRow key={item.id} hover>
-                            <TableCell><strong>{item.coffee?.name || 'Unknown'}</strong></TableCell>
-                            <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
-                            <TableCell align="right">{item.smallBags || 0}</TableCell>
-                            <TableCell align="right">{item.largeBags || 0}</TableCell>
-                            <TableCell align="right">{item.totalQuantity ? item.totalQuantity.toFixed(2) : '0.00'}</TableCell>
-                            <TableCell>
-                              {item.lastOrderDate
-                                ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
-                                : 'Never'}
-                            </TableCell>
+                <>
+                  {/* Shop minimum quantities info alert */}
+                  {selectedShopDetails && (canUpdateInventory || isAdmin || isOwner) && (
+                    <IconlessAlert severity="info" sx={{ mb: 2 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        Shop Minimum Inventory Requirements
+                      </Typography>
+                      <Typography variant="body2">
+                        Small bags: {selectedShopDetails.minCoffeeQuantitySmall} |
+                        Large bags: {selectedShopDetails.minCoffeeQuantityLarge} 
+                      </Typography>
+                    </IconlessAlert>
+                  )}
+                
+                  <Paper elevation={1}>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                          <TableRow>
+                            <TableCell>Coffee</TableCell>
+                            <TableCell>Grade</TableCell>
+                            <TableCell align="right">Small Bags (250g)</TableCell>
+                            <TableCell align="right">Large Bags (1kg)</TableCell>
+                            <TableCell align="right">Total Quantity (kg)</TableCell>
+                            <TableCell>Last Order Date</TableCell>
+                            <TableCell>Stock Status</TableCell>
                             {canUpdateInventory && (
-                              <TableCell align="right">
-                                <Tooltip title="Update Inventory">
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => handleOpenInventoryDialog(item)}
-                                    aria-label="update inventory"
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </TableCell>
+                              <TableCell align="right">Actions</TableCell>
                             )}
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
+                        </TableHead>
+                        <TableBody>
+                          {inventory.map((item) => (
+                            <TableRow 
+                              key={item.id} 
+                              hover
+                              sx={
+                                // Add warning background for low stock items
+                                selectedShopDetails && (
+                                  (selectedShopDetails.minCoffeeQuantitySmall > 0 && 
+                                   item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.5) ||
+                                  (selectedShopDetails.minCoffeeQuantityLarge > 0 && 
+                                   item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.5)
+                                ) ? { backgroundColor: 'rgba(211, 47, 47, 0.05)' } : // Critical
+                                selectedShopDetails && (
+                                  (selectedShopDetails.minCoffeeQuantitySmall > 0 && 
+                                   item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.75) ||
+                                  (selectedShopDetails.minCoffeeQuantityLarge > 0 && 
+                                   item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.75)
+                                ) ? { backgroundColor: 'rgba(237, 108, 2, 0.05)' } : // Warning
+                                {}
+                              }
+                            >
+                              <TableCell>
+                                <strong>{item.coffee?.name || 'Unknown'}</strong>
+                              </TableCell>
+                              <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
+                              <TableCell align="right">{item.smallBags || 0}</TableCell>
+                              <TableCell align="right">{item.largeBags || 0}</TableCell>
+                              <TableCell align="right">{item.totalQuantity ? item.totalQuantity.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell>
+                                {item.lastOrderDate
+                                  ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
+                                  : 'Never'}
+                              </TableCell>
+                              <TableCell>
+                                {(canUpdateInventory || isAdmin || isOwner) && selectedShopDetails && (
+                                  <StockLevelAlert
+                                    inventory={item}
+                                    shopMinQuantities={selectedShopDetails}
+                                  />
+                                )}
+                              </TableCell>
+                              {canUpdateInventory && (
+                                <TableCell align="right">
+                                  <Tooltip title="Update Inventory">
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => handleOpenInventoryDialog(item)}
+                                      aria-label="update inventory"
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+                </>
               )}
             </Box>
             
