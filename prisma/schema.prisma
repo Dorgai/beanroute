@@ -1,132 +1,120 @@
-// This is your Prisma schema file for the PostgreSQL database
 generator client {
-  provider        = "prisma-client-js"
-  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("POSTGRES_PRISMA_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// User model - Core of our user management system
 model User {
-  id                  String               @id @default(uuid())
-  username            String               @unique
-  email               String?              @unique
-  password            String               // Will be hashed with bcrypt
-  firstName           String?
-  lastName            String?
-  role                Role                 @default(BARISTA)
-  status              UserStatus           @default(ACTIVE)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  lastLogin           DateTime?
-  permissions         Permission[]         // One-to-many relationship with permissions
-  sessions            Session[]            // One-to-many relationship with sessions
-  createdPermissions  Permission[]         @relation("PermissionCreator")
-  teams               UserTeam[]           // Many-to-many relationship with teams
-  activities          UserActivity[]       // One-to-many relationship with user activities
-  shops               UserShop[]           // Many-to-many relationship with shops
-  createdShops        Shop[]               // Shops created by this user
-  createdCoffees      GreenCoffee[]        // Green coffee created by this user
-  inventoryLogs       GreenCoffeeInventoryLog[] // Inventory logs created by this user
-  retailOrders        RetailOrder[]        @relation("OrderedBy") // Retail orders placed by this user
+  id                 String                    @id @default(uuid())
+  username           String                    @unique
+  email              String?                   @unique
+  password           String
+  firstName          String?
+  lastName           String?
+  role               Role                      @default(BARISTA)
+  status             UserStatus                @default(ACTIVE)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  lastLogin          DateTime?
+  createdCoffees     GreenCoffee[]
+  inventoryLogs      GreenCoffeeInventoryLog[]
+  createdPermissions Permission[]              @relation("PermissionCreator")
+  permissions        Permission[]
+  retailOrders       RetailOrder[]             @relation("OrderedBy")
+  sessions           Session[]
+  createdShops       Shop[]
+  activities         UserActivity[]
+  shops              UserShop[]
+  teams              UserTeam[]
 }
 
-// Shop model - For managing coffee shops
 model Shop {
-  id                    String               @id @default(uuid())
-  name                  String               @unique
-  address               String?
-  minCoffeeQuantityLarge Int                 @default(0)  // Minimum coffee quantity in large bags (1 Kg)
-  minCoffeeQuantitySmall Int                 @default(0)  // Minimum coffee quantity in small bags (250 g)
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  createdBy             User                 @relation(fields: [createdById], references: [id])
-  createdById           String
-  users                 UserShop[]           // Users associated with this shop
-  retailOrders          RetailOrder[]        // Retail orders for this shop
-  retailInventory       RetailInventory[]    // Retail inventory for this shop
+  id                     String            @id @default(uuid())
+  name                   String            @unique
+  address                String?
+  minCoffeeQuantityLarge Int               @default(0)
+  minCoffeeQuantitySmall Int               @default(0)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  createdById            String
+  retailInventory        RetailInventory[]
+  retailOrders           RetailOrder[]
+  createdBy              User              @relation(fields: [createdById], references: [id])
+  users                  UserShop[]
 }
 
-// Junction table for User and Shop
 model UserShop {
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId    String
   role      Role     @default(BARISTA)
   createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, shopId])
 }
 
-// Team model - For organizing users into groups
 model Team {
   id          String     @id @default(uuid())
   name        String     @unique
   description String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  users       UserTeam[] // Many-to-many relationship with users
+  users       UserTeam[]
 }
 
-// Junction table for User and Team
 model UserTeam {
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId    String
   role      TeamRole @default(MEMBER)
   createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, teamId])
 }
 
-// Permission model - For fine-grained access control
 model Permission {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
   resource    String
-  action      String    // create, read, update, delete
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String
   userId      String?
-  createdBy   User      @relation("PermissionCreator", fields: [createdById], references: [id])
   createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation("PermissionCreator", fields: [createdById], references: [id])
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, resource, action])
 }
 
-// Session model - For keeping track of user sessions
 model Session {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
   ipAddress String?
   userAgent String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// UserActivity model - For audit trail
 model UserActivity {
-  id        String   @id @default(uuid())
-  userId    String
-  action    String   // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, etc.
-  resource  String   // USER, SHOP, COFFEE, etc.
-  resourceId String? // ID of the affected resource
-  details   String?  // Additional details about the action
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-
-  // Relation to User
-  user      User     @relation(fields: [userId], references: [id])
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String?
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([action])
@@ -134,50 +122,46 @@ model UserActivity {
   @@index([createdAt])
 }
 
-// GreenCoffee model - For managing green coffee inventory
 model GreenCoffee {
-  id          String                @id @default(uuid())
-  name        String
-  quantity    Float                 @default(0)  // Current quantity in kg
-  grade       CoffeeGrade
-  country     String?
-  producer    String?
-  notes       String?
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-  createdBy   User                  @relation(fields: [createdById], references: [id])
-  createdById String
-  
-  inventoryLogs GreenCoffeeInventoryLog[]
-  retailOrders  RetailOrderItem[]        // Relation to retail orders
-  retailInventory RetailInventory[]      // Relation to retail inventory
+  id              String                    @id @default(uuid())
+  name            String
+  quantity        Float                     @default(0)
+  grade           CoffeeGrade
+  country         String?
+  producer        String?
+  notes           String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  createdById     String
+  createdBy       User                      @relation(fields: [createdById], references: [id])
+  inventoryLogs   GreenCoffeeInventoryLog[]
+  retailInventory RetailInventory[]
+  retailOrders    RetailOrderItem[]
 
   @@unique([name, country, producer])
 }
 
-// GreenCoffeeInventoryLog model - For tracking inventory changes
 model GreenCoffeeInventoryLog {
-  id          String      @id @default(uuid())
-  coffee      GreenCoffee @relation(fields: [coffeeId], references: [id], onDelete: Cascade)
-  coffeeId    String
-  user        User        @relation(fields: [userId], references: [id])
-  userId      String
-  changeAmount Float       // Can be positive (addition) or negative (removal)
-  quantity    Float       // Quantity after change
-  notes       String?
-  createdAt   DateTime    @default(now())
+  id           String      @id @default(uuid())
+  coffeeId     String
+  userId       String
+  changeAmount Float
+  quantity     Float
+  notes        String?
+  createdAt    DateTime    @default(now())
+  coffee       GreenCoffee @relation(fields: [coffeeId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id])
 }
 
-// RetailOrder model - For managing retail orders
 model RetailOrder {
-  id          String      @id @default(uuid())
-  shop        Shop        @relation(fields: [shopId], references: [id])
+  id          String            @id @default(uuid())
   shopId      String
-  orderedBy   User        @relation("OrderedBy", fields: [orderedById], references: [id])
   orderedById String
-  status      OrderStatus @default(PENDING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  status      OrderStatus       @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  orderedBy   User              @relation("OrderedBy", fields: [orderedById], references: [id])
+  shop        Shop              @relation(fields: [shopId], references: [id])
   items       RetailOrderItem[]
 
   @@index([shopId])
@@ -186,43 +170,40 @@ model RetailOrder {
   @@index([createdAt])
 }
 
-// RetailOrderItem model - For individual items in a retail order
 model RetailOrderItem {
   id            String      @id @default(uuid())
-  order         RetailOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId       String
-  coffee        GreenCoffee @relation(fields: [coffeeId], references: [id])
   coffeeId      String
-  smallBags     Int         @default(0)  // Number of 250g bags
-  largeBags     Int         @default(0)  // Number of 1kg bags
-  totalQuantity Float       // Total quantity in kg
+  smallBags     Int         @default(0)
+  largeBags     Int         @default(0)
+  totalQuantity Float
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  coffee        GreenCoffee @relation(fields: [coffeeId], references: [id])
+  order         RetailOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([coffeeId])
 }
 
-// RetailInventory model - For tracking retail inventory
 model RetailInventory {
   id            String      @id @default(uuid())
-  shop          Shop        @relation(fields: [shopId], references: [id])
   shopId        String
-  coffee        GreenCoffee @relation(fields: [coffeeId], references: [id])
   coffeeId      String
-  smallBags     Int         @default(0)  // Current number of 250g bags
-  largeBags     Int         @default(0)  // Current number of 1kg bags
-  totalQuantity Float       // Total quantity in kg
+  smallBags     Int         @default(0)
+  largeBags     Int         @default(0)
+  totalQuantity Float
   lastOrderDate DateTime?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  coffee        GreenCoffee @relation(fields: [coffeeId], references: [id])
+  shop          Shop        @relation(fields: [shopId], references: [id])
 
   @@unique([shopId, coffeeId])
   @@index([shopId])
   @@index([coffeeId])
 }
 
-// Updated Enums for new roles
 enum Role {
   ADMIN
   OWNER
@@ -257,4 +238,4 @@ enum OrderStatus {
   DISPATCHED
   DELIVERED
   CANCELLED
-} 
+}
