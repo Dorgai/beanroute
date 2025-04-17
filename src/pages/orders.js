@@ -38,6 +38,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { format } from 'date-fns';
+import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
 
 // Simple Order Dialog Component
 function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
@@ -598,7 +599,9 @@ export default function RetailOrders() {
   const [orders, setOrders] = useState([]);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [inventoryDialogOpen, setInventoryDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState(null);
   const [tabIndex, setTabIndex] = useState(0);
   const [expandedRows, setExpandedRows] = useState({});
   const [hasPendingOrders, setHasPendingOrders] = useState(false);
@@ -611,6 +614,9 @@ export default function RetailOrders() {
   const isBarista = userRole === 'BARISTA';
   const isAdmin = userRole === 'ADMIN';
   const isOwner = userRole === 'OWNER';
+  
+  // Check if the user can update inventory (retailer, barista, admin, owner)
+  const canUpdateInventory = isRetailer || isBarista || isAdmin || isOwner;
   
   // Should show pending orders alert for certain user roles
   const shouldShowPendingAlert = isRoaster || isAdmin || isOwner;
@@ -837,6 +843,20 @@ export default function RetailOrders() {
     setTabIndex(newValue);
   };
   
+  const handleOpenInventoryDialog = (inventoryItem) => {
+    setSelectedInventoryItem(inventoryItem);
+    setInventoryDialogOpen(true);
+  };
+  
+  const handleCloseInventoryDialog = (success) => {
+    setInventoryDialogOpen(false);
+    setSelectedInventoryItem(null);
+    if (success) {
+      // Refresh inventory data after update
+      refreshData();
+    }
+  };
+  
   const refreshData = async () => {
     if (!selectedShop) return;
     
@@ -1033,6 +1053,9 @@ export default function RetailOrders() {
                           <TableCell align="right">Large Bags (1kg)</TableCell>
                           <TableCell align="right">Total Quantity (kg)</TableCell>
                           <TableCell>Last Order Date</TableCell>
+                          {canUpdateInventory && (
+                            <TableCell align="right">Actions</TableCell>
+                          )}
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1048,6 +1071,19 @@ export default function RetailOrders() {
                                 ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
                                 : 'Never'}
                             </TableCell>
+                            {canUpdateInventory && (
+                              <TableCell align="right">
+                                <Tooltip title="Update Inventory">
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={() => handleOpenInventoryDialog(item)}
+                                    aria-label="update inventory"
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1187,6 +1223,13 @@ export default function RetailOrders() {
           open={statusDialogOpen}
           onClose={handleCloseStatusDialog}
           order={selectedOrder}
+        />
+        
+        {/* Inventory Update Dialog */}
+        <InventoryUpdateDialog
+          open={inventoryDialogOpen}
+          onClose={handleCloseInventoryDialog}
+          inventoryItem={selectedInventoryItem}
         />
       </Container>
     </>
