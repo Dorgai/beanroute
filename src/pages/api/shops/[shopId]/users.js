@@ -1,6 +1,7 @@
 import { verifyRequestAndGetUser } from '../../../../lib/auth';
 import { getShopById, addUserToShop, removeUserFromShop, updateUserRoleInShop, getShopUsers } from '../../../../lib/shop-service';
 import { logActivity } from '../../../../lib/activity-service';
+import { getUsersForShop } from '../../../../lib/user-service';
 
 export default async function handler(req, res) {
   try {
@@ -31,10 +32,17 @@ export default async function handler(req, res) {
     
     // Handle GET request - Fetch users assigned to shop
     if (req.method === 'GET') {
-      // Fetch users assigned to this shop
-      const shopUsers = await getShopUsers(shopId);
-      
-      return res.status(200).json(shopUsers);
+      if (!['ADMIN', 'OWNER', 'MANAGER'].includes(user.role)) {
+        return res.status(403).json({ message: 'Forbidden - Insufficient permissions' });
+      }
+
+      try {
+        const users = await getShopUsers(shopId);
+        return res.status(200).json(users);
+      } catch (error) {
+        console.error(`Error getting users for shop ${shopId}:`, error);
+        return res.status(500).json({ message: 'Error getting users for shop' });
+      }
     }
     
     // Handle POST request - Add user to shop
@@ -143,9 +151,9 @@ export default async function handler(req, res) {
       }
     }
     
-    // Return 405 for other methods
+    // Unsupported method
     res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-    return res.status(405).json({ message: 'Method not allowed' });
+    return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   } catch (error) {
     console.error('Error in shop users API:', error);
     return res.status(500).json({ message: 'Internal server error' });

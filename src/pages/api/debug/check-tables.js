@@ -1,19 +1,16 @@
 import { PrismaClient } from '@prisma/client';
-import { withSessionRoute } from '../../../lib/session';
 
 const prisma = new PrismaClient();
 
-async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Only allow access if user is admin or if the request has a valid debug token
-  const session = req.session;
+  // Only allow access if the request has a valid debug token
   const debugToken = req.query.token;
   
-  if ((!session || !session.user || session.user.role !== 'ADMIN') && 
-      debugToken !== process.env.DEBUG_TOKEN) {
+  if (debugToken !== process.env.DEBUG_TOKEN) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
@@ -60,6 +57,4 @@ async function handler(req, res) {
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-}
-
-export default withSessionRoute(handler); 
+} 

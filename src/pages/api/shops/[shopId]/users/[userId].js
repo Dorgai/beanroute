@@ -1,80 +1,61 @@
 import { verifyRequestAndGetUser } from '../../../../../lib/auth';
-import { canManageShops } from '../../../../../lib/user-service';
-import { removeUserFromShop, getShopById } from '../../../../../lib/shop-service';
+import { updateUserRoleInShop, removeUserFromShop } from '../../../../../lib/shop-service';
 import { logActivity } from '../../../../../lib/activity-service';
 import prisma from '../../../../../lib/prisma';
 
 export default async function handler(req, res) {
   try {
-    // Verify the user is authenticated
-    const authenticatedUser = await verifyRequestAndGetUser(req, res);
-    if (!authenticatedUser) {
+    // Verify authentication
+    const user = await verifyRequestAndGetUser(req);
+    if (!user) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
     const { shopId, userId } = req.query;
+    
     if (!shopId || !userId) {
       return res.status(400).json({ message: 'Shop ID and User ID are required' });
     }
 
-    // Handle DELETE request - Remove user from shop
-    if (req.method === 'DELETE') {
-      // Check if the user can manage shops
-      const canManage = await canManageShops(authenticatedUser.id);
-      if (!canManage) {
-        return res.status(403).json({ message: 'Forbidden: Insufficient permissions to manage shops' });
-      }
-
-      // Check if both shop and user exist
-      const shop = await getShopById(shopId);
-      if (!shop) {
-        return res.status(404).json({ message: 'Shop not found' });
-      }
-
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      // Check if the user is assigned to the shop
-      const existingAssignment = await prisma.userShop.findUnique({
-        where: {
-          userId_shopId: {
-            userId,
-            shopId,
-          },
-        },
-      });
-
-      if (!existingAssignment) {
-        return res.status(404).json({ message: 'User is not assigned to this shop' });
-      }
-
-      // Delete the user-shop assignment
-      await removeUserFromShop(userId, shopId);
-
-      // Log the activity
-      await logActivity({
-        userId: authenticatedUser.id,
-        action: 'REMOVE',
-        resource: 'SHOP_USER',
-        resourceId: shopId,
-        details: `Removed user ${userId} from shop ${shopId}`
-      });
-
-      return res.status(200).json({
-        message: 'User removed from shop'
-      });
+    // Only admins, owners, and managers can manage users
+    const canManageUsers = ['ADMIN', 'OWNER', 'MANAGER'].includes(user.role);
+    if (!canManageUsers) {
+      return res.status(403).json({ message: 'Forbidden - Insufficient permissions' });
     }
 
-    // Method not allowed for other HTTP methods
-    res.setHeader('Allow', ['DELETE']);
+    // PUT request - Update user role in shop
+    if (req.method === 'PUT') {
+      const { role } = req.body;
+      
+      if (!role) {
+        return res.status(400).json({ message: 'Role is required' });
+      }
+      
+      try {
+        await updateUserRoleInShop(shopId, userId, role);
+        return res.status(200).json({ message: 'User role updated successfully' });
+      } catch (error) {
+        console.error(`Error updating user ${userId} in shop ${shopId}:`, error);
+        return res.status(500).json({ message: 'Error updating user role' });
+      }
+    }
+    
+    // DELETE request - Remove user from shop
+    if (req.method === 'DELETE') {
+      try {
+        await removeUserFromShop(shopId, userId);
+        return res.status(200).json({ message: 'User removed from shop successfully' });
+      } catch (error) {
+        console.error(`Error removing user ${userId} from shop ${shopId}:`, error);
+        return res.status(500).json({ message: 'Error removing user from shop' });
+      }
+    }
+    
+    // Unsupported method
+    res.setHeader('Allow', ['PUT', 'DELETE']);
     return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   } catch (error) {
-    console.error('Error in shop user API:', error);
-    return res.status(500).json({ message: 'Internal server error', error: error.message });
+    console.error('Error in shop user management API:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 } 
