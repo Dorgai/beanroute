@@ -1,7 +1,7 @@
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
-const { initializeDatabase } = require('./db-init');
+const { ensureAdminExists } = require('./init-db');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -16,8 +16,8 @@ async function startServer() {
     // Prepare Next.js
     await app.prepare();
     
-    // Start database initialization in parallel
-    const dbInitPromise = initializeDatabase();
+    // Start database initialization and admin user creation in parallel
+    const dbInitPromise = ensureAdminExists();
     
     // Create and start the HTTP server
     const server = createServer(async (req, res) => {
@@ -41,12 +41,12 @@ async function startServer() {
     });
 
     // Wait for database initialization to complete
-    const dbSuccess = await dbInitPromise;
-    if (dbSuccess) {
-      console.log('✅ Database setup completed');
-    } else {
-      console.warn('⚠️ Database setup failed, but server is still running');
-      console.warn('⚠️ Some features may not work until database is properly set up');
+    try {
+      const adminUser = await dbInitPromise;
+      console.log('✅ Admin user setup completed:', adminUser.username);
+    } catch (err) {
+      console.error('⚠️ Admin setup failed, but server is still running:', err.message);
+      console.warn('⚠️ Authentication functionality may not work properly');
     }
   } catch (err) {
     console.error('Error starting server:', err);

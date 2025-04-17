@@ -4,6 +4,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const { execSync } = require('child_process');
+const bcrypt = require('bcryptjs');
 
 // Display environment info
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 
@@ -11,50 +12,92 @@ console.log('DATABASE_URL:', process.env.DATABASE_URL ?
   'Not defined');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 
-async function main() {
+const prisma = new PrismaClient();
+
+async function ensureAdminExists() {
+  console.log('Ensuring admin user exists...');
+  
   try {
-    // Run migrations
-    console.log('Running database migrations...');
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+    // Check if admin user already exists
+    const existingAdmin = await prisma.user.findUnique({
+      where: { username: 'admin' }
+    });
     
-    // Generate Prisma client
-    console.log('Generating Prisma client...');
-    execSync('npx prisma generate', { stdio: 'inherit' });
-    
-    // Test connection
-    console.log('Testing database connection...');
-    const prisma = new PrismaClient();
-    
-    // Try a simple query
-    const userCount = await prisma.user.count();
-    console.log(`Database connection successful. Found ${userCount} users.`);
-    
-    if (process.env.SEED_DATABASE === 'true') {
-      console.log('Seeding database...');
-      execSync('npx prisma db seed', { stdio: 'inherit' });
+    if (existingAdmin) {
+      console.log('Admin user already exists, ensuring password is set correctly...');
+      
+      // Update the admin password to ensure it's correct
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      
+      await prisma.user.update({
+        where: { username: 'admin' },
+        data: {
+          password: hashedPassword,
+          status: 'ACTIVE'
+        }
+      });
+      
+      console.log('Admin user updated successfully.');
+      return existingAdmin;
     }
     
-    await prisma.$disconnect();
-    console.log('Database initialization completed successfully!');
-    return true;
+    // Create admin user if it doesn't exist
+    console.log('Admin user does not exist, creating...');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    
+    const admin = await prisma.user.create({
+      data: {
+        username: 'admin',
+        email: 'admin@beanroute.com',
+        password: hashedPassword,
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'ADMIN',
+        status: 'ACTIVE'
+      }
+    });
+    
+    console.log('Admin user created successfully.');
+    
+    // Create a sample shop if none exists
+    const shopCount = await prisma.shop.count();
+    
+    if (shopCount === 0) {
+      console.log('No shops found, creating a sample shop...');
+      
+      const shop = await prisma.shop.create({
+        data: {
+          name: 'Sample Coffee Shop',
+          address: '123 Coffee Street, Beanville, BN 12345',
+          createdById: admin.id
+        }
+      });
+      
+      console.log(`Created sample shop: ${shop.name}`);
+    }
+    
+    return admin;
   } catch (error) {
-    console.error('Database initialization failed:', error);
-    return false;
+    console.error('Error ensuring admin exists:', error);
+    throw error;
   }
 }
 
-// Run if this script is executed directly
+// Execute the function if this script is run directly
 if (require.main === module) {
-  main()
-    .then(success => {
-      if (success) {
-        process.exit(0);
-      } else {
-        process.exit(1);
-      }
+  ensureAdminExists()
+    .then(() => {
+      console.log('Admin user verification completed');
+      process.exit(0);
     })
     .catch(error => {
-      console.error('Unhandled error:', error);
+      console.error('Error in admin user creation:', error);
       process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
     });
+} else {
+  // Export for use in other files
+  module.exports = { ensureAdminExists };
 } 
