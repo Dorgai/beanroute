@@ -1,29 +1,39 @@
 FROM node:18-alpine
 
-WORKDIR /app
-
-# Install dependencies needed for PostgreSQL client
+# Install PostgreSQL client for database migrations
 RUN apk add --no-cache postgresql-client
 
-# Copy package files and Prisma schema
+# Create app directory
+WORKDIR /app
+
+# Copy package files
 COPY package*.json ./
-COPY prisma ./prisma/
+
+# Install dependencies
 RUN npm ci
 
-# Copy application code
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Copy all other files
 COPY . .
 
 # Make scripts executable
-RUN chmod +x docker-entrypoint.sh deploy-db.sh
+RUN chmod +x docker-entrypoint.sh
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the application
+# Build the Next.js app
 RUN npm run build
 
-# Expose port
+# Set required environment variables
+ENV PORT=3000
+ENV NODE_ENV=production
+ENV SEED_DATABASE=true
+
+# Expose the app's port
 EXPOSE 3000
 
-# Start the application
-CMD ["./docker-entrypoint.sh"] 
+# Start the app
+CMD ["npm", "run", "railway:start"] 
