@@ -606,32 +606,42 @@ function StockLevelAlert({ inventory, shopMinQuantities }) {
   
   // Calculate if this individual inventory item is low or critically low
   const isSmallBagsLow = shopMinQuantities.minCoffeeQuantitySmall > 0 && 
-                         inventory.smallBags < 5;
+                         inventory.smallBags < shopMinQuantities.minCoffeeQuantitySmall * 0.7;
   
   const isLargeBagsLow = shopMinQuantities.minCoffeeQuantityLarge > 0 && 
-                         inventory.largeBags < 3;
+                         inventory.largeBags < shopMinQuantities.minCoffeeQuantityLarge * 0.7;
+  
+  const isSmallBagsCritical = shopMinQuantities.minCoffeeQuantitySmall > 0 && 
+                              inventory.smallBags < shopMinQuantities.minCoffeeQuantitySmall * 0.3;
+  
+  const isLargeBagsCritical = shopMinQuantities.minCoffeeQuantityLarge > 0 && 
+                              inventory.largeBags < shopMinQuantities.minCoffeeQuantityLarge * 0.3;
   
   // If no issues with this specific inventory item, don't show anything
   if (!isSmallBagsLow && !isLargeBagsLow) {
-    return null;
+    return (
+      <Chip label="In Stock" color="success" size="small" />
+    );
+  }
+  
+  if (isSmallBagsCritical || isLargeBagsCritical) {
+    return (
+      <Chip 
+        label="Critical Low" 
+        color="error" 
+        size="small"
+        icon={<ErrorIcon />} 
+      />
+    );
   }
   
   return (
-    <Box sx={{ mt: 1 }}>
-      {isSmallBagsLow && (
-        <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center' }}>
-          <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Low stock: {inventory.smallBags.toFixed(2)} small bags
-        </Typography>
-      )}
-      
-      {isLargeBagsLow && (
-        <Typography variant="caption" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', mt: isSmallBagsLow ? 0.5 : 0 }}>
-          <WarningIcon fontSize="small" sx={{ mr: 0.5 }} />
-          Low stock: {inventory.largeBags.toFixed(2)} large bags
-        </Typography>
-      )}
-    </Box>
+    <Chip 
+      label="Low Stock" 
+      color="warning" 
+      size="small"
+      icon={<WarningIcon />} 
+    />
   );
 }
 
@@ -656,6 +666,9 @@ export default function RetailOrders() {
   const [expandedRows, setExpandedRows] = useState({});
   const [hasPendingOrders, setHasPendingOrders] = useState(false);
   const [recentlyChangedOrders, setRecentlyChangedOrders] = useState([]);
+  const [recentAlertLogs, setRecentAlertLogs] = useState([]);
+  const [checkingInventory, setCheckingInventory] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null);
   
   // Check user role for conditional UI elements
   const userRole = session?.user?.role || '';
@@ -1069,6 +1082,85 @@ export default function RetailOrders() {
     fetchInventoryHistory();
   }, [selectedShop]);
 
+  // Fetch recent alert logs when shop changes
+  useEffect(() => {
+    if (!selectedShop || !(isAdmin || isOwner)) return;
+    
+    const fetchRecentAlertLogs = async () => {
+      try {
+        const response = await fetch('/api/retail/alert-logs');
+        
+        if (!response.ok) {
+          console.error('Error response from alert logs API:', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        // Filter logs for the selected shop
+        const shopLogs = data.logs.filter(log => log.shop.id === selectedShop);
+        setRecentAlertLogs(shopLogs);
+      } catch (error) {
+        console.error('Error fetching alert logs:', error);
+      }
+    };
+    
+    fetchRecentAlertLogs();
+  }, [selectedShop, isAdmin, isOwner]);
+  
+  // Handle running a manual inventory check
+  const handleRunInventoryCheck = async () => {
+    if (!selectedShop) return;
+    
+    setCheckingInventory(true);
+    setAlertMessage(null);
+    
+    try {
+      const response = await fetch('/api/retail/check-inventory-alerts');
+      
+      if (!response.ok) {
+        throw new Error('Failed to run inventory check');
+      }
+      
+      const data = await response.json();
+      
+      // Get alerts for this shop
+      const shopAlerts = data.alertsSent.filter(alert => alert.shopId === selectedShop);
+      
+      if (shopAlerts.length > 0) {
+        setAlertMessage({
+          type: 'success',
+          text: `Inventory check completed. ${shopAlerts.length} alert${shopAlerts.length !== 1 ? 's' : ''} for this shop.`
+        });
+      } else {
+        setAlertMessage({
+          type: 'info',
+          text: 'Inventory check completed. No alerts generated for this shop.'
+        });
+      }
+      
+      // Refresh alert logs
+      const logsResponse = await fetch('/api/retail/alert-logs');
+      if (logsResponse.ok) {
+        const logsData = await logsResponse.json();
+        const shopLogs = logsData.logs.filter(log => log.shop.id === selectedShop);
+        setRecentAlertLogs(shopLogs);
+      }
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setAlertMessage(null);
+      }, 5000);
+    } catch (err) {
+      console.error('Error running inventory check:', err);
+      setAlertMessage({
+        type: 'error',
+        text: 'Failed to run inventory check. Please try again later.'
+      });
+    } finally {
+      setCheckingInventory(false);
+    }
+  };
+
   const handleCreateOrder = () => {
     setOrderDialogOpen(true);
   };
@@ -1377,30 +1469,146 @@ export default function RetailOrders() {
                         </Typography>
                       </IconlessAlert>
                     )}
-                  
-                    <Paper elevation={1}>
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                            <TableRow>
-                              <TableCell>Coffee</TableCell>
-                              <TableCell>Grade</TableCell>
-                              <TableCell align="right">Small Bags (250g)</TableCell>
-                              <TableCell align="right">Large Bags (1kg)</TableCell>
-                              <TableCell align="right">Total Quantity (kg)</TableCell>
-                              <TableCell>Last Order Date</TableCell>
-                              <TableCell>Stock Status</TableCell>
-                              {canUpdateInventory && (
-                                <TableCell align="right">Actions</TableCell>
-                              )}
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {inventory.map((item) => (
+                    
+                    {/* Recent inventory alerts section for admin and owner */}
+                    {(isAdmin || isOwner) && (
+                      <Box sx={{ mb: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="h6">Recent Inventory Alerts</Typography>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            onClick={handleRunInventoryCheck}
+                            disabled={checkingInventory}
+                            startIcon={checkingInventory ? <CircularProgress size={20} /> : null}
+                          >
+                            Run Inventory Check
+                          </Button>
+                        </Box>
+                        
+                        {alertMessage && (
+                          <IconlessAlert severity={alertMessage.type} sx={{ mb: 2 }}>
+                            {alertMessage.text}
+                          </IconlessAlert>
+                        )}
+                        
+                        {recentAlertLogs.length > 0 ? (
+                          <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Date</TableCell>
+                                  <TableCell>Alert Type</TableCell>
+                                  <TableCell>Small Bags</TableCell>
+                                  <TableCell>Large Bags</TableCell>
+                                  <TableCell>Emails Sent</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {recentAlertLogs.slice(0, 3).map((log) => (
+                                  <TableRow key={log.id}>
+                                    <TableCell>{format(new Date(log.createdAt), 'MMM d, yyyy h:mm a')}</TableCell>
+                                    <TableCell>
+                                      <Chip 
+                                        label={log.alertType} 
+                                        color={log.alertType === 'CRITICAL' ? 'error' : 'warning'} 
+                                        size="small" 
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.totalSmallBags} / {log.minSmallBags} 
+                                      ({Math.round(log.smallBagsPercentage)}%)
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.totalLargeBags} / {log.minLargeBags}
+                                      ({Math.round(log.largeBagsPercentage)}%)
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.emailsSent ? (
+                                        <Chip label="Sent" color="success" size="small" />
+                                      ) : (
+                                        <Chip label="Not Sent" color="default" size="small" />
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        ) : (
+                          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                            No recent alerts for this shop. Run a check to verify inventory levels.
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                    
+                    <TableContainer component={Paper}>
+                      <Table size="small">
+                        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                          <TableRow>
+                            {canUpdateInventory && (
+                              <TableCell align="center">Actions</TableCell>
+                            )}
+                            <TableCell>Coffee</TableCell>
+                            <TableCell>Grade</TableCell>
+                            <TableCell align="right">Small Bags (250g)</TableCell>
+                            <TableCell align="right">Large Bags (1kg)</TableCell>
+                            <TableCell align="right">Total Quantity (kg)</TableCell>
+                            <TableCell>Last Order Date</TableCell>
+                            <TableCell>Stock Status</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {inventory.map((item) => {
+                            // Calculate stock status for row styling
+                            const isSmallBagsLow = selectedShopDetails?.minCoffeeQuantitySmall > 0 && 
+                                                   item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.7;
+                            const isLargeBagsLow = selectedShopDetails?.minCoffeeQuantityLarge > 0 && 
+                                                   item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.7;
+                            const isSmallBagsCritical = selectedShopDetails?.minCoffeeQuantitySmall > 0 && 
+                                                        item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.3;
+                            const isLargeBagsCritical = selectedShopDetails?.minCoffeeQuantityLarge > 0 && 
+                                                        item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.3;
+                            
+                            // Determine row background color
+                            const isCritical = isSmallBagsCritical || isLargeBagsCritical;
+                            const isWarning = (isSmallBagsLow || isLargeBagsLow) && !isCritical;
+                            const rowBgColor = isCritical 
+                              ? '#fff8f8' // light red for critical
+                              : isWarning 
+                                ? '#fffaf0' // light orange/yellow for warning
+                                : 'inherit'; // default for normal stock
+                            
+                            return (
                               <TableRow 
                                 key={item.id} 
                                 hover
+                                sx={{ 
+                                  backgroundColor: rowBgColor,
+                                  '&:hover': {
+                                    backgroundColor: isCritical 
+                                      ? '#fff0f0' 
+                                      : isWarning 
+                                        ? '#fff5e6' 
+                                        : undefined
+                                  }
+                                }}
                               >
+                                {canUpdateInventory && (
+                                  <TableCell align="center">
+                                    <Tooltip title="Update Inventory">
+                                      <IconButton 
+                                        size="small" 
+                                        onClick={() => handleOpenInventoryDialog(item)}
+                                        aria-label="update inventory"
+                                      >
+                                        <EditIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </TableCell>
+                                )}
                                 <TableCell>
                                   <strong>{item.coffee?.name || 'Unknown'}</strong>
                                 </TableCell>
@@ -1421,51 +1629,39 @@ export default function RetailOrders() {
                                     />
                                   )}
                                 </TableCell>
-                                {canUpdateInventory && (
-                                  <TableCell align="right">
-                                    <Tooltip title="Update Inventory">
-                                      <IconButton 
-                                        size="small" 
-                                        onClick={() => handleOpenInventoryDialog(item)}
-                                        aria-label="update inventory"
-                                      >
-                                        <EditIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </TableCell>
-                                )}
                               </TableRow>
-                            ))}
-                            
-                            {/* Summary row with totals */}
-                            {inventory.length > 0 && (
-                              <TableRow sx={{ 
-                                backgroundColor: '#f5f5f5', 
+                            );
+                          })}
+                          
+                          {/* Summary row with totals */}
+                          {inventory.length > 0 && (
+                            <TableRow sx={{ 
+                              backgroundColor: '#f5f5f5', 
+                              fontWeight: 'bold',
+                              '& .MuiTableCell-root': { 
                                 fontWeight: 'bold',
-                                '& .MuiTableCell-root': { 
-                                  fontWeight: 'bold',
-                                  borderTop: '2px solid #e0e0e0' 
-                                }
-                              }}>
-                                <TableCell colSpan={2}>
-                                  <Typography variant="subtitle2">TOTAL</Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  {inventory.reduce((sum, item) => sum + (item.smallBags || 0), 0)}
-                                </TableCell>
-                                <TableCell align="right">
-                                  {inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0)}
-                                </TableCell>
-                                <TableCell align="right">
-                                  {inventory.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
-                                </TableCell>
-                                <TableCell colSpan={canUpdateInventory ? 3 : 2} />
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Paper>
+                                borderTop: '2px solid #e0e0e0' 
+                              }
+                            }}>
+                              {canUpdateInventory && <TableCell />}
+                              <TableCell colSpan={2}>
+                                <Typography variant="subtitle2">TOTAL</Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                {inventory.reduce((sum, item) => sum + (item.smallBags || 0), 0)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {inventory.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
+                              </TableCell>
+                              <TableCell colSpan={2} />
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
                   </>
                 )}
               </Box>

@@ -11,13 +11,10 @@ export default function EditCoffeePage() {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    roaster: '',
-    origin: '',
-    process: '',
-    notes: '',
     grade: 'SPECIALTY',
-    price: '',
-    isActive: false,
+    country: '',
+    producer: '',
+    notes: '',
   });
   
   const [loading, setLoading] = useState(true);
@@ -32,27 +29,34 @@ export default function EditCoffeePage() {
   // Fetch coffee data
   useEffect(() => {
     const fetchCoffeeData = async () => {
+      if (!coffeeId) return;
+      
       setLoading(true);
-      setError('');
+      setFetchError(null);
+      setError(null);
       
       try {
-        const response = await fetch(`/api/coffee/coffee-details?id=${coffeeId}`);
+        console.log(`Fetching coffee data for ID: ${coffeeId}`);
+        const response = await fetch(`/api/coffee/${coffeeId}`);
         
         if (!response.ok) {
+          console.error(`Error response from coffee API: ${response.status}`);
           throw new Error(`Failed to fetch coffee data: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log('Coffee data received:', data);
+        
         setFormData({
           name: data.name || '',
-          grade: data.grade || '',
-          origin: data.origin || '',
-          price: data.price?.toString() || '',
-          isActive: data.isActive || false,
+          grade: data.grade || 'SPECIALTY',
+          country: data.country || '',
+          producer: data.producer || '',
+          notes: data.notes || '',
         });
       } catch (error) {
         console.error('Error fetching coffee data:', error);
-        setError('Failed to load coffee data. Please try again.');
+        setFetchError('Failed to load coffee data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -98,21 +102,37 @@ export default function EditCoffeePage() {
     setSuccess('');
     
     try {
-      const response = await fetch(`/api/coffee/coffee-details?id=${coffeeId}`, {
+      console.log(`Submitting update for coffee ID: ${coffeeId}`);
+      console.log('Form data:', formData);
+      
+      const response = await fetch(`/api/coffee/${coffeeId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          grade: formData.grade,
+          country: formData.country,
+          producer: formData.producer,
+          notes: formData.notes
+        }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Error response:', errorData);
         throw new Error(errorData.error || 'Failed to update coffee');
       }
       
+      const updatedCoffee = await response.json();
+      console.log('Update successful:', updatedCoffee);
+      
       setSuccess('Coffee updated successfully!');
-      // You may want to redirect to coffee details page here
+      // Redirect to coffee details page after 1 second
+      setTimeout(() => {
+        router.push(`/coffee/${coffeeId}`);
+      }, 1000);
     } catch (error) {
       console.error('Error updating coffee:', error);
       setError(error.message || 'Failed to update coffee. Please try again.');
@@ -204,46 +224,31 @@ export default function EditCoffeePage() {
               </select>
             </div>
 
-            {/* Roaster */}
+            {/* Producer */}
             <div>
-              <label htmlFor="roaster" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="producer" className="block text-sm font-medium text-gray-700 mb-1">
                 Roaster/Producer
               </label>
               <input
                 type="text"
-                id="roaster"
-                name="roaster"
-                value={formData.roaster}
+                id="producer"
+                name="producer"
+                value={formData.producer}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded"
               />
             </div>
 
-            {/* Origin */}
+            {/* Country */}
             <div>
-              <label htmlFor="origin" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
                 Country of Origin
               </label>
               <input
                 type="text"
-                id="origin"
-                name="origin"
-                value={formData.origin}
-                onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-            </div>
-
-            {/* Process */}
-            <div>
-              <label htmlFor="process" className="block text-sm font-medium text-gray-700 mb-1">
-                Process
-              </label>
-              <input
-                type="text"
-                id="process"
-                name="process"
-                value={formData.process}
+                id="country"
+                name="country"
+                value={formData.country}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded"
               />
