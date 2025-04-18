@@ -118,6 +118,9 @@ export default function Login() {
             priority
           />
         </div>
+        <h1 className="mt-2 text-center text-3xl font-bold text-gray-800">
+          Bean Route
+        </h1>
         <p className="mt-2 text-center text-sm text-gray-600">
           Sign in to access the dashboard
         </p>
