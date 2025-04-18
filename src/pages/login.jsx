@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
+import Image from 'next/image';
 
 export default function Login() {
   const [username, setUsername] = useState('admin');
@@ -108,7 +109,15 @@ export default function Login() {
       </Head>
       
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="text-center text-3xl font-extrabold text-gray-900">Bean Route</h2>
+        <div className="flex justify-center mb-4">
+          <Image 
+            src="/images/sonic-beans-logo.svg" 
+            alt="Sonic Beans Logo" 
+            width={200} 
+            height={100} 
+            priority
+          />
+        </div>
         <p className="mt-2 text-center text-sm text-gray-600">
           Sign in to access the dashboard
         </p>
