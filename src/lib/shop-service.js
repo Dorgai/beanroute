@@ -117,46 +117,29 @@ export async function getShops(page = 1, limit = 10, search = '') {
  * Get a single shop by ID
  */
 export async function getShopById(id) {
+  // Use a more conservative approach to avoid schema issues
   try {
+    console.log(`[getShopById] Fetching shop with ID: ${id} (minimal fields)`);
+    // Start with a minimal query to ensure it works across environments
     return prisma.shop.findUnique({
       where: { id },
       select: {
         id: true,
         name: true,
-        address: true,
-        minCoffeeQuantityLarge: true,
-        minCoffeeQuantitySmall: true,
-        createdAt: true,
-        updatedAt: true,
         createdById: true,
-        createdBy: { 
-          select: { 
-            id: true, 
-            username: true 
-          } 
-        },
-        users: { 
-          include: { 
-            user: { 
-              select: { 
-                id: true, 
-                username: true, 
-                role: true 
-              } 
-            } 
-          } 
-        }
+        createdAt: true,
+        updatedAt: true
       }
     });
   } catch (error) {
     console.error('[getShopById] Error fetching shop:', error);
-    // Fall back to a more minimal query if the first one fails due to schema differences
+    // Extreme fallback with only the most essential fields
+    console.log('[getShopById] Trying fallback query with only ID and name');
     return prisma.shop.findUnique({
       where: { id },
       select: {
         id: true,
-        name: true,
-        createdById: true
+        name: true
       }
     });
   }

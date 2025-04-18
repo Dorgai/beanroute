@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "chmod +x ./docker-entrypoint.sh && ./docker-entrypoint.sh",
+    "start": "node init-db.js && chmod +x ./docker-entrypoint.sh && ./docker-entrypoint.sh",
     "start:server": "node server.js",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
@@ -20,8 +20,9 @@
     "setup:local": "./setup-local-db.sh",
     "start:dev": "./start-dev.sh",
     "start:prod": "./start-prod.sh",
-    "railway:start": "npx prisma migrate deploy && node init-db.js && node server.js",
-    "fix:migrations": "rm -rf prisma/migrations && npx prisma migrate dev --name init"
+    "railway:start": "chmod +x ./fix-and-run.sh && ./fix-and-run.sh",
+    "fix:migrations": "rm -rf prisma/migrations && npx prisma migrate dev --name init",
+    "start:fixed": "chmod +x ./fix-and-run.sh && ./fix-and-run.sh"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -41,12 +42,13 @@
     "bcryptjs": "^2.4.3",
     "cookie": "^0.6.0",
     "date-fns": "^3.6.0",
+    "dotenv": "^16.5.0",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "next": "14.2.28",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.10.1",
-    "pg": "^8.11.3",
+    "pg": "^8.14.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.5.0",

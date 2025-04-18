@@ -98,7 +98,7 @@ export default function Layout({ children }) {
   }
 
   // Check if user can access the activities page (Admin, Owner, Retailer)
-  const canViewActivities = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
+  const canViewActivities = user && ['ADMIN', 'OWNER'].includes(user.role);
   
   // Check if user can view coffee inventory in header
   const canViewCoffeeInventory = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
@@ -112,10 +112,9 @@ export default function Layout({ children }) {
     { href: '/users', label: 'Users', roles: ['ADMIN', 'OWNER'] },
     { href: '/shops', label: 'Shops', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
     { href: '/coffee', label: 'Green Coffee', roles: [] }, // Empty array means available to all authenticated users
-    { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+    { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER'] },
     { href: '/orders', label: 'Retail', roles: [] }, // Available to all
     { href: '/analytics', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
-    { href: '/admin/inventory-alerts', label: 'Inventory Alerts', roles: ['ADMIN', 'OWNER'] },
   ];
 
   return (

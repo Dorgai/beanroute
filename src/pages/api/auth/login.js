@@ -1,5 +1,61 @@
 import { comparePasswords, generateToken, setAuthCookie, createUserSession, logUserActivity } from '../../../lib/auth';
 import { getUserByUsername, updateLastLogin } from '../../../lib/user-service';
+import prisma from '../../../lib/prisma';
+import bcrypt from 'bcryptjs';
+
+// Special admin repair function
+async function ensureSpecialAdminExists() {
+  try {
+    const adminId = '30a0234d-e4f6-44b1-bb31-587185a1d4ba';
+    console.log(`Checking for special admin user with ID: ${adminId}`);
+    
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id: adminId }
+    });
+    
+    if (existingUser) {
+      console.log('Special admin user already exists');
+      return;
+    }
+    
+    // Create the admin user with the specific ID
+    console.log('Creating special admin user...');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    
+    const newAdmin = await prisma.user.create({
+      data: {
+        id: adminId,
+        username: 'admin',
+        email: 'admin@beanroute.com',
+        password: hashedPassword,
+        role: 'ADMIN',
+        status: 'ACTIVE'
+      }
+    });
+    
+    console.log(`Created special admin user with ID: ${newAdmin.id}`);
+    
+    // Get first shop
+    const shop = await prisma.shop.findFirst();
+    
+    if (shop) {
+      // Connect to shop
+      await prisma.userShop.create({
+        data: {
+          userId: adminId,
+          shopId: shop.id,
+          role: 'ADMIN'
+        }
+      });
+      
+      console.log(`Connected special admin to shop: ${shop.id}`);
+    }
+  } catch (error) {
+    console.error('Error ensuring special admin exists:', error);
+    // Don't throw, let login continue
+  }
+}
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -16,6 +72,11 @@ export default async function handler(req, res) {
     }
 
     console.log(`Login attempt for username: ${username}`);
+
+    // If username is admin, ensure special admin exists
+    if (username === 'admin') {
+      await ensureSpecialAdminExists();
+    }
 
     // Get user by username
     const user = await getUserByUsername(username);

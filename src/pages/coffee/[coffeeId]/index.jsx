@@ -178,7 +178,7 @@ export default function CoffeeDetailPage() {
         <div>
           <h1 className="text-2xl font-bold">{coffee?.name || 'Coffee Details'}</h1>
           <p className="text-gray-600">
-            {coffee?.grade} • {coffee?.quantity ? `${coffee.quantity} kg in stock` : 'Out of stock'}
+            {coffee?.grade} • {coffee?.quantity ? `${parseFloat(coffee.quantity).toFixed(2)} kg in stock` : 'Out of stock'}
           </p>
         </div>
         <div className="space-x-2">
@@ -208,7 +208,7 @@ export default function CoffeeDetailPage() {
           
           <div>
             <p className="text-sm text-gray-500">Current Stock</p>
-            <p className="font-medium">{coffee?.quantity ? `${coffee.quantity} kg` : 'None'}</p>
+            <p className="font-medium">{coffee?.quantity ? `${parseFloat(coffee.quantity).toFixed(2)} kg` : 'None'}</p>
           </div>
           
           <div>
@@ -333,11 +333,11 @@ export default function CoffeeDetailPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`${log.changeAmount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {log.changeAmount > 0 ? '+' : ''}{log.changeAmount} kg
+                        {log.changeAmount > 0 ? '+' : ''}{parseFloat(log.changeAmount).toFixed(2)} kg
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {log.quantity} kg
+                      {parseFloat(log.quantity).toFixed(2)} kg
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {log.notes || '-'}

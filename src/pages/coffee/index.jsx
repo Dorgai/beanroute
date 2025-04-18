@@ -161,57 +161,26 @@ export default function CoffeeListPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  {canManageCoffee && (
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  )}
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roaster</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origin</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  {canManageCoffee && (
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {coffeeList.map((coffee) => (
                   <tr key={coffee.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{coffee.name}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.roaster || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.origin || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.producer || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.country || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.grade?.replace('_', ' ') || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className={`text-sm ${coffee.quantity > 0 ? 'text-green-600 font-medium' : 'text-red-500'}`}>
-                        {coffee.quantity ? `${coffee.quantity} kg` : 'Out of stock'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {coffee.price ? `$${parseFloat(coffee.price).toFixed(2)}` : '-'}
-                      </div>
-                    </td>
                     {canManageCoffee && (
-                      <td className="px-4 py-2 whitespace-nowrap text-right text-sm">
-                        <div className="flex justify-end space-x-2">
+                      <td className="px-4 py-2 whitespace-nowrap text-left text-sm">
+                        <div className="flex space-x-2">
                           <Link
                             href={`/coffee/${coffee.id}`}
                             className="text-blue-600 hover:text-blue-800"
@@ -247,6 +216,37 @@ export default function CoffeeListPage() {
                         </div>
                       </td>
                     )}
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{coffee.name}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className={`text-sm ${coffee.quantity > 0 ? 'text-green-600 font-medium' : 'text-red-500'}`}>
+                        {coffee.quantity ? `${parseFloat(coffee.quantity).toFixed(2)} kg` : 'Out of stock'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.grade?.replace('_', ' ') || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.roaster || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.origin || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.producer || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{coffee.country || '-'}</div>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {coffee.price ? `$${parseFloat(coffee.price).toFixed(2)}` : '-'}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

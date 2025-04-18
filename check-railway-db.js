@@ -25,106 +25,58 @@ prisma.$on('query', (e) => {
   console.log('Duration: ' + e.duration + 'ms');
 });
 
-async function checkDatabaseConnection() {
-  console.log('Checking database connection...');
-  console.log('DATABASE_URL:', process.env.DATABASE_URL ? 
-    process.env.DATABASE_URL.replace(/\/\/[^:]+:[^@]+@/, '//******:******@') : 
-    'Not defined');
+async function checkDatabase() {
+  console.log('Starting database check...');
+  const prisma = new PrismaClient();
   
   try {
-    // Test basic connection
-    console.log('Testing basic connection...');
-    const result = await prisma.$queryRaw`SELECT 1 as connection_test`;
-    console.log('Connection successful:', result);
+    // Connect to the database
+    console.log('Connecting to database...');
+    await prisma.$connect();
+    console.log('Database connection successful.');
+
+    // Check if essential tables exist
+    console.log('\nChecking database tables...');
     
-    // Check if tables exist by examining PostgreSQL schema
-    console.log('\nChecking PostgreSQL schema information...');
-    const tables = await prisma.$queryRaw`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      ORDER BY table_name
-    `;
-    
-    console.log(`\nFound ${tables.length} tables in database:`);
-    tables.forEach(table => {
-      console.log(`- ${table.table_name}`);
-    });
-    
-    // Expected tables based on Prisma schema
-    const expectedTables = [
-      'User', 'Shop', 'Team', 'UserShop', 'UserTeam', 'Permission', 
-      'Session', 'UserActivity', 'GreenCoffee', 'GreenCoffeeInventoryLog', 
-      'RetailOrder', 'RetailOrderItem', 'RetailInventory'
-    ].map(name => name.toLowerCase());
-    
-    // Check for missing tables
-    const foundTables = tables.map(t => t.table_name.toLowerCase());
-    const missingTables = expectedTables.filter(t => !foundTables.includes(t));
-    
-    if (missingTables.length > 0) {
-      console.log('\nMissing tables:');
-      missingTables.forEach(table => console.log(`- ${table}`));
-    } else {
-      console.log('\nAll expected tables are present!');
+    // Try to fetch one user to verify User table exists
+    try {
+      const userCount = await prisma.user.count();
+      console.log(`✓ User table exists with ${userCount} records`);
+    } catch (e) {
+      console.error('✗ User table not found or has issues:', e.message);
     }
     
-    // Create a mapping of table names to Prisma model names
-    const tableToModelMap = {
-      'greencoffee': 'greenCoffee',
-      'greencoffeeinventorylog': 'greenCoffeeInventoryLog',
-      'permission': 'permission',
-      'retailinventory': 'retailInventory',
-      'retailorder': 'retailOrder',
-      'retailorderitem': 'retailOrderItem',
-      'session': 'session',
-      'shop': 'shop',
-      'team': 'team',
-      'user': 'user',
-      'useractivity': 'userActivity',
-      'usershop': 'userShop',
-      'userteam': 'userTeam'
-    };
-    
-    // Check record counts
-    console.log('\nCounting records in each table:');
-    const counts = {};
-    
-    for (const tableObj of tables) {
-      const tableName = tableObj.table_name.toLowerCase();
-      
-      // Skip Prisma's migration table
-      if (tableName === '_prisma_migrations') {
-        continue;
-      }
-      
-      try {
-        // Get the corresponding Prisma model name
-        const modelName = tableToModelMap[tableName];
-        
-        if (!modelName || !prisma[modelName]) {
-          console.log(`- ${tableName}: Skipped (no matching Prisma model)`);
-          continue;
-        }
-        
-        const count = await prisma[modelName].count();
-        counts[tableName] = count;
-        console.log(`- ${tableName}: ${count} records`);
-      } catch (err) {
-        console.log(`- ${tableName}: Error - ${err.message}`);
-      }
+    // Try to fetch one shop to verify Shop table exists
+    try {
+      const shopCount = await prisma.shop.count();
+      console.log(`✓ Shop table exists with ${shopCount} records`);
+    } catch (e) {
+      console.error('✗ Shop table not found or has issues:', e.message);
     }
+    
+    // Check if any orders exist
+    try {
+      const orderCount = await prisma.retailOrder.count();
+      console.log(`✓ RetailOrder table exists with ${orderCount} records`);
+    } catch (e) {
+      console.error('✗ RetailOrder table not found or has issues:', e.message);
+    }
+    
+    // Check migrations table if it exists
+    try {
+      const result = await prisma.$queryRaw`SELECT COUNT(*) FROM _prisma_migrations`;
+      console.log(`✓ _prisma_migrations table exists with ${result[0].count} migrations`);
+    } catch (e) {
+      console.log('✗ _prisma_migrations table not found. Database may not be using Prisma migrations.');
+    }
+
+    console.log('\nDatabase check complete.');
     
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error('Database check failed:', error);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-checkDatabaseConnection()
-  .then(() => console.log('Database check completed.'))
-  .catch(err => {
-    console.error('Unhandled error:', err);
-    process.exit(1);
-  }); 
+checkDatabase(); 

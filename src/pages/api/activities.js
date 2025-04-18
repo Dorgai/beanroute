@@ -9,8 +9,8 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    // Only Admin, Owner and Retailer can view activity logs
-    const canViewLogs = ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
+    // Only Admin and Owner can view activity logs
+    const canViewLogs = ['ADMIN', 'OWNER'].includes(user.role);
     if (!canViewLogs) {
       return res.status(403).json({ error: 'You do not have permission to view activity logs' });
     }

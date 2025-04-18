@@ -63,7 +63,14 @@ export default function CreateCoffeePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          grade: formData.grade,
+          country: formData.origin,
+          producer: formData.roaster,
+          notes: formData.notes,
+          quantity: parseFloat(formData.quantity) || 0
+        }),
       });
 
       if (!response.ok) {

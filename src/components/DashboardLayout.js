@@ -22,7 +22,6 @@ export default function DashboardLayout({ children }) {
   // Create navigation items
   const commonNavItems = [
     { name: 'Green Coffee', href: '/coffee' },
-    { name: 'Activities', href: '/activities' },
   ];
   
   // Check user roles for menu visibility
@@ -51,17 +50,17 @@ export default function DashboardLayout({ children }) {
   // Add common navigation items
   navigation = [...navigation, ...commonNavItems];
   
+  // Add Activities only for admin and owner
+  if (isAdminOrOwner) {
+    navigation.push({ name: 'Activities', href: '/activities' });
+  }
+  
   // Add Orders for all users
   navigation.push({ name: 'Retail', href: '/orders' });
   
   // Add Analytics for admin, owner and retailer
   if (isAdminOrOwner || userRole === 'RETAILER') {
     navigation.push({ name: 'Analytics', href: '/analytics' });
-  }
-  
-  // Add Inventory Alerts for admin and owner
-  if (isAdminOrOwner) {
-    navigation.push({ name: 'Inventory Alerts', href: '/admin/inventory-alerts' });
   }
   
   // Debug logging

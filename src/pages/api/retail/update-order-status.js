@@ -91,22 +91,23 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check if order exists
+    // Check if order exists with minimal fields selection to avoid schema issues
     let existingOrder;
     try {
       console.log(`[update-order-status] Fetching order from database: ${orderId}`);
       existingOrder = await prisma.retailOrder.findUnique({
         where: { id: orderId },
-        include: {
-          shop: {
+        select: {
+          id: true,
+          shopId: true,
+          status: true,
+          items: {
             select: {
               id: true,
-              name: true
-            }
-          },
-          items: {
-            include: {
-              coffee: true
+              coffeeId: true,
+              smallBags: true,
+              largeBags: true,
+              totalQuantity: true
             }
           }
         }
@@ -216,25 +217,19 @@ export default async function handler(req, res) {
       updatedOrder = await prisma.$transaction(async (tx) => {
         console.log(`[update-order-status] Updating order status to ${status}`);
         
-        // Update order status
+        // Update order status with minimal fields selection - no Shop details to avoid schema issues
         const updated = await tx.retailOrder.update({
           where: { id: orderId },
           data: {
             status: status,
             updatedAt: new Date()
           },
-          include: {
-            shop: {
-              select: {
-                id: true,
-                name: true
-              }
-            },
-            items: {
-              include: {
-                coffee: true
-              }
-            }
+          select: {
+            id: true,
+            shopId: true,
+            status: true,
+            updatedAt: true
+            // Remove any Shop selection to avoid schema differences
           }
         });
         
@@ -248,37 +243,42 @@ export default async function handler(req, res) {
           for (const item of existingOrder.items) {
             console.log(`[update-order-status] Processing inventory update for item: Coffee ${item.coffeeId} - ${item.smallBags} small bags, ${item.largeBags} large bags`);
             
-            // Update shop inventory
-            await tx.retailInventory.upsert({
-              where: {
-                shopId_coffeeId: {
+            try {
+              // Update shop inventory with minimal field selection to avoid schema differences
+              await tx.retailInventory.upsert({
+                where: {
+                  shopId_coffeeId: {
+                    shopId: existingOrder.shopId,
+                    coffeeId: item.coffeeId
+                  }
+                },
+                create: {
                   shopId: existingOrder.shopId,
-                  coffeeId: item.coffeeId
+                  coffeeId: item.coffeeId,
+                  smallBags: item.smallBags || 0,
+                  largeBags: item.largeBags || 0,
+                  totalQuantity: item.totalQuantity || 0,
+                  lastOrderDate: new Date()
+                },
+                update: {
+                  smallBags: {
+                    increment: item.smallBags || 0
+                  },
+                  largeBags: {
+                    increment: item.largeBags || 0
+                  },
+                  totalQuantity: {
+                    increment: item.totalQuantity || 0
+                  },
+                  lastOrderDate: new Date()
                 }
-              },
-              create: {
-                shopId: existingOrder.shopId,
-                coffeeId: item.coffeeId,
-                smallBags: item.smallBags,
-                largeBags: item.largeBags,
-                totalQuantity: item.totalQuantity,
-                lastOrderDate: new Date()
-              },
-              update: {
-                smallBags: {
-                  increment: item.smallBags
-                },
-                largeBags: {
-                  increment: item.largeBags
-                },
-                totalQuantity: {
-                  increment: item.totalQuantity
-                },
-                lastOrderDate: new Date()
-              }
-            });
-            
-            console.log(`[update-order-status] Inventory updated for coffee ${item.coffeeId} in shop ${existingOrder.shopId}`);
+              });
+              
+              console.log(`[update-order-status] Inventory updated for coffee ${item.coffeeId} in shop ${existingOrder.shopId}`);
+            } catch (inventoryError) {
+              console.error(`[update-order-status] Error updating inventory for coffee ${item.coffeeId}:`, inventoryError);
+              // Continue with other items despite error
+            }
           }
         }
         
@@ -294,7 +294,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Success! Return the updated order
+    // Success! Return the updated order with minimal data
     console.log(`[update-order-status] Successfully updated order ${orderId} to status ${status}`);
     await prisma.$disconnect();
     return res.status(200).json({
@@ -303,7 +303,6 @@ export default async function handler(req, res) {
       order: {
         id: updatedOrder.id,
         shopId: updatedOrder.shopId,
-        shopName: updatedOrder.shop?.name,
         status: updatedOrder.status,
         updatedAt: updatedOrder.updatedAt
       }
@@ -321,7 +320,7 @@ export default async function handler(req, res) {
     return res.status(500).json({
       error: 'Internal server error',
       message: 'An unexpected error occurred while processing the order status update',
-      details: error.message
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 } 

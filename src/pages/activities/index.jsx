@@ -123,6 +123,9 @@ function ActivitiesPage() {
     return description;
   };
   
+  // Check if user is authorized to view activities
+  const isAuthorized = user && ['ADMIN', 'OWNER'].includes(user?.role);
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -130,201 +133,210 @@ function ActivitiesPage() {
         <p className="text-gray-600">Track and monitor user activities within the system</p>
       </div>
       
-      {/* Filters */}
-      <div className="bg-white p-4 rounded shadow mb-6">
-        <h2 className="text-lg font-semibold mb-2">Filters</h2>
-        <form onSubmit={applyFilters} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Action Type</label>
-              <select
-                name="action"
-                value={filters.action}
-                onChange={handleFilterChange}
-                className="w-full p-2 border border-gray-300 rounded"
-              >
-                <option value="">All Actions</option>
-                {actionTypes.map(action => (
-                  <option key={action} value={action}>{action}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Resource Type</label>
-              <select
-                name="resource"
-                value={filters.resource}
-                onChange={handleFilterChange}
-                className="w-full p-2 border border-gray-300 rounded"
-              >
-                <option value="">All Resources</option>
-                {resourceTypes.map(resource => (
-                  <option key={resource} value={resource}>{resource}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-              <input
-                type="text"
-                name="userId"
-                value={filters.userId}
-                onChange={handleFilterChange}
-                placeholder="Filter by User ID"
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-              <input
-                type="date"
-                name="fromDate"
-                value={filters.fromDate}
-                onChange={handleFilterChange}
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-              <input
-                type="date"
-                name="toDate"
-                value={filters.toDate}
-                onChange={handleFilterChange}
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded"
-            >
-              Reset
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-white bg-primary rounded"
-            >
-              Apply Filters
-            </button>
-          </div>
-        </form>
-      </div>
-      
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-      
-      {/* Activity Logs Table */}
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : activities.length === 0 ? (
-        <div className="text-center py-8 bg-white rounded shadow">
-          No activity logs found.
+      {!isAuthorized ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          <strong className="font-bold">Access Denied!</strong>
+          <span className="block sm:inline"> You do not have permission to view activity logs. Only Administrators and Owners can access this page.</span>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded shadow overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Timestamp
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Resource
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Details
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {activities.map((activity) => (
-                  <tr key={activity.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatTimestamp(activity.createdAt)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {activity.user ? (
-                        <div>
-                          <div className="font-medium text-gray-900">{activity.user.username}</div>
-                          <div className="text-gray-500">{activity.user.email}</div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">Unknown user</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        activity.action === 'LOGIN' || activity.action === 'LOGOUT' ? 'bg-blue-100 text-blue-800' : 
-                        activity.action === 'CREATE' ? 'bg-green-100 text-green-800' :
-                        activity.action === 'UPDATE' ? 'bg-yellow-100 text-yellow-800' :
-                        activity.action === 'DELETE' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {activity.action}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {activity.resource}
-                      {activity.resourceId && (
-                        <span className="ml-1 text-xs text-gray-400">
-                          (ID: {activity.resourceId})
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {activity.details || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Filters */}
+          <div className="bg-white p-4 rounded shadow mb-6">
+            <h2 className="text-lg font-semibold mb-2">Filters</h2>
+            <form onSubmit={applyFilters} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Action Type</label>
+                  <select
+                    name="action"
+                    value={filters.action}
+                    onChange={handleFilterChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  >
+                    <option value="">All Actions</option>
+                    {actionTypes.map(action => (
+                      <option key={action} value={action}>{action}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Resource Type</label>
+                  <select
+                    name="resource"
+                    value={filters.resource}
+                    onChange={handleFilterChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  >
+                    <option value="">All Resources</option>
+                    {resourceTypes.map(resource => (
+                      <option key={resource} value={resource}>{resource}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+                  <input
+                    type="text"
+                    name="userId"
+                    value={filters.userId}
+                    onChange={handleFilterChange}
+                    placeholder="Filter by User ID"
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                  <input
+                    type="date"
+                    name="fromDate"
+                    value={filters.fromDate}
+                    onChange={handleFilterChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                  <input
+                    type="date"
+                    name="toDate"
+                    value={filters.toDate}
+                    onChange={handleFilterChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded"
+                >
+                  Reset
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-white bg-primary rounded"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </form>
           </div>
           
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4 bg-white p-4 rounded shadow">
-              <div className="text-sm text-gray-700">
-                Showing page {page} of {totalPages} ({totalCount} total logs)
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setPage(p => Math.max(p - 1, 1))}
-                  disabled={page === 1}
-                  className={`px-3 py-1 rounded ${
-                    page === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-primary hover:bg-gray-100'
-                  }`}
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                  disabled={page === totalPages}
-                  className={`px-3 py-1 rounded ${
-                    page === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-primary hover:bg-gray-100'
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
             </div>
+          )}
+          
+          {/* Activity Logs Table */}
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : activities.length === 0 ? (
+            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+              No activity logs found.
+            </div>
+          ) : (
+            <>
+              <div className="bg-white rounded shadow overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Timestamp
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Action
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Resource
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Details
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {activities.map((activity) => (
+                      <tr key={activity.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatTimestamp(activity.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {activity.user ? (
+                            <div>
+                              <div className="font-medium text-gray-900">{activity.user.username}</div>
+                              <div className="text-gray-500">{activity.user.email}</div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">Unknown user</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            activity.action === 'LOGIN' || activity.action === 'LOGOUT' ? 'bg-blue-100 text-blue-800' : 
+                            activity.action === 'CREATE' ? 'bg-green-100 text-green-800' :
+                            activity.action === 'UPDATE' ? 'bg-yellow-100 text-yellow-800' :
+                            activity.action === 'DELETE' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {activity.action}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {activity.resource}
+                          {activity.resourceId && (
+                            <span className="ml-1 text-xs text-gray-400">
+                              (ID: {activity.resourceId})
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {activity.details || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-4 bg-white p-4 rounded shadow">
+                  <div className="text-sm text-gray-700">
+                    Showing page {page} of {totalPages} ({totalCount} total logs)
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setPage(p => Math.max(p - 1, 1))}
+                      disabled={page === 1}
+                      className={`px-3 py-1 rounded ${
+                        page === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-primary hover:bg-gray-100'
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                      disabled={page === totalPages}
+                      className={`px-3 py-1 rounded ${
+                        page === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-primary hover:bg-gray-100'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

@@ -41,13 +41,14 @@ export default async function handler(req, res) {
     let shop;
     try {
       console.log(`[shop-users-api] Fetching shop with ID: ${shopId}`);
-      // Use a simpler shop fetch to avoid schema issues
+      // Use a simpler shop fetch with minimal fields to avoid schema issues
       shop = await prisma.shop.findUnique({
         where: { id: shopId },
         select: {
           id: true,
           name: true,
           createdById: true
+          // Avoid selecting fields that might not exist in all environments
         }
       });
       
@@ -77,7 +78,7 @@ export default async function handler(req, res) {
       try {
         console.log(`[shop-users-api] Fetching users for shop ${shopId}`);
         
-        // Use direct Prisma query for more control over fields
+        // Use direct Prisma query with minimal fields to avoid schema differences
         const userShops = await prisma.userShop.findMany({
           where: { shopId },
           include: {
@@ -90,6 +91,7 @@ export default async function handler(req, res) {
                 lastName: true,
                 role: true,
                 status: true
+                // Avoid any fields that might not exist in all environments
               }
             }
           },
