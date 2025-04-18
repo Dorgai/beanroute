@@ -8,13 +8,17 @@ import { getTokenFromRequestCookie } from './lib/auth';
 // export const runtime = 'nodejs';
 
 // Define public paths that don't require authentication
-const publicPaths = [
+export const publicPaths = [
   '/login',
   '/dashboard',
   '/api/auth/login',
   '/api/auth/logout',
   '/api/admin/test-db', // Allow db testing
   '/api/health',
+  '/api/health-basic',
+  '/api/admin/create-admin',
+  '/api/admin/fix-admin', // Add our fix-admin endpoint
+  '/api/retail/check-inventory-alerts', // Allow inventory checks with API key
 ];
 
 // Check if a path is public
