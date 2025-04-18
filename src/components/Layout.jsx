@@ -115,6 +115,7 @@ export default function Layout({ children }) {
     { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
     { href: '/orders', label: 'Retail', roles: [] }, // Available to all
     { href: '/analytics', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+    { href: '/admin/inventory-alerts', label: 'Inventory Alerts', roles: ['ADMIN', 'OWNER'] },
   ];
 
   return (

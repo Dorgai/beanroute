@@ -256,6 +256,25 @@ function Dashboard() {
               </div>
             )}
 
+            {(user?.role === 'ADMIN' || user?.role === 'OWNER') && (
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="p-5">
+                  <h3 className="text-lg font-medium text-gray-900">Inventory Alerts</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Manage inventory alert settings and view alert history
+                  </p>
+                  <div className="mt-4">
+                    <Link
+                      href="/admin/inventory-alerts"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      Manage Alerts
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {(user?.role === 'ADMIN' || user?.role === 'OWNER' || user?.role === 'RETAILER') && (
               <div className="bg-white shadow rounded-lg overflow-hidden">
                 <div className="p-5">

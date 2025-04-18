@@ -54,6 +54,16 @@ export default function DashboardLayout({ children }) {
   // Add Orders for all users
   navigation.push({ name: 'Retail', href: '/orders' });
   
+  // Add Analytics for admin, owner and retailer
+  if (isAdminOrOwner || userRole === 'RETAILER') {
+    navigation.push({ name: 'Analytics', href: '/analytics' });
+  }
+  
+  // Add Inventory Alerts for admin and owner
+  if (isAdminOrOwner) {
+    navigation.push({ name: 'Inventory Alerts', href: '/admin/inventory-alerts' });
+  }
+  
   // Debug logging
   console.log('User role:', session.user.role);
   console.log('Navigation items:', navigation.map(item => item.name));

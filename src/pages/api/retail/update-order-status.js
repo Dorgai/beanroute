@@ -1,48 +1,88 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
-import { createActivityLog } from '@/lib/activity-service';
+import { verifyRequestAndGetUser } from '@/lib/auth';
 
 export default async function handler(req, res) {
+  console.log(`[update-order-status] Handling ${req.method} request`);
+
   // Create a dedicated prisma instance for this request
   const prisma = new PrismaClient();
   
   if (req.method !== 'PUT') {
+    console.log(`[update-order-status] Method ${req.method} not allowed`);
     await prisma.$disconnect();
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     // Get user session with error handling
-    let session;
+    let user;
     try {
-      session = await getServerSession(req, res);
-      if (!session) {
-        await prisma.$disconnect();
-        return res.status(401).json({ error: 'Unauthorized' });
+      // First try with API authentication method (for direct API calls)
+      console.log(`[update-order-status] Checking for API auth token`);
+      user = await verifyRequestAndGetUser(req);
+      
+      if (user) {
+        console.log(`[update-order-status] API auth successful for user: ${user.id}, role: ${user.role}`);
+      } else {
+        console.log(`[update-order-status] API auth failed, trying session auth`);
+        // If that doesn't work, try with session (for browser usage)
+        const session = await getServerSession({ req, res });
+        console.log(`[update-order-status] Session result:`, session ? 'Session found' : 'No session');
+        
+        if (session && session.user) {
+          user = session.user;
+          console.log(`[update-order-status] Session auth successful for user: ${user.id}, role: ${user.role}`);
+        }
       }
-      console.log('Update order status - session user role:', session.user.role);
-    } catch (sessionError) {
-      console.error('Session error:', sessionError);
+      
+      if (!user) {
+        console.error('[update-order-status] Authentication failed completely');
+        await prisma.$disconnect();
+        return res.status(401).json({ error: 'Unauthorized - User authentication failed' });
+      }
+      
+    } catch (authError) {
+      console.error('[update-order-status] Authentication error:', authError);
       await prisma.$disconnect();
-      return res.status(401).json({ error: 'Session validation failed' });
+      return res.status(401).json({ 
+        error: 'Authentication failed', 
+        details: authError.message
+      });
     }
 
-    const { orderId, status } = req.body;
-    console.log(`Update order status request: Order ID ${orderId}, Status ${status}`);
+    // Parse and validate request body
+    let orderId, status;
+    try {
+      console.log(`[update-order-status] Request body:`, req.body);
+      ({ orderId, status } = req.body);
+      console.log(`[update-order-status] Parsed request - Order ID: ${orderId}, Status: ${status}`);
+    } catch (parseError) {
+      console.error('[update-order-status] Failed to parse request body:', parseError);
+      await prisma.$disconnect();
+      return res.status(400).json({ 
+        error: 'Invalid request body',
+        details: 'Could not parse orderId and status from request'
+      });
+    }
 
     // Validate request data
     if (!orderId) {
+      console.log('[update-order-status] Missing order ID');
       await prisma.$disconnect();
       return res.status(400).json({ error: 'Order ID is required' });
     }
 
     if (!status) {
+      console.log('[update-order-status] Missing status');
       await prisma.$disconnect();
       return res.status(400).json({ error: 'Status is required' });
     }
 
+    // Validate status value
     const validStatusValues = ['PENDING', 'CONFIRMED', 'ROASTED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'];
     if (!validStatusValues.includes(status)) {
+      console.log(`[update-order-status] Invalid status: ${status}`);
       await prisma.$disconnect();
       return res.status(400).json({ 
         error: 'Invalid status value',
@@ -51,12 +91,19 @@ export default async function handler(req, res) {
       });
     }
 
+    // Check if order exists
+    let existingOrder;
     try {
-      // Check if order exists
-      const existingOrder = await prisma.retailOrder.findUnique({
+      console.log(`[update-order-status] Fetching order from database: ${orderId}`);
+      existingOrder = await prisma.retailOrder.findUnique({
         where: { id: orderId },
         include: {
-          shop: true,
+          shop: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
           items: {
             include: {
               coffee: true
@@ -66,15 +113,28 @@ export default async function handler(req, res) {
       });
 
       if (!existingOrder) {
+        console.log(`[update-order-status] Order not found: ${orderId}`);
         await prisma.$disconnect();
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      console.log(`Found order ${orderId}, current status: ${existingOrder.status}`);
+      console.log(`[update-order-status] Found order ${orderId}, current status: ${existingOrder.status}`);
+    } catch (dbError) {
+      console.error(`[update-order-status] Database error when fetching order:`, dbError);
+      await prisma.$disconnect();
+      return res.status(500).json({ 
+        error: 'Failed to fetch order from database',
+        details: dbError.message
+      });
+    }
 
-      // Role-based permission checks for status updates
-      const userRole = session.user.role;
-      
+    // Role-based permission checks for status updates
+    const userRole = user.role;
+    console.log(`[update-order-status] User role for status update: ${userRole}`);
+    
+    // Admin and Owner can perform any status change - skip permission checks
+    if (userRole !== 'ADMIN' && userRole !== 'OWNER') {
+      console.log(`[update-order-status] Checking permissions for role: ${userRole}`);
       if (userRole === 'ROASTER') {
         // Roasters can update PENDING to CONFIRMED to ROASTED to DISPATCHED
         const allowedTransitions = {
@@ -89,6 +149,7 @@ export default async function handler(req, res) {
         // Check if the current order status can be updated to the requested status
         const currentStatus = existingOrder.status;
         if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+          console.log(`[update-order-status] Permission denied: Roaster cannot change from ${currentStatus} to ${status}`);
           await prisma.$disconnect();
           return res.status(403).json({ 
             error: `Roasters cannot change order status from '${currentStatus}' to '${status}'`,
@@ -108,6 +169,7 @@ export default async function handler(req, res) {
         
         const currentStatus = existingOrder.status;
         if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+          console.log(`[update-order-status] Permission denied: Retailer cannot change from ${currentStatus} to ${status}`);
           await prisma.$disconnect();
           return res.status(403).json({ 
             error: `Retailers cannot change order status from '${currentStatus}' to '${status}'`,
@@ -127,147 +189,139 @@ export default async function handler(req, res) {
         
         const currentStatus = existingOrder.status;
         if (!allowedTransitions[currentStatus] || !allowedTransitions[currentStatus].includes(status)) {
+          console.log(`[update-order-status] Permission denied: Barista cannot change from ${currentStatus} to ${status}`);
           await prisma.$disconnect();
           return res.status(403).json({ 
             error: `Baristas cannot change order status from '${currentStatus}' to '${status}'`,
             allowedNextStatuses: allowedTransitions[currentStatus] || []
           });
         }
+      } else {
+        // Unknown role - deny permission
+        console.log(`[update-order-status] Permission denied: Unknown role ${userRole}`);
+        await prisma.$disconnect();
+        return res.status(403).json({ 
+          error: `User with role '${userRole}' does not have permission to update order status`
+        });
       }
-      // Admin and Owner can change to any status - no restrictions needed
+    } else {
+      console.log(`[update-order-status] User has ${userRole} role - all status changes are allowed`);
+    }
 
-      try {
-        // Use a transaction to ensure all database operations are atomic
-        const updatedOrder = await prisma.$transaction(async (tx) => {
-          console.log(`Updating order status to ${status}`);
-          
-          // Update order status
-          const updatedOrder = await tx.retailOrder.update({
-            where: { id: orderId },
-            data: {
-              status: status,
-              updatedAt: new Date()
+    // All validations passed, update the order status
+    let updatedOrder;
+    try {
+      // Use a transaction to ensure all database operations are atomic
+      console.log(`[update-order-status] Starting database transaction to update order ${orderId} to ${status}`);
+      updatedOrder = await prisma.$transaction(async (tx) => {
+        console.log(`[update-order-status] Updating order status to ${status}`);
+        
+        // Update order status
+        const updated = await tx.retailOrder.update({
+          where: { id: orderId },
+          data: {
+            status: status,
+            updatedAt: new Date()
+          },
+          include: {
+            shop: {
+              select: {
+                id: true,
+                name: true
+              }
             },
-            include: {
-              shop: true,
-              items: {
-                include: {
-                  coffee: true
-                }
+            items: {
+              include: {
+                coffee: true
               }
             }
-          });
-          
-          console.log(`Updated order ${orderId} status from ${existingOrder.status} to ${status}`);
-
-          // If the status is being changed to DELIVERED, update the inventory
-          if (status === 'DELIVERED') {
-            console.log(`Order ${orderId} marked as DELIVERED - updating inventory quantities`);
-            
-            // Process each item in the order
-            for (const item of existingOrder.items) {
-              console.log(`Processing inventory update for item: Coffee ${item.coffeeId} - ${item.smallBags} small bags, ${item.largeBags} large bags`);
-              
-              // Update shop inventory
-              await tx.retailInventory.upsert({
-                where: {
-                  shopId_coffeeId: {
-                    shopId: existingOrder.shopId,
-                    coffeeId: item.coffeeId
-                  }
-                },
-                create: {
-                  shopId: existingOrder.shopId,
-                  coffeeId: item.coffeeId,
-                  smallBags: item.smallBags,
-                  largeBags: item.largeBags,
-                  totalQuantity: item.totalQuantity,
-                  lastOrderDate: new Date()
-                },
-                update: {
-                  smallBags: {
-                    increment: item.smallBags
-                  },
-                  largeBags: {
-                    increment: item.largeBags
-                  },
-                  totalQuantity: {
-                    increment: item.totalQuantity
-                  },
-                  lastOrderDate: new Date()
-                }
-              });
-              
-              console.log(`Updated inventory for coffee ${item.coffeeId} in shop ${existingOrder.shopId}`);
-            }
           }
-          // If the status is being changed to CANCELLED, return the coffee quantity to inventory
-          else if (status === 'CANCELLED' && existingOrder.status !== 'DELIVERED') {
-            console.log(`Order ${orderId} marked as CANCELLED - returning reserved quantities to inventory`);
-            
-            // Process each item in the order
-            for (const item of existingOrder.items) {
-              console.log(`Returning ${item.totalQuantity}kg of coffee ${item.coffeeId} to inventory`);
-              
-              // Return the reserved quantity back to green coffee inventory
-              await tx.greenCoffee.update({
-                where: { id: item.coffeeId },
-                data: {
-                  quantity: {
-                    increment: item.totalQuantity
-                  }
-                }
-              });
-              
-              console.log(`Returned coffee ${item.coffeeId} quantity by ${item.totalQuantity}kg`);
-            }
-          }
-          
-          return updatedOrder;
         });
-
-        // Create activity log
-        try {
-          await createActivityLog(session.user.id, 'UPDATE', 'RETAIL_ORDER', orderId, {
-            previousStatus: existingOrder.status,
-            newStatus: status
-          });
-          console.log('Created activity log for order status update', orderId);
-        } catch (logError) {
-          // Don't fail the request if activity log fails
-          console.error('Failed to create activity log:', logError);
-        }
-
-        // Make sure to disconnect the Prisma client
-        await prisma.$disconnect();
         
-        return res.status(200).json(updatedOrder);
-      } catch (dbError) {
-        console.error('Database error updating order status:', dbError);
-        await prisma.$disconnect();
-        return res.status(500).json({ 
-          error: 'Failed to update order status',
-          details: process.env.NODE_ENV === 'development' ? dbError.message : 'Database update failed'
-        });
-      }
-    } catch (error) {
-      console.error('Unhandled error updating order status:', error);
-      // Make sure to disconnect prisma in case of unhandled errors
-      await prisma.$disconnect().catch(console.error);
+        console.log(`[update-order-status] Updated order ${orderId} status from ${existingOrder.status} to ${status}`);
+
+        // If the status is being changed to DELIVERED, update the inventory
+        if (status === 'DELIVERED') {
+          console.log(`[update-order-status] Order ${orderId} marked as DELIVERED - updating inventory quantities`);
+          
+          // Process each item in the order
+          for (const item of existingOrder.items) {
+            console.log(`[update-order-status] Processing inventory update for item: Coffee ${item.coffeeId} - ${item.smallBags} small bags, ${item.largeBags} large bags`);
+            
+            // Update shop inventory
+            await tx.retailInventory.upsert({
+              where: {
+                shopId_coffeeId: {
+                  shopId: existingOrder.shopId,
+                  coffeeId: item.coffeeId
+                }
+              },
+              create: {
+                shopId: existingOrder.shopId,
+                coffeeId: item.coffeeId,
+                smallBags: item.smallBags,
+                largeBags: item.largeBags,
+                totalQuantity: item.totalQuantity,
+                lastOrderDate: new Date()
+              },
+              update: {
+                smallBags: {
+                  increment: item.smallBags
+                },
+                largeBags: {
+                  increment: item.largeBags
+                },
+                totalQuantity: {
+                  increment: item.totalQuantity
+                },
+                lastOrderDate: new Date()
+              }
+            });
+            
+            console.log(`[update-order-status] Inventory updated for coffee ${item.coffeeId} in shop ${existingOrder.shopId}`);
+          }
+        }
+        
+        return updated;
+      });
       
+    } catch (dbError) {
+      console.error('[update-order-status] Database error during update:', dbError);
+      await prisma.$disconnect();
       return res.status(500).json({ 
-        error: 'Failed to update order status',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: 'Failed to update order status in the database',
+        details: dbError.message
       });
     }
-  } catch (error) {
-    console.error('Unhandled error updating order status:', error);
-    // Make sure to disconnect prisma in case of unhandled errors
-    await prisma.$disconnect().catch(console.error);
+
+    // Success! Return the updated order
+    console.log(`[update-order-status] Successfully updated order ${orderId} to status ${status}`);
+    await prisma.$disconnect();
+    return res.status(200).json({
+      success: true,
+      message: `Order status updated to ${status}`,
+      order: {
+        id: updatedOrder.id,
+        shopId: updatedOrder.shopId,
+        shopName: updatedOrder.shop?.name,
+        status: updatedOrder.status,
+        updatedAt: updatedOrder.updatedAt
+      }
+    });
     
-    return res.status(500).json({ 
-      error: 'Failed to update order status',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+  } catch (error) {
+    // Catch any unhandled errors
+    console.error('[update-order-status] Unhandled error:', error);
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error('[update-order-status] Error disconnecting from database:', disconnectError);
+    }
+    
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: 'An unexpected error occurred while processing the order status update',
+      details: error.message
     });
   }
 } 

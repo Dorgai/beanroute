@@ -117,13 +117,49 @@ export async function getShops(page = 1, limit = 10, search = '') {
  * Get a single shop by ID
  */
 export async function getShopById(id) {
-  return prisma.shop.findUnique({
-    where: { id },
-    include: {
-      createdBy: { select: { id: true, username: true } },
-      users: { include: { user: { select: { id: true, username: true, role: true } } } } // Include associated users
-    }
-  });
+  try {
+    return prisma.shop.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        minCoffeeQuantityLarge: true,
+        minCoffeeQuantitySmall: true,
+        createdAt: true,
+        updatedAt: true,
+        createdById: true,
+        createdBy: { 
+          select: { 
+            id: true, 
+            username: true 
+          } 
+        },
+        users: { 
+          include: { 
+            user: { 
+              select: { 
+                id: true, 
+                username: true, 
+                role: true 
+              } 
+            } 
+          } 
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[getShopById] Error fetching shop:', error);
+    // Fall back to a more minimal query if the first one fails due to schema differences
+    return prisma.shop.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        createdById: true
+      }
+    });
+  }
 }
 
 /**

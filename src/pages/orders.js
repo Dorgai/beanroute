@@ -318,7 +318,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
 }
 
 // Order Status Update Dialog Component
-function StatusUpdateDialog({ open, onClose, order }) {
+function StatusUpdateDialog({ open, onClose, order, refreshData }) {
   const { session } = useSession();
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -444,9 +444,13 @@ function StatusUpdateDialog({ open, onClose, order }) {
       console.log('Order status updated successfully');
       
       // Force a refresh of the data
-      setTimeout(() => {
-        refreshData();
-      }, 500);
+      if (typeof refreshData === 'function') {
+        setTimeout(() => {
+          refreshData();
+        }, 500);
+      } else {
+        console.warn('refreshData is not a function, skipping refresh');
+      }
       
       onClose(true); // Pass true to indicate successful update
     } catch (error) {
@@ -1073,7 +1077,7 @@ export default function RetailOrders() {
     setOrderDialogOpen(false);
     if (success) {
       // Refresh data after successful order
-      refreshData();
+      fetchData();
     }
   };
   
@@ -1084,10 +1088,8 @@ export default function RetailOrders() {
   
   const handleCloseStatusDialog = (success) => {
     setStatusDialogOpen(false);
-    setSelectedOrder(null);
     if (success) {
-      // Refresh orders after status update
-      refreshData();
+      fetchData();
     }
   };
   
@@ -1107,11 +1109,11 @@ export default function RetailOrders() {
     setSelectedInventoryItem(null);
     if (success) {
       // Refresh inventory data after update
-      refreshData();
+      fetchData();
     }
   };
   
-  const refreshData = async () => {
+  const fetchData = async () => {
     if (!selectedShop) return;
     
     setLoading(true);
@@ -1266,7 +1268,7 @@ export default function RetailOrders() {
             </Typography>
             <Box>
               <Tooltip title="Refresh Data">
-                <IconButton onClick={refreshData} sx={{ mr: 1 }}>
+                <IconButton onClick={fetchData} sx={{ mr: 1 }}>
                   <RefreshIcon />
                 </IconButton>
               </Tooltip>
@@ -1690,6 +1692,7 @@ export default function RetailOrders() {
           open={statusDialogOpen}
           onClose={handleCloseStatusDialog}
           order={selectedOrder}
+          refreshData={fetchData}
         />
         
         {/* Inventory Update Dialog */}
@@ -1697,7 +1700,7 @@ export default function RetailOrders() {
           open={inventoryDialogOpen}
           onClose={handleCloseInventoryDialog}
           inventoryItem={selectedInventoryItem}
-          refreshData={refreshData}
+          refreshData={fetchData}
         />
       </Container>
     </>

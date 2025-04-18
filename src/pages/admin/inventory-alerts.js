@@ -133,6 +133,55 @@ export default function InventoryAlerts() {
     }
   };
 
+  // Handle creating a test alert (for debugging)
+  const handleCreateTestAlert = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/retail/log-inventory-alert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shopId: "90a7cbc1-1c31-4b02-9efa-7d54b6ad4b2a", // Use a valid shop ID from your database
+          alertType: "WARNING",
+          totalSmallBags: 5,
+          totalLargeBags: 2,
+          minSmallBags: 10,
+          minLargeBags: 5,
+          smallBagsPercentage: 50,
+          largeBagsPercentage: 40
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create test alert');
+      }
+      
+      const data = await response.json();
+      setSuccessMessage('Test alert created successfully.');
+      
+      // Refresh alert logs
+      const logsResponse = await fetch('/api/retail/alert-logs');
+      if (logsResponse.ok) {
+        const logsData = await logsResponse.json();
+        setAlertLogs(logsData.logs || []);
+      }
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+    } catch (err) {
+      console.error('Error creating test alert:', err);
+      setError('Failed to create test alert. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!session) {
     return null;
   }
@@ -210,6 +259,16 @@ export default function InventoryAlerts() {
               Run Manual Check Now
             </Button>
             
+            <Button 
+              variant="outlined" 
+              color="info" 
+              onClick={handleCreateTestAlert}
+              disabled={loading}
+              sx={{ ml: 2 }}
+            >
+              Create Test Alert
+            </Button>
+            
             {loading && <CircularProgress size={24} sx={{ ml: 2 }} />}
           </Box>
           
@@ -231,7 +290,14 @@ export default function InventoryAlerts() {
               <CircularProgress />
             </Box>
           ) : alertLogs.length === 0 ? (
-            <Typography>No alert logs found.</Typography>
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography color="textSecondary">
+                No alert logs found. Try creating a test alert or running a manual check.
+              </Typography>
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                If you believe this is an error, check your database connection and SMTP settings.
+              </Typography>
+            </Box>
           ) : (
             <TableContainer>
               <Table>
