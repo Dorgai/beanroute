@@ -7,6 +7,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
+  console.log('[api/dashboard/stats] Processing request');
+
   // Check for direct access mode (for debugging)
   const bypassAuth = req.query.direct === 'true';
 
@@ -16,10 +18,12 @@ export default async function handler(req, res) {
     try {
       session = await getServerSession(req, res);
       if (!session) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        console.log('[api/dashboard/stats] No valid session found');
+        return res.status(401).json({ message: 'Unauthorized' });
       }
+      console.log('[api/dashboard/stats] Authenticated as user:', session.user?.username || 'unknown');
     } catch (error) {
-      console.error('Error authenticating request:', error);
+      console.error('[api/dashboard/stats] Error authenticating request:', error);
       return res.status(401).json({ error: 'Authentication error' });
     }
   } else {
@@ -30,12 +34,14 @@ export default async function handler(req, res) {
   const prisma = new PrismaClient();
 
   try {
+    console.log('[api/dashboard/stats] Fetching statistics');
     // Get dashboard statistics
     const [
       totalOrders,
       ordersByStatus,
       totalShops,
       totalUsers,
+      usersByStatus,
       totalCoffees,
       recentOrders
     ] = await Promise.all([
@@ -53,6 +59,12 @@ export default async function handler(req, res) {
       
       // Total users
       prisma.user.count(),
+      
+      // Users by active status
+      prisma.user.groupBy({
+        by: ['active'],
+        _count: true
+      }),
       
       // Total coffees
       prisma.coffee.count(),
@@ -87,6 +99,18 @@ export default async function handler(req, res) {
       statusCounts[item.status] = item._count;
     });
 
+    // Format user status counts
+    let activeUsers = 0;
+    let inactiveUsers = 0;
+    
+    usersByStatus.forEach(item => {
+      if (item.active === true) {
+        activeUsers = item._count;
+      } else {
+        inactiveUsers = item._count;
+      }
+    });
+
     // Map recent orders to a simpler format
     const formattedRecentOrders = recentOrders.map(order => ({
       id: order.id,
@@ -97,17 +121,20 @@ export default async function handler(req, res) {
     }));
 
     // Return formatted statistics
+    console.log('[api/dashboard/stats] Successfully fetched statistics');
     await prisma.$disconnect();
     return res.status(200).json({
       totalOrders,
       ordersByStatus: statusCounts,
       totalShops,
       totalUsers,
+      activeUsers,
+      inactiveUsers,
       totalCoffees,
       recentOrders: formattedRecentOrders
     });
   } catch (error) {
-    console.error('Error fetching dashboard statistics:', error);
+    console.error('[api/dashboard/stats] Error fetching dashboard statistics:', error);
     await prisma.$disconnect();
     return res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
   }

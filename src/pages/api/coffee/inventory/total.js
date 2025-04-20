@@ -15,11 +15,14 @@ export default async function handler(req, res) {
     try {
       session = await getServerSession(req, res);
       if (!session) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        console.log('[api/coffee/inventory/total] No valid session found');
+        // Return empty result instead of error for header display
+        return res.status(200).json({ total: 0, error: 'Unauthorized', items: [] });
       }
     } catch (error) {
-      console.error('Error authenticating request:', error);
-      return res.status(401).json({ error: 'Authentication error' });
+      console.error('[api/coffee/inventory/total] Error authenticating request:', error);
+      // Return empty result instead of error for header display
+      return res.status(200).json({ total: 0, error: 'Authentication error', items: [] });
     }
   } else {
     console.log('[api/coffee/inventory/total] AUTH BYPASS MODE - Skipping authentication check');
@@ -50,6 +53,7 @@ export default async function handler(req, res) {
     // Calculate totals by coffee
     const coffeeTotals = {};
     const coffeeIds = new Set();
+    let overallTotal = 0;
 
     inventoryItems.forEach(item => {
       const coffeeId = item.coffeeId;
@@ -64,6 +68,7 @@ export default async function handler(req, res) {
       }
       
       coffeeTotals[coffeeId].totalQuantity += item.quantity;
+      overallTotal += item.quantity;
       
       // Add shop to list if not already added
       const shopExists = coffeeTotals[coffeeId].shops.some(s => s.id === item.shopId);
@@ -79,10 +84,13 @@ export default async function handler(req, res) {
     const result = Array.from(coffeeIds).map(id => coffeeTotals[id]);
 
     await prisma.$disconnect();
-    return res.status(200).json(result);
+    return res.status(200).json({ 
+      total: overallTotal, 
+      items: result 
+    });
   } catch (error) {
-    console.error('Error fetching inventory totals:', error);
+    console.error('[api/coffee/inventory/total] Error fetching inventory totals:', error);
     await prisma.$disconnect();
-    return res.status(500).json({ message: 'Error fetching inventory data' });
+    return res.status(200).json({ total: 0, error: 'Error fetching inventory data', items: [] });
   }
 } 
