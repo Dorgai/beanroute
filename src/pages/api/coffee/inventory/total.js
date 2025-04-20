@@ -37,6 +37,11 @@ export default async function handler(req, res) {
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
 
+    // Verify prisma client is defined
+    if (!prisma || !prisma.greenCoffee) {
+      throw new Error('Prisma client or greenCoffee model is not properly initialized');
+    }
+
     // Fetch green coffee items with their quantities
     const coffeeItems = await prisma.greenCoffee.findMany({
       select: {
@@ -72,6 +77,6 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('[api/coffee/inventory/total] Error fetching inventory totals:', error);
-    return res.status(200).json({ total: 0, error: 'Error fetching inventory data', items: [] });
+    return res.status(200).json({ total: 0, error: `Error fetching inventory data: ${error.message}`, items: [] });
   }
 } 
