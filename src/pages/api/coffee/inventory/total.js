@@ -1,14 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
-// Use PrismaClient as a singleton to prevent too many connections
-// Check if PrismaClient is defined in global scope
-const globalForPrisma = global;
-const prisma = globalForPrisma.prisma || new PrismaClient();
+// Use PrismaClient with error handling
+let prisma;
 
-// Only assign if we're not in production to avoid memory leaks
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+try {
+  prisma = new PrismaClient();
+} catch (error) {
+  console.error('Failed to initialize Prisma client:', error);
 }
 
 export default async function handler(req, res) {
@@ -44,7 +43,11 @@ export default async function handler(req, res) {
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
 
-    // Fetch green coffee items with their quantities
+    if (!prisma) {
+      throw new Error('Prisma client not initialized correctly');
+    }
+
+    // Fetch green coffee items with their quantities - model is GreenCoffee based on schema
     const coffeeItems = await prisma.greenCoffee.findMany({
       select: {
         id: true,
