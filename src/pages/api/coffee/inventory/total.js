@@ -1,8 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
-// Create the Prisma client outside the handler function
-const prisma = new PrismaClient();
+// Use PrismaClient as a singleton to prevent too many connections
+// Check if PrismaClient is defined in global scope
+const globalForPrisma = global;
+const prisma = globalForPrisma.prisma || new PrismaClient();
+
+// Only assign if we're not in production to avoid memory leaks
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -37,11 +44,6 @@ export default async function handler(req, res) {
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
 
-    // Verify prisma client is defined
-    if (!prisma || !prisma.greenCoffee) {
-      throw new Error('Prisma client or greenCoffee model is not properly initialized');
-    }
-
     // Fetch green coffee items with their quantities
     const coffeeItems = await prisma.greenCoffee.findMany({
       select: {
@@ -52,6 +54,9 @@ export default async function handler(req, res) {
         country: true,
         producer: true
       }
+    }).catch(err => {
+      console.error('[api/coffee/inventory/total] Database query error:', err);
+      throw new Error(`Database query failed: ${err.message}`);
     });
 
     // Calculate total inventory
