@@ -110,12 +110,16 @@ export default function Login() {
       
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-4">
-          <Image 
-            src="/images/sonic-beans-logo.svg" 
+          <img 
+            src="/images/sonic-beans-logo.jpg"
             alt="Sonic Beans Logo" 
             width={200} 
             height={100} 
-            priority
+            className="h-20 object-contain"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/images/sonic-beans-logo.svg";
+            }}
           />
         </div>
         <h1 className="mt-2 text-center text-3xl font-bold text-gray-800">
