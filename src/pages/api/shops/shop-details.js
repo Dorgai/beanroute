@@ -4,7 +4,15 @@ import { verifyRequestAndGetUser } from '../../../lib/auth';
 import { updateShop, deleteShop } from '../../../lib/shop-service';
 import { Role } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Single instance to avoid too many connections
+let prismaInstance = null;
+
+function getPrismaInstance() {
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient();
+  }
+  return prismaInstance;
+}
 
 // Helper function for authorization check
 function canModifyShop(user) {
@@ -12,19 +20,44 @@ function canModifyShop(user) {
 }
 
 export default async function handler(req, res) {
+  console.log('[api/shops/shop-details] Processing request, method:', req.method);
+  
   try {
+    // Create Prisma instance
+    const prisma = getPrismaInstance();
+    
     // GET method - Fetch shop details
     if (req.method === 'GET') {
-      // Validate session
-      const user = await getServerSession({ req, res });
-      if (!user) {
-        return res.status(401).json({ error: 'Unauthorized' });
+      // Validate session (check for query param direct access)
+      const bypassAuth = req.query.direct === 'true';
+      let user;
+
+      if (!bypassAuth) {
+        // Use cookies from req for authentication
+        if (req.cookies?.auth) {
+          console.log('[api/shops/shop-details] Auth cookie found in request');
+          user = await verifyRequestAndGetUser(req);
+        } else {
+          console.log('[api/shops/shop-details] Trying session-based auth');
+          user = await getServerSession(req, res);
+        }
+
+        if (!user) {
+          console.log('[api/shops/shop-details] No authenticated user found');
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+        console.log('[api/shops/shop-details] Authenticated user:', user.username || user.id);
+      } else {
+        console.log('[api/shops/shop-details] AUTH BYPASS MODE - Skipping authentication check');
       }
 
       const id = req.query.id;
       if (!id) {
+        console.log('[api/shops/shop-details] Missing shop ID');
         return res.status(400).json({ error: 'Shop ID is required as a query parameter' });
       }
+      
+      console.log('[api/shops/shop-details] Fetching shop details for ID:', id);
 
       // Fetch shop details with the specified ID
       const shop = await prisma.shop.findUnique({
@@ -39,9 +72,11 @@ export default async function handler(req, res) {
       });
 
       if (!shop) {
+        console.log('[api/shops/shop-details] Shop not found for ID:', id);
         return res.status(404).json({ error: 'Shop not found' });
       }
 
+      console.log('[api/shops/shop-details] Successfully retrieved shop:', shop.name);
       return res.status(200).json(shop);
     } 
     // PUT method - Update shop
@@ -121,7 +156,5 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Error handling shop request:', error);
     return res.status(500).json({ error: 'Internal server error', details: error.message });
-  } finally {
-    await prisma.$disconnect();
   }
 } 

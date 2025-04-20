@@ -1,13 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
-const globalForPrisma = global;
+// Single instance to avoid too many connections
+let prismaInstance = null;
 
-const prisma = globalForPrisma.prisma || new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+function getPrismaInstance() {
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient();
+  }
+  return prismaInstance;
+}
 
 export default async function handler(req, res) {
   // Only allow GET requests
@@ -38,11 +40,11 @@ export default async function handler(req, res) {
     console.log('[api/dashboard/stats] AUTH BYPASS MODE - Skipping authentication check');
   }
 
-  // Create a new Prisma client for this request
-  const prisma = new PrismaClient();
-
   try {
+    // Get Prisma instance
+    const prisma = getPrismaInstance();
     console.log('[api/dashboard/stats] Fetching statistics');
+    
     // Get dashboard statistics
     const [
       totalOrders,
@@ -130,7 +132,6 @@ export default async function handler(req, res) {
 
     // Return formatted statistics
     console.log('[api/dashboard/stats] Successfully fetched statistics');
-    await prisma.$disconnect();
     return res.status(200).json({
       totalOrders,
       ordersByStatus: statusCounts,
@@ -143,7 +144,6 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('[api/dashboard/stats] Error fetching dashboard statistics:', error);
-    await prisma.$disconnect();
     return res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
   }
 } 
