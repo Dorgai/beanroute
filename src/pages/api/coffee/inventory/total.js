@@ -1,13 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
-// Use PrismaClient with error handling
+// Initialize Prisma client at the module level
 let prisma;
-
 try {
-  prisma = new PrismaClient();
+  // Create a new PrismaClient instance
+  prisma = new PrismaClient({
+    log: ['error', 'warn']
+  });
+  console.log('[api/coffee/inventory/total] Prisma client initialized successfully');
 } catch (error) {
-  console.error('Failed to initialize Prisma client:', error);
+  console.error('[api/coffee/inventory/total] Failed to initialize Prisma client:', error);
 }
 
 export default async function handler(req, res) {
@@ -43,12 +46,12 @@ export default async function handler(req, res) {
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
 
-    if (!prisma) {
-      throw new Error('Prisma client not initialized correctly');
-    }
-
+    // Create a new client if not already initialized
+    const db = prisma || new PrismaClient();
+    
     // Fetch green coffee items with their quantities - model is GreenCoffee based on schema
-    const coffeeItems = await prisma.greenCoffee.findMany({
+    console.log('[api/coffee/inventory/total] Executing greenCoffee.findMany query');
+    const coffeeItems = await db.greenCoffee.findMany({
       select: {
         id: true,
         name: true,
@@ -57,9 +60,6 @@ export default async function handler(req, res) {
         country: true,
         producer: true
       }
-    }).catch(err => {
-      console.error('[api/coffee/inventory/total] Database query error:', err);
-      throw new Error(`Database query failed: ${err.message}`);
     });
 
     // Calculate total inventory
