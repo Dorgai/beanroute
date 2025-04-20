@@ -28,7 +28,16 @@ function CoffeeInventory() {
       }
       
       const data = await response.json();
-      setTotalInventory(data.total !== undefined ? data.total : 0);
+      
+      // Check if there's an error in the response
+      if (data.error) {
+        console.warn('Coffee inventory API returned error:', data.error);
+        setError(true);
+        setTotalInventory(0);
+      } else {
+        // Handle new response format
+        setTotalInventory(data.total !== undefined ? data.total : 0);
+      }
     } catch (error) {
       console.error('Error fetching coffee inventory:', error);
       setError(true);

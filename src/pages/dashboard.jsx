@@ -55,7 +55,7 @@ function Dashboard() {
     // Fetch dashboard statistics
     async function fetchStats() {
       try {
-        const response = await fetch('/api/dashboard/stats');
+        const response = await fetch('/api/dashboard/stats?direct=true');
         
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard statistics');

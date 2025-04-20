@@ -3,16 +3,13 @@ set -e
 
 echo "=== BeanRoute Railway Deployment Script ==="
 
-# Delete any DOCKERFILE reference to force NIXPACKS
-rm -f railway.toml 2>/dev/null || true
-
-# Create a simplified railway.json
+# Create a railway.json that uses our Dockerfile
 cat > railway.json << 'END'
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "npm ci && npx prisma generate && npm run build"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
@@ -22,9 +19,16 @@ cat > railway.json << 'END'
 }
 END
 
-# Force add railway.json, ignoring other uncommitted changes
-git add railway.json
-git commit -m "Simplify deployment configuration" --no-verify || true
+# Ensure prisma folder is included in deployment
+echo "Making sure prisma folder is included in deployment..."
+mkdir -p ./prisma
+
+# Add prisma folder to deployment explicitly
+git add -f prisma/
+
+# Force add railway.json and Dockerfile, ignoring other uncommitted changes
+git add -f railway.json Dockerfile
+git commit -m "Use Dockerfile for Railway deployment with explicit prisma handling" --no-verify || true
 
 # Deploy to Railway
 echo "Deploying to Railway..."
