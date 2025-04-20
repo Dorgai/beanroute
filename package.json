@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node init-db.js && chmod +x ./docker-entrypoint.sh && ./docker-entrypoint.sh",
+    "start": "next start -p $PORT",
     "start:server": "node server.js",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
