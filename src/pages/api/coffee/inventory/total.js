@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
+// Create the Prisma client outside the handler function
+const prisma = new PrismaClient();
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -30,9 +33,6 @@ export default async function handler(req, res) {
   } else {
     console.log('[api/coffee/inventory/total] AUTH BYPASS MODE - Skipping authentication check');
   }
-
-  // Create Prisma client directly for this request
-  const prisma = new PrismaClient();
   
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
@@ -66,14 +66,12 @@ export default async function handler(req, res) {
     });
 
     console.log(`[api/coffee/inventory/total] Found total: ${overallTotal}kg across ${result.length} coffee types`);
-    await prisma.$disconnect();
     return res.status(200).json({ 
       total: overallTotal, 
       items: result 
     });
   } catch (error) {
     console.error('[api/coffee/inventory/total] Error fetching inventory totals:', error);
-    await prisma.$disconnect();
     return res.status(200).json({ total: 0, error: 'Error fetching inventory data', items: [] });
   }
 } 
