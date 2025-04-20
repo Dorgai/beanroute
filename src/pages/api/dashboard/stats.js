@@ -63,12 +63,12 @@ export default async function handler(req, res) {
       
       // Users by active status
       prisma.user.groupBy({
-        by: ['active'],
+        by: ['status'],
         _count: true
       }),
       
       // Total coffees
-      prisma.coffee.count(),
+      prisma.greenCoffee.count(),
       
       // Recent orders
       prisma.retailOrder.findMany({
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
     let inactiveUsers = 0;
     
     usersByStatus.forEach(item => {
-      if (item.active === true) {
+      if (item.status === 'ACTIVE') {
         activeUsers = item._count;
       } else {
         inactiveUsers = item._count;

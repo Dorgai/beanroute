@@ -24,7 +24,7 @@ export default function EditShopPage() {
   // Fetch existing shop data
   useEffect(() => {
     const fetchShop = async () => {
-      setLoading(true);
+      setFetchLoading(true);
       try {
         const response = await fetch(`/api/shops/shop-details?id=${shopId}`, { credentials: 'same-origin' });
         
@@ -46,12 +46,14 @@ export default function EditShopPage() {
         console.error('Error fetching shop details:', error);
         setError(error.message || 'Failed to load shop details');
       } finally {
-        setLoading(false);
+        setFetchLoading(false);
       }
     };
     
     if (shopId) {
       fetchShop();
+    } else {
+      setFetchLoading(false); // Make sure we're not loading if shopId isn't available yet
     }
   }, [shopId]);
 
