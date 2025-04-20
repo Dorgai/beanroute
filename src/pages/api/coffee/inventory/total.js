@@ -1,9 +1,6 @@
 import { getServerSession } from '@/lib/session';
 import { PrismaClient } from '@prisma/client';
 
-// Create a new instance of PrismaClient
-const prisma = new PrismaClient();
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -36,38 +33,37 @@ export default async function handler(req, res) {
   
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
-
-    // Use direct SQL query if Prisma is having issues
+    
+    // Create a new Prisma client for this request
+    const prisma = new PrismaClient();
+    
+    // Use direct SQL query instead of Prisma ORM methods
     const rawQuery = `
       SELECT id, name, grade, quantity, country, producer
       FROM "GreenCoffee"
     `;
     
     let coffeeItems;
+    
     try {
-      // First try using Prisma's findMany
-      coffeeItems = await prisma.greenCoffee.findMany({
-        select: {
-          id: true,
-          name: true,
-          grade: true,
-          quantity: true,
-          country: true,
-          producer: true
-        }
-      });
-      console.log('[api/coffee/inventory/total] Successfully used Prisma findMany');
-    } catch (prismaError) {
-      console.error('[api/coffee/inventory/total] Prisma findMany failed, using raw query:', prismaError);
-      // Fallback to raw query
-      const result = await prisma.$queryRaw`${rawQuery}`;
+      // Execute the raw SQL query
+      const result = await prisma.$queryRawUnsafe(rawQuery);
       coffeeItems = result;
+      console.log(`[api/coffee/inventory/total] Raw query successful, found ${result.length} items`);
+    } catch (dbError) {
+      console.error('[api/coffee/inventory/total] Database query error:', dbError);
+      throw new Error(`Database query failed: ${dbError.message}`);
+    } finally {
+      // Always disconnect the client
+      await prisma.$disconnect();
     }
 
     // Calculate total inventory
     let overallTotal = 0;
     const result = coffeeItems.map(coffee => {
-      overallTotal += coffee.quantity;
+      // Convert quantity to number in case it's returned as string from raw query
+      const quantity = parseFloat(coffee.quantity) || 0;
+      overallTotal += quantity;
       
       return {
         coffee: {
@@ -75,7 +71,7 @@ export default async function handler(req, res) {
           name: coffee.name,
           grade: coffee.grade
         },
-        totalQuantity: coffee.quantity,
+        totalQuantity: quantity,
         shops: [] // Shop-specific data isn't available at this level
       };
     });
@@ -87,17 +83,10 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('[api/coffee/inventory/total] Error fetching inventory totals:', error);
-    // Return a more detailed error message in development
-    const errorMessage = process.env.NODE_ENV === 'development' 
-      ? `Error fetching inventory data: ${error.message}\n${error.stack}` 
-      : 'Error fetching inventory data';
-      
     return res.status(200).json({ 
       total: 0, 
-      error: errorMessage, 
+      error: `Error fetching inventory data: ${error.message}`, 
       items: [] 
     });
-  } finally {
-    // No need to disconnect in Next.js API routes as they're serverless
   }
 } 
