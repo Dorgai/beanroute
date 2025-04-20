@@ -6,34 +6,25 @@ RUN apk add --no-cache postgresql-client
 # Create app directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy Prisma schema
-COPY prisma ./prisma/
-
-# Copy all other files
+# Copy application code
 COPY . .
-
-# Make scripts executable
-RUN chmod +x docker-entrypoint.sh
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the Next.js app
+# Build the application
 RUN npm run build
 
-# Set required environment variables
-ENV PORT=3000
+# Expose the port
+EXPOSE 8080
+
+# Set environment variables
 ENV NODE_ENV=production
-ENV SEED_DATABASE=true
+ENV PORT=8080
 
-# Expose the app's port
-EXPOSE 3000
-
-# Start the app
+# Start the application
 CMD ["npm", "run", "railway:start"] 

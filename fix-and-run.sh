@@ -1,9 +1,9 @@
 #!/bin/sh
 
-echo "=== Starting BeanRoute with Migration Fix ==="
+echo "=== Starting BeanRoute with Database Migration Fix ==="
 
 # Run the database initialization with migration fixes
 node init-db.js
 
-# Start the Next.js server
-next start -p ${PORT:-3000} 
+# Start the Next.js server with the proper port
+next start -p ${PORT:-8080} 
