@@ -1,9 +1,8 @@
 FROM node:18-alpine
 
-# Install PostgreSQL client for database migrations
+# Install PostgreSQL client
 RUN apk add --no-cache postgresql-client
 
-# Create app directory
 WORKDIR /app
 
 # Copy package files and install dependencies
@@ -12,6 +11,9 @@ RUN npm ci
 
 # Copy application code
 COPY . .
+
+# Make scripts executable
+RUN chmod +x fix-and-run.sh docker-entrypoint.sh
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -27,4 +29,4 @@ ENV NODE_ENV=production
 ENV PORT=8080
 
 # Start the application
-CMD ["npm", "run", "railway:start"] 
+CMD ["./fix-and-run.sh"] 
