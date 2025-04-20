@@ -1,17 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
+import { PrismaClient } from '@prisma/client';
 
-// Initialize Prisma client at the module level
-let prisma;
-try {
-  // Create a new PrismaClient instance
-  prisma = new PrismaClient({
-    log: ['error', 'warn']
-  });
-  console.log('[api/coffee/inventory/total] Prisma client initialized successfully');
-} catch (error) {
-  console.error('[api/coffee/inventory/total] Failed to initialize Prisma client:', error);
-}
+// Create a new instance of PrismaClient
+const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -46,21 +37,32 @@ export default async function handler(req, res) {
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
 
-    // Create a new client if not already initialized
-    const db = prisma || new PrismaClient();
+    // Use direct SQL query if Prisma is having issues
+    const rawQuery = `
+      SELECT id, name, grade, quantity, country, producer
+      FROM "GreenCoffee"
+    `;
     
-    // Fetch green coffee items with their quantities - model is GreenCoffee based on schema
-    console.log('[api/coffee/inventory/total] Executing greenCoffee.findMany query');
-    const coffeeItems = await db.greenCoffee.findMany({
-      select: {
-        id: true,
-        name: true,
-        grade: true,
-        quantity: true,
-        country: true,
-        producer: true
-      }
-    });
+    let coffeeItems;
+    try {
+      // First try using Prisma's findMany
+      coffeeItems = await prisma.greenCoffee.findMany({
+        select: {
+          id: true,
+          name: true,
+          grade: true,
+          quantity: true,
+          country: true,
+          producer: true
+        }
+      });
+      console.log('[api/coffee/inventory/total] Successfully used Prisma findMany');
+    } catch (prismaError) {
+      console.error('[api/coffee/inventory/total] Prisma findMany failed, using raw query:', prismaError);
+      // Fallback to raw query
+      const result = await prisma.$queryRaw`${rawQuery}`;
+      coffeeItems = result;
+    }
 
     // Calculate total inventory
     let overallTotal = 0;
@@ -85,6 +87,17 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('[api/coffee/inventory/total] Error fetching inventory totals:', error);
-    return res.status(200).json({ total: 0, error: `Error fetching inventory data: ${error.message}`, items: [] });
+    // Return a more detailed error message in development
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Error fetching inventory data: ${error.message}\n${error.stack}` 
+      : 'Error fetching inventory data';
+      
+    return res.status(200).json({ 
+      total: 0, 
+      error: errorMessage, 
+      items: [] 
+    });
+  } finally {
+    // No need to disconnect in Next.js API routes as they're serverless
   }
 } 
