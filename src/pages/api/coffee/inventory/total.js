@@ -37,57 +37,33 @@ export default async function handler(req, res) {
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
 
-    // Fetch total inventory across all shops
-    const inventoryItems = await prisma.inventory.findMany({
-      include: {
-        coffee: {
-          select: {
-            id: true,
-            name: true,
-            grade: true
-          }
-        },
-        shop: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
+    // Fetch green coffee items with their quantities
+    const coffeeItems = await prisma.greenCoffee.findMany({
+      select: {
+        id: true,
+        name: true,
+        grade: true,
+        quantity: true,
+        country: true,
+        producer: true
       }
     });
 
-    // Calculate totals by coffee
-    const coffeeTotals = {};
-    const coffeeIds = new Set();
+    // Calculate total inventory
     let overallTotal = 0;
-
-    inventoryItems.forEach(item => {
-      const coffeeId = item.coffeeId;
-      coffeeIds.add(coffeeId);
+    const result = coffeeItems.map(coffee => {
+      overallTotal += coffee.quantity;
       
-      if (!coffeeTotals[coffeeId]) {
-        coffeeTotals[coffeeId] = {
-          coffee: item.coffee,
-          totalQuantity: 0,
-          shops: []
-        };
-      }
-      
-      coffeeTotals[coffeeId].totalQuantity += item.quantity;
-      overallTotal += item.quantity;
-      
-      // Add shop to list if not already added
-      const shopExists = coffeeTotals[coffeeId].shops.some(s => s.id === item.shopId);
-      if (!shopExists) {
-        coffeeTotals[coffeeId].shops.push({
-          id: item.shopId,
-          name: item.shop.name
-        });
-      }
+      return {
+        coffee: {
+          id: coffee.id,
+          name: coffee.name,
+          grade: coffee.grade
+        },
+        totalQuantity: coffee.quantity,
+        shops: [] // Shop-specific data isn't available at this level
+      };
     });
-
-    // Convert to array for response
-    const result = Array.from(coffeeIds).map(id => coffeeTotals[id]);
 
     console.log(`[api/coffee/inventory/total] Found total: ${overallTotal}kg across ${result.length} coffee types`);
     await prisma.$disconnect();
