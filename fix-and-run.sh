@@ -12,4 +12,4 @@ node init-db.js
 
 echo "Starting Next.js server..."
 # Start the Next.js server with the proper port
-exec next start -p ${PORT:-8080} 
+exec next start -p ${PORT:-8080}
