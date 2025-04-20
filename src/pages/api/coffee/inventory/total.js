@@ -1,16 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
-// Single instance to avoid too many connections
-let prismaInstance = null;
-
-function getPrismaInstance() {
-  if (!prismaInstance) {
-    prismaInstance = new PrismaClient();
-  }
-  return prismaInstance;
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -41,9 +31,10 @@ export default async function handler(req, res) {
     console.log('[api/coffee/inventory/total] AUTH BYPASS MODE - Skipping authentication check');
   }
 
+  // Create Prisma client directly for this request
+  const prisma = new PrismaClient();
+  
   try {
-    // Get Prisma instance
-    const prisma = getPrismaInstance();
     console.log('[api/coffee/inventory/total] Fetching inventory data');
 
     // Fetch total inventory across all shops
@@ -99,12 +90,14 @@ export default async function handler(req, res) {
     const result = Array.from(coffeeIds).map(id => coffeeTotals[id]);
 
     console.log(`[api/coffee/inventory/total] Found total: ${overallTotal}kg across ${result.length} coffee types`);
+    await prisma.$disconnect();
     return res.status(200).json({ 
       total: overallTotal, 
       items: result 
     });
   } catch (error) {
     console.error('[api/coffee/inventory/total] Error fetching inventory totals:', error);
+    await prisma.$disconnect();
     return res.status(200).json({ total: 0, error: 'Error fetching inventory data', items: [] });
   }
 } 
