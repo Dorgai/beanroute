@@ -1,10 +1,20 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
+// PrismaClient is attached to the `global` object in development to prevent
+// exhausting your database connection limit.
+const globalForPrisma = global;
+
+const prisma = globalForPrisma.prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
+
+  console.log('[api/coffee/inventory/total] Processing request');
 
   // Check for direct access mode (for debugging)
   const bypassAuth = req.query.direct === 'true';
@@ -19,6 +29,7 @@ export default async function handler(req, res) {
         // Return empty result instead of error for header display
         return res.status(200).json({ total: 0, error: 'Unauthorized', items: [] });
       }
+      console.log('[api/coffee/inventory/total] Authenticated as user:', session.user?.username || 'unknown');
     } catch (error) {
       console.error('[api/coffee/inventory/total] Error authenticating request:', error);
       // Return empty result instead of error for header display
@@ -28,9 +39,8 @@ export default async function handler(req, res) {
     console.log('[api/coffee/inventory/total] AUTH BYPASS MODE - Skipping authentication check');
   }
 
-  const prisma = new PrismaClient();
-
   try {
+    console.log('[api/coffee/inventory/total] Fetching inventory data');
     // Fetch total inventory across all shops
     const inventoryItems = await prisma.inventory.findMany({
       include: {
@@ -83,14 +93,13 @@ export default async function handler(req, res) {
     // Convert to array for response
     const result = Array.from(coffeeIds).map(id => coffeeTotals[id]);
 
-    await prisma.$disconnect();
+    console.log(`[api/coffee/inventory/total] Found total: ${overallTotal}kg across ${result.length} coffee types`);
     return res.status(200).json({ 
       total: overallTotal, 
       items: result 
     });
   } catch (error) {
     console.error('[api/coffee/inventory/total] Error fetching inventory totals:', error);
-    await prisma.$disconnect();
     return res.status(200).json({ total: 0, error: 'Error fetching inventory data', items: [] });
   }
 } 
