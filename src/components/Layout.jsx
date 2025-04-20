@@ -66,8 +66,20 @@ function CoffeeInventory() {
     return <span className="text-sm text-yellow-600">Inventory unavailable</span>;
   }
 
+  // Determine color based on inventory level
+  let bgColor = "bg-green-50";
+  let textColor = "text-green-600";
+  
+  if (totalInventory < 150) {
+    bgColor = "bg-red-50";
+    textColor = "text-red-600";
+  } else if (totalInventory < 300) {
+    bgColor = "bg-orange-50";
+    textColor = "text-orange-600";
+  }
+
   return (
-    <div className="text-sm px-3 py-1 bg-green-50 text-green-600 rounded-md">
+    <div className={`text-sm px-3 py-1 ${bgColor} ${textColor} rounded-md`}>
       <Link href="/coffee" className="flex items-center">
         <span className="font-medium">{Number(totalInventory).toFixed(1)} kg</span>
         <span className="ml-1">Green Stock</span>
