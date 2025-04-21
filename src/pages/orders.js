@@ -1794,13 +1794,13 @@ export default function RetailOrders() {
                       <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                         <TableRow>
                           <TableCell padding="checkbox" />
-                          <TableCell>Order ID</TableCell>
+                          <TableCell align="right">Actions</TableCell>
                           <TableCell>Date</TableCell>
                           <TableCell>Status</TableCell>
                           <TableCell>Ordered By</TableCell>
                           <TableCell>Items</TableCell>
                           <TableCell>Total Quantity</TableCell>
-                          <TableCell align="right">Actions</TableCell>
+                          <TableCell>Order ID</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1820,7 +1820,16 @@ export default function RetailOrders() {
                                   )}
                                 </IconButton>
                               </TableCell>
-                              <TableCell>{order.id.substring(0, 8)}</TableCell>
+                              <TableCell align="right">
+                                <Tooltip title="Update Status">
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={() => handleOpenStatusDialog(order)}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
                               <TableCell>
                                 {order.createdAt 
                                   ? format(new Date(order.createdAt), 'MMM d, yyyy') 
@@ -1838,16 +1847,7 @@ export default function RetailOrders() {
                               <TableCell>
                                 {order.items?.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
                               </TableCell>
-                              <TableCell align="right">
-                                <Tooltip title="Update Status">
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => handleOpenStatusDialog(order)}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </TableCell>
+                              <TableCell>{order.id.substring(0, 8)}</TableCell>
                             </TableRow>
                             {expandedRows[order.id] && Array.isArray(order.items) && order.items.length > 0 && (
                               <TableRow>
