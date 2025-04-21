@@ -32,29 +32,23 @@ export default async function handler(req, res) {
   }
   
   // Create a new Prisma client for this request
-  let prisma = null;
+  const prisma = new PrismaClient();
   
   try {
-    prisma = new PrismaClient();
     console.log('[api/coffee/inventory/total] Fetching inventory data');
     
-    // Use direct SQL query instead of Prisma ORM methods
+    // Simple query to verify connection is working
+    await prisma.$queryRaw`SELECT 1`;
+    
+    // Use direct SQL query for better reliability
     const rawQuery = `
       SELECT id, name, grade, quantity, country, producer
       FROM "GreenCoffee"
     `;
     
-    let coffeeItems = [];
-    
-    try {
-      // Execute the raw SQL query
-      const result = await prisma.$queryRawUnsafe(rawQuery);
-      coffeeItems = result;
-      console.log(`[api/coffee/inventory/total] Raw query successful, found ${result.length} items`);
-    } catch (dbError) {
-      console.error('[api/coffee/inventory/total] Database query error:', dbError);
-      throw new Error(`Database query failed: ${dbError.message}`);
-    }
+    // Execute the raw SQL query
+    const coffeeItems = await prisma.$queryRawUnsafe(rawQuery);
+    console.log(`[api/coffee/inventory/total] Raw query successful, found ${coffeeItems.length} items`);
 
     // Calculate total inventory
     let overallTotal = 0;
@@ -87,9 +81,7 @@ export default async function handler(req, res) {
       items: [] 
     });
   } finally {
-    // Always disconnect the client if it was created
-    if (prisma) {
-      await prisma.$disconnect();
-    }
+    // Always disconnect the client
+    await prisma.$disconnect();
   }
 } 
