@@ -102,52 +102,6 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
         ...sx 
       }}
     >
-      {showCritical && (
-        <Alert 
-          severity="error" 
-          icon={<ErrorIcon />}
-          sx={{ 
-            mb: 2, 
-            fontWeight: 'medium',
-            fontSize: '1rem',
-            padding: '12px 16px',
-            backgroundColor: 'rgba(244,67,54,0.15)',
-            border: '1px solid rgba(244,67,54,0.3)',
-            '& .MuiAlert-icon': {
-              fontSize: '1.5rem',
-              color: '#d32f2f'
-            }
-          }}
-        >
-          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-            {isEmpty ? 'CRITICAL: No retail inventory found!' : 'CRITICAL: Retail inventory levels are dangerously low!'}
-          </Typography>
-        </Alert>
-      )}
-      
-      {hasWarning && !showCritical && (
-        <Alert 
-          severity="warning" 
-          icon={<WarningIcon />}
-          sx={{ 
-            mb: 2, 
-            fontWeight: 'medium',
-            fontSize: '1rem',
-            padding: '12px 16px',
-            backgroundColor: 'rgba(255,255,255,0.9)',
-            border: '1px solid rgba(255,152,0,0.3)',
-            '& .MuiAlert-icon': {
-              fontSize: '1.5rem',
-              color: '#ed6c02'
-            }
-          }}
-        >
-          <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-            WARNING: Retail inventory levels are running low
-          </Typography>
-        </Alert>
-      )}
-      
       <Typography variant="h6" sx={{ 
         fontWeight: 'bold', 
         mb: 2, 
