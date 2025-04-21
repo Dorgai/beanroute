@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
+import { useSession } from 'src/hooks/useSession';
+import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -10,6 +12,12 @@ export default function UsersPage() {
   const [meta, setMeta] = useState({}); // For pagination info
   const { user: currentUser } = useAuth(); // Get the logged-in user
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const { session, loading: sessionLoading } = useSession();
+  const currentUserSession = session?.user;
+  // Add new state variables for deletion confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   // TODO: Add state for filters, sorting, search, page
 
@@ -80,15 +88,24 @@ export default function UsersPage() {
     }
   };
 
+  // Handler for showing delete confirmation dialog
+  const showDeleteConfirmation = (userId, username) => {
+    setUserToDelete({ id: userId, username });
+    setDeleteDialogOpen(true);
+    setError(''); // Clear previous errors
+  };
+
   // Handler for deleting a user
-  const handleDeleteUser = async (userId, username) => {
-    if (!window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    const userId = userToDelete.id;
+    const username = userToDelete.username;
 
     // Optimistically remove user from list
     const originalUsers = [...users];
     setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+    setDeleteLoading(true);
     setError(''); // Clear previous errors
 
     try {
@@ -102,19 +119,20 @@ export default function UsersPage() {
         try {
           // If API returns JSON error on failure (e.g., 404, 403)
           const errorData = await response.json(); 
-          errorMsg = errorData.message || errorMsg;
+          errorMsg = errorData.message || errorData.error || errorMsg;
         } catch (jsonError) {}
         // Revert optimistic update
         setUsers(originalUsers);
         setError(`Error: ${response.status} ${errorMsg}`);
-        // TODO: Display error more prominently
       }
       // On successful 204, no action needed, user already removed from state
-      // Optionally show a success message
     } catch (err) {
       console.error('Delete user error:', err);
       setUsers(originalUsers); // Revert optimistic update
       setError(err.message || 'Could not delete user.');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -255,7 +273,7 @@ export default function UsersPage() {
                           </Link>
                           
                           {/* Activate/Deactivate Buttons */} 
-                          {currentUser?.id !== user.id && (
+                          {currentUserSession?.id !== user.id && (
                             user.status === 'ACTIVE' ? (
                               <button 
                                 onClick={() => handleUpdateStatus(user.id, 'INACTIVE')}
@@ -274,7 +292,7 @@ export default function UsersPage() {
                           )}
                           
                           {/* Reset Password Button */}
-                          {currentUser?.id !== user.id && (
+                          {currentUserSession?.id !== user.id && (
                             <button
                               onClick={() => handleResetPassword(user.id, user.username)}
                               className="text-gray-600 hover:text-gray-900 text-xs"
@@ -284,9 +302,9 @@ export default function UsersPage() {
                           )}
                           
                           {/* Delete Button */}
-                          {currentUser?.id !== user.id && (
+                          {currentUserSession?.id !== user.id && (
                             <button
-                              onClick={() => handleDeleteUser(user.id, user.username)}
+                              onClick={() => showDeleteConfirmation(user.id, user.username)}
                               className="text-gray-600 hover:text-gray-900 text-xs"
                             >
                               Delete
@@ -301,6 +319,19 @@ export default function UsersPage() {
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          title="Delete User"
+          message={`Are you sure you want to delete user "${userToDelete?.username}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          loading={deleteLoading}
+          onConfirm={handleDeleteUser}
+          severity="error"
+        />
       </div>
     </>
   );
