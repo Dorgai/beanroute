@@ -93,10 +93,10 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
       elevation={showCritical ? 8 : hasWarning ? 6 : 2} 
       sx={{ 
         p: 3, 
-        borderLeft: showCritical ? '8px solid #f44336' : hasWarning ? '8px solid #ff9800' : '1px solid #e0e0e0',
+        borderLeft: showCritical ? '8px solid #ff1744' : hasWarning ? '8px solid #ff9100' : '1px solid #e0e0e0',
         borderRadius: '4px',
-        boxShadow: showCritical ? '0px 6px 16px rgba(244,67,54,0.3)' : 
-                   hasWarning ? '0px 4px 14px rgba(255,152,0,0.3)' : 
+        boxShadow: showCritical ? '0px 6px 16px rgba(255,23,68,0.3)' : 
+                   hasWarning ? '0px 4px 14px rgba(255,145,0,0.3)' : 
                    '0px 2px 4px rgba(0,0,0,0.1)',
         backgroundColor: '#ffffff',
         ...sx 
@@ -113,7 +113,16 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
       </Typography>
       
       {isEmpty ? (
-        <Alert severity="error" sx={{ mb: 2, fontWeight: 'medium' }}>
+        <Alert 
+          severity="error" 
+          sx={{ 
+            mb: 2, 
+            fontWeight: 'medium',
+            '& .MuiAlert-icon': {
+              color: '#ff1744'
+            }
+          }}
+        >
           No inventory data is available. Please check the inventory records.
         </Alert>
       ) : (
@@ -125,8 +134,8 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
                 fontWeight: 'bold', 
                 color: getTextColor(totalSmallBags, minSmallBags, smallBagsPercentage),
                 fontSize: isSmallBagsCritical || isSmallBagsWarning ? '0.85rem' : '0.8rem',
-                textShadow: isSmallBagsCritical ? '0px 0px 1px rgba(244,67,54,0.3)' : 
-                           isSmallBagsWarning ? '0px 0px 1px rgba(255,152,0,0.3)' : 'none'
+                textShadow: isSmallBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
+                           isSmallBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
               }}>
                 {totalSmallBags} in stock
               </Typography>
@@ -144,7 +153,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               }}
             />
             {isSmallBagsCritical && (
-              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
+              <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
                 Critical: Minimum requirement is {minSmallBags} bags
               </Typography>
             )}
@@ -157,8 +166,8 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
                 fontWeight: 'bold', 
                 color: getTextColor(totalLargeBags, minLargeBags, largeBagsPercentage),
                 fontSize: isLargeBagsCritical || isLargeBagsWarning ? '0.85rem' : '0.8rem',
-                textShadow: isLargeBagsCritical ? '0px 0px 1px rgba(244,67,54,0.3)' : 
-                           isLargeBagsWarning ? '0px 0px 1px rgba(255,152,0,0.3)' : 'none'
+                textShadow: isLargeBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
+                           isLargeBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
               }}>
                 {totalLargeBags} in stock
               </Typography>
@@ -176,7 +185,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               }}
             />
             {isLargeBagsCritical && (
-              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
+              <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
                 Critical: Minimum requirement is {minLargeBags} bags
               </Typography>
             )}
