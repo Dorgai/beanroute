@@ -19,6 +19,7 @@ export const publicPaths = [
   '/api/admin/create-admin',
   '/api/admin/fix-admin', // Add our fix-admin endpoint
   '/api/retail/check-inventory-alerts', // Allow inventory checks with API key
+  '/api/public/coffee-inventory-total', // Public coffee inventory endpoint
 ];
 
 // Check if a path is public

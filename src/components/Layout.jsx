@@ -16,7 +16,7 @@ function CoffeeInventory() {
       
       // Add cache-busting parameter to prevent caching
       const timestamp = new Date().getTime();
-      const response = await fetch(`/api/coffee/inventory/total?_=${timestamp}`);
+      const response = await fetch(`/api/public/coffee-inventory-total?_=${timestamp}`);
       
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
