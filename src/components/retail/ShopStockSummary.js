@@ -102,11 +102,11 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
         ...sx 
       }}
     >
-      <Typography variant="h6" sx={{ 
+      <Typography variant="subtitle1" sx={{ 
         fontWeight: 'bold', 
         mb: 2, 
         color: showCritical ? 'error.main' : hasWarning ? 'warning.main' : 'inherit',
-        fontSize: '1.1rem',
+        fontSize: '0.9rem',
         textShadow: showCritical || hasWarning ? '0px 0px 1px rgba(0,0,0,0.1)' : 'none'
       }}>
         {shopDetails.name} - Inventory Summary
@@ -120,11 +120,11 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
         <>
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body1" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>Small Bags</Typography>
-              <Typography variant="body1" sx={{ 
+              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem' }}>Small Bags</Typography>
+              <Typography variant="body2" sx={{ 
                 fontWeight: 'bold', 
                 color: getTextColor(totalSmallBags, minSmallBags, smallBagsPercentage),
-                fontSize: isSmallBagsCritical || isSmallBagsWarning ? '1rem' : '0.95rem',
+                fontSize: isSmallBagsCritical || isSmallBagsWarning ? '0.85rem' : '0.8rem',
                 textShadow: isSmallBagsCritical ? '0px 0px 1px rgba(244,67,54,0.3)' : 
                            isSmallBagsWarning ? '0px 0px 1px rgba(255,152,0,0.3)' : 'none'
               }}>
@@ -136,15 +136,15 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               value={smallBagsPercentage} 
               color={getProgressColor(smallBagsPercentage)}
               sx={{ 
-                height: 12, 
-                borderRadius: 6,
+                height: 10, 
+                borderRadius: 5,
                 '& .MuiLinearProgress-bar': {
-                  borderRadius: 6
+                  borderRadius: 5
                 }
               }}
             />
             {isSmallBagsCritical && (
-              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.85rem' }}>
+              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
                 Critical: Minimum requirement is {minSmallBags} bags
               </Typography>
             )}
@@ -152,11 +152,11 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
           
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body1" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>Large Bags</Typography>
-              <Typography variant="body1" sx={{ 
+              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem' }}>Large Bags</Typography>
+              <Typography variant="body2" sx={{ 
                 fontWeight: 'bold', 
                 color: getTextColor(totalLargeBags, minLargeBags, largeBagsPercentage),
-                fontSize: isLargeBagsCritical || isLargeBagsWarning ? '1rem' : '0.95rem',
+                fontSize: isLargeBagsCritical || isLargeBagsWarning ? '0.85rem' : '0.8rem',
                 textShadow: isLargeBagsCritical ? '0px 0px 1px rgba(244,67,54,0.3)' : 
                            isLargeBagsWarning ? '0px 0px 1px rgba(255,152,0,0.3)' : 'none'
               }}>
@@ -168,15 +168,15 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               value={largeBagsPercentage} 
               color={getProgressColor(largeBagsPercentage)}
               sx={{ 
-                height: 12, 
-                borderRadius: 6,
+                height: 10, 
+                borderRadius: 5,
                 '& .MuiLinearProgress-bar': {
-                  borderRadius: 6
+                  borderRadius: 5
                 }
               }}
             />
             {isLargeBagsCritical && (
-              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.85rem' }}>
+              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
                 Critical: Minimum requirement is {minLargeBags} bags
               </Typography>
             )}
