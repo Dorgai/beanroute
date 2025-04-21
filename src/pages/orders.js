@@ -604,21 +604,30 @@ function StatusChip({ status }) {
 function StockLevelAlert({ inventory, shopMinQuantities }) {
   if (!inventory || !shopMinQuantities) return null;
   
-  // Calculate if this individual inventory item is low or critically low
-  const isSmallBagsLow = shopMinQuantities.minCoffeeQuantitySmall > 0 && 
-                         inventory.smallBags < shopMinQuantities.minCoffeeQuantitySmall * 0.7;
+  // Calculate the per-coffee thresholds based on shop minimums
+  // Take the minimum amount and divide by the number of coffees (2 in this case based on logs)
+  // If we don't know the exact number, we'll use a default of 2
+  const numberOfCoffees = 2; // Default to 2 as observed in the logs
+
+  // Calculate per-coffee minimums
+  const perCoffeeMinSmall = shopMinQuantities.minCoffeeQuantitySmall / numberOfCoffees;
+  const perCoffeeMinLarge = shopMinQuantities.minCoffeeQuantityLarge / numberOfCoffees;
   
-  const isLargeBagsLow = shopMinQuantities.minCoffeeQuantityLarge > 0 && 
-                         inventory.largeBags < shopMinQuantities.minCoffeeQuantityLarge * 0.7;
+  // Calculate percentage thresholds: below 75% is low, below 50% is critical
+  const smallBagsPercentage = perCoffeeMinSmall > 0 ? 
+                             (inventory.smallBags / perCoffeeMinSmall) * 100 : 100;
+  const largeBagsPercentage = perCoffeeMinLarge > 0 ? 
+                             (inventory.largeBags / perCoffeeMinLarge) * 100 : 100;
   
-  const isSmallBagsCritical = shopMinQuantities.minCoffeeQuantitySmall > 0 && 
-                              inventory.smallBags < shopMinQuantities.minCoffeeQuantitySmall * 0.3;
+  // Determine if stock is low (below 75%) or critical (below 50%)
+  const isSmallBagsLow = perCoffeeMinSmall > 0 && smallBagsPercentage < 75 && smallBagsPercentage >= 50;
+  const isLargeBagsLow = perCoffeeMinLarge > 0 && largeBagsPercentage < 75 && largeBagsPercentage >= 50;
   
-  const isLargeBagsCritical = shopMinQuantities.minCoffeeQuantityLarge > 0 && 
-                              inventory.largeBags < shopMinQuantities.minCoffeeQuantityLarge * 0.3;
+  const isSmallBagsCritical = perCoffeeMinSmall > 0 && smallBagsPercentage < 50;
+  const isLargeBagsCritical = perCoffeeMinLarge > 0 && largeBagsPercentage < 50;
   
   // If no issues with this specific inventory item, don't show anything
-  if (!isSmallBagsLow && !isLargeBagsLow) {
+  if (!isSmallBagsLow && !isLargeBagsLow && !isSmallBagsCritical && !isLargeBagsCritical) {
     return (
       <Chip label="In Stock" color="success" size="small" />
     );
@@ -1470,80 +1479,6 @@ export default function RetailOrders() {
                       </IconlessAlert>
                     )}
                     
-                    {/* Recent inventory alerts section for admin and owner */}
-                    {(isAdmin || isOwner) && (
-                      <Box sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                          <Typography variant="h6">Recent Inventory Alerts</Typography>
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            size="small"
-                            onClick={handleRunInventoryCheck}
-                            disabled={checkingInventory}
-                            startIcon={checkingInventory ? <CircularProgress size={20} /> : null}
-                          >
-                            Run Inventory Check
-                          </Button>
-                        </Box>
-                        
-                        {alertMessage && (
-                          <IconlessAlert severity={alertMessage.type} sx={{ mb: 2 }}>
-                            {alertMessage.text}
-                          </IconlessAlert>
-                        )}
-                        
-                        {recentAlertLogs.length > 0 ? (
-                          <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>Date</TableCell>
-                                  <TableCell>Alert Type</TableCell>
-                                  <TableCell>Small Bags</TableCell>
-                                  <TableCell>Large Bags</TableCell>
-                                  <TableCell>Emails Sent</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {recentAlertLogs.slice(0, 3).map((log) => (
-                                  <TableRow key={log.id}>
-                                    <TableCell>{format(new Date(log.createdAt), 'MMM d, yyyy h:mm a')}</TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={log.alertType} 
-                                        color={log.alertType === 'CRITICAL' ? 'error' : 'warning'} 
-                                        size="small" 
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      {log.totalSmallBags} / {log.minSmallBags} 
-                                      ({Math.round(log.smallBagsPercentage)}%)
-                                    </TableCell>
-                                    <TableCell>
-                                      {log.totalLargeBags} / {log.minLargeBags}
-                                      ({Math.round(log.largeBagsPercentage)}%)
-                                    </TableCell>
-                                    <TableCell>
-                                      {log.emailsSent ? (
-                                        <Chip label="Sent" color="success" size="small" />
-                                      ) : (
-                                        <Chip label="Not Sent" color="default" size="small" />
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        ) : (
-                          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                            No recent alerts for this shop. Run a check to verify inventory levels.
-                          </Typography>
-                        )}
-                      </Box>
-                    )}
-                    
                     <TableContainer component={Paper}>
                       <Table size="small">
                         <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
@@ -1562,15 +1497,27 @@ export default function RetailOrders() {
                         </TableHead>
                         <TableBody>
                           {inventory.map((item) => {
-                            // Calculate stock status for row styling
-                            const isSmallBagsLow = selectedShopDetails?.minCoffeeQuantitySmall > 0 && 
-                                                   item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.7;
-                            const isLargeBagsLow = selectedShopDetails?.minCoffeeQuantityLarge > 0 && 
-                                                   item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.7;
-                            const isSmallBagsCritical = selectedShopDetails?.minCoffeeQuantitySmall > 0 && 
-                                                        item.smallBags < selectedShopDetails.minCoffeeQuantitySmall * 0.3;
-                            const isLargeBagsCritical = selectedShopDetails?.minCoffeeQuantityLarge > 0 && 
-                                                        item.largeBags < selectedShopDetails.minCoffeeQuantityLarge * 0.3;
+                            // Calculate stock status for row styling using the updated calculation method
+                            const numberOfCoffees = 2; // Default to 2 as observed in the logs
+                            
+                            // Calculate per-coffee minimums
+                            const perCoffeeMinSmall = selectedShopDetails?.minCoffeeQuantitySmall > 0 ?
+                                                     selectedShopDetails.minCoffeeQuantitySmall / numberOfCoffees : 0;
+                            const perCoffeeMinLarge = selectedShopDetails?.minCoffeeQuantityLarge > 0 ? 
+                                                     selectedShopDetails.minCoffeeQuantityLarge / numberOfCoffees : 0;
+                            
+                            // Calculate percentage thresholds
+                            const smallBagsPercentage = perCoffeeMinSmall > 0 ? 
+                                                       (item.smallBags / perCoffeeMinSmall) * 100 : 100;
+                            const largeBagsPercentage = perCoffeeMinLarge > 0 ? 
+                                                       (item.largeBags / perCoffeeMinLarge) * 100 : 100;
+                            
+                            // Determine if stock is low (below 75%) or critical (below 50%)
+                            const isSmallBagsLow = perCoffeeMinSmall > 0 && smallBagsPercentage < 75 && smallBagsPercentage >= 50;
+                            const isLargeBagsLow = perCoffeeMinLarge > 0 && largeBagsPercentage < 75 && largeBagsPercentage >= 50;
+                            
+                            const isSmallBagsCritical = perCoffeeMinSmall > 0 && smallBagsPercentage < 50;
+                            const isLargeBagsCritical = perCoffeeMinLarge > 0 && largeBagsPercentage < 50;
                             
                             // Determine row background color
                             const isCritical = isSmallBagsCritical || isLargeBagsCritical;
@@ -1662,6 +1609,80 @@ export default function RetailOrders() {
                         </TableBody>
                       </Table>
                     </TableContainer>
+                    
+                    {/* Recent inventory alerts section for admin and owner - moved to bottom */}
+                    {(isAdmin || isOwner) && (
+                      <Box sx={{ mt: 4 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="h6">Recent Inventory Alerts</Typography>
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            onClick={handleRunInventoryCheck}
+                            disabled={checkingInventory}
+                            startIcon={checkingInventory ? <CircularProgress size={20} /> : null}
+                          >
+                            Run Inventory Check
+                          </Button>
+                        </Box>
+                        
+                        {alertMessage && (
+                          <IconlessAlert severity={alertMessage.type} sx={{ mb: 2 }}>
+                            {alertMessage.text}
+                          </IconlessAlert>
+                        )}
+                        
+                        {recentAlertLogs.length > 0 ? (
+                          <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Date</TableCell>
+                                  <TableCell>Alert Type</TableCell>
+                                  <TableCell>Small Bags</TableCell>
+                                  <TableCell>Large Bags</TableCell>
+                                  <TableCell>Emails Sent</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {recentAlertLogs.slice(0, 3).map((log) => (
+                                  <TableRow key={log.id}>
+                                    <TableCell>{format(new Date(log.createdAt), 'MMM d, yyyy h:mm a')}</TableCell>
+                                    <TableCell>
+                                      <Chip 
+                                        label={log.alertType} 
+                                        color={log.alertType === 'CRITICAL' ? 'error' : 'warning'} 
+                                        size="small" 
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.totalSmallBags} / {log.minSmallBags} 
+                                      ({Math.round(log.smallBagsPercentage)}%)
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.totalLargeBags} / {log.minLargeBags}
+                                      ({Math.round(log.largeBagsPercentage)}%)
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.emailsSent ? (
+                                        <Chip label="Sent" color="success" size="small" />
+                                      ) : (
+                                        <Chip label="Not Sent" color="default" size="small" />
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        ) : (
+                          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                            No recent alerts for this shop. Run a check to verify inventory levels.
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
                   </>
                 )}
               </Box>

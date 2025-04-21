@@ -98,7 +98,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
         boxShadow: showCritical ? '0px 6px 16px rgba(244,67,54,0.3)' : 
                    hasWarning ? '0px 4px 14px rgba(255,152,0,0.3)' : 
                    '0px 2px 4px rgba(0,0,0,0.1)',
-        backgroundColor: showCritical ? '#fff5f5' : hasWarning ? '#fff8f0' : '#fcfcfc',
+        backgroundColor: '#ffffff',
         ...sx 
       }}
     >
@@ -134,7 +134,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
             fontWeight: 'medium',
             fontSize: '1rem',
             padding: '12px 16px',
-            backgroundColor: 'rgba(255,152,0,0.15)',
+            backgroundColor: 'rgba(255,255,255,0.9)',
             border: '1px solid rgba(255,152,0,0.3)',
             '& .MuiAlert-icon': {
               fontSize: '1.5rem',
