@@ -10,6 +10,7 @@ export default async function handler(req, res) {
 
   // Check for direct access mode (for debugging)
   const bypassAuth = req.query.direct === 'true';
+  console.log(`[api/coffee/inventory/total] Direct access mode: ${bypassAuth ? 'ENABLED' : 'DISABLED'}`);
 
   // Authenticate the request
   let session;

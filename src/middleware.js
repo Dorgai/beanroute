@@ -31,11 +31,32 @@ const isApiPath = (path) => {
   return path.startsWith('/api/');
 };
 
+// Check if the request has direct=true query parameter for specific APIs
+const isDirectAccessAPI = (request) => {
+  const { pathname, searchParams } = request.nextUrl;
+  const isDirect = searchParams.get('direct') === 'true';
+  
+  // List of API paths that can be accessed directly with direct=true parameter
+  const directAccessPaths = [
+    '/api/coffee/inventory/total',
+    '/api/dashboard/stats'
+    // Add other APIs that should support direct mode here
+  ];
+  
+  return isDirect && directAccessPaths.some(path => pathname === path);
+};
+
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths without authentication
   if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+  
+  // Allow direct access to specific APIs when direct=true is present
+  if (isDirectAccessAPI(request)) {
+    console.log(`[middleware] Allowing direct access to ${pathname}`);
     return NextResponse.next();
   }
 
