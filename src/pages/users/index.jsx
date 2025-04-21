@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { useSession } from 'src/hooks/useSession';
 import ConfirmationDialog from '../../components/ui/ConfirmationDialog';
 
 export default function UsersPage() {
@@ -12,8 +11,7 @@ export default function UsersPage() {
   const [meta, setMeta] = useState({}); // For pagination info
   const { user: currentUser } = useAuth(); // Get the logged-in user
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
-  const { session, loading: sessionLoading } = useSession();
-  const currentUserSession = session?.user;
+  const currentUserSession = currentUser;
   // Add new state variables for deletion confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
