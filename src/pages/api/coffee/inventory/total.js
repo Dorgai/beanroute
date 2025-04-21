@@ -32,9 +32,10 @@ export default async function handler(req, res) {
   }
   
   // Create a new Prisma client for this request
-  const prisma = new PrismaClient();
+  let prisma = null;
   
   try {
+    prisma = new PrismaClient();
     console.log('[api/coffee/inventory/total] Fetching inventory data');
     
     // Use direct SQL query instead of Prisma ORM methods
@@ -43,7 +44,7 @@ export default async function handler(req, res) {
       FROM "GreenCoffee"
     `;
     
-    let coffeeItems;
+    let coffeeItems = [];
     
     try {
       // Execute the raw SQL query
@@ -86,7 +87,9 @@ export default async function handler(req, res) {
       items: [] 
     });
   } finally {
-    // Always disconnect the client
-    await prisma.$disconnect();
+    // Always disconnect the client if it was created
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   }
 } 
