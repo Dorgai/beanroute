@@ -31,11 +31,11 @@ export default async function handler(req, res) {
     console.log('[api/coffee/inventory/total] AUTH BYPASS MODE - Skipping authentication check');
   }
   
+  // Create a new Prisma client for this request
+  const prisma = new PrismaClient();
+  
   try {
     console.log('[api/coffee/inventory/total] Fetching inventory data');
-    
-    // Create a new Prisma client for this request
-    const prisma = new PrismaClient();
     
     // Use direct SQL query instead of Prisma ORM methods
     const rawQuery = `
@@ -53,9 +53,6 @@ export default async function handler(req, res) {
     } catch (dbError) {
       console.error('[api/coffee/inventory/total] Database query error:', dbError);
       throw new Error(`Database query failed: ${dbError.message}`);
-    } finally {
-      // Always disconnect the client
-      await prisma.$disconnect();
     }
 
     // Calculate total inventory
@@ -88,5 +85,8 @@ export default async function handler(req, res) {
       error: `Error fetching inventory data: ${error.message}`, 
       items: [] 
     });
+  } finally {
+    // Always disconnect the client
+    await prisma.$disconnect();
   }
 } 
