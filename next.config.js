@@ -6,7 +6,7 @@ const nextConfig = {
   // },
   // Configure your environment variables here
   env: {
-    APP_NAME: 'User Management System',
+    APP_NAME: 'BeanRoute',
     DATABASE_URL: process.env.DATABASE_URL,
   },
   // Configure redirects if needed
@@ -16,6 +16,25 @@ const nextConfig = {
         source: '/home',
         destination: '/',
         permanent: true,
+      },
+    ];
+  },
+  // Custom headers for specific paths
+  async headers() {
+    return [
+      {
+        // Apply these headers to public API endpoints
+        source: '/api/public/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
       },
     ];
   },

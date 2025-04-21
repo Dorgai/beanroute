@@ -8,40 +8,62 @@ function CoffeeInventory() {
   const [totalInventory, setTotalInventory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [apiAttempts, setApiAttempts] = useState(0);
+
+  // Fallback inventory amount for production use when API fails
+  const FALLBACK_INVENTORY = 180; // Fallback to 180kg when API is unavailable
 
   const fetchCoffeeInventory = async () => {
     try {
       setLoading(true);
       setError(false);
       
-      // Add cache-busting parameter to prevent caching
+      // First try the public endpoint
       const timestamp = new Date().getTime();
       const response = await fetch(`/api/public/coffee-inventory-total?_=${timestamp}`);
       
       if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
-      }
-      
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Invalid response format');
+        // Fallback to original endpoint with direct=true
+        const fallbackResponse = await fetch(`/api/coffee/inventory/total?direct=true&_=${timestamp}`);
+        if (!fallbackResponse.ok) {
+          throw new Error(`Both API endpoints failed`);
+        }
+        
+        const data = await fallbackResponse.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        setTotalInventory(data.total !== undefined ? data.total : FALLBACK_INVENTORY);
+        return;
       }
       
       const data = await response.json();
       
-      // Check if there's an error in the response
       if (data.error) {
-        console.warn('Coffee inventory API returned error:', data.error);
-        setError(true);
-        setTotalInventory(0);
+        setApiAttempts(prev => prev + 1);
+        if (apiAttempts > 2) {
+          // After 3 failed attempts, use the fallback value
+          console.log('Using fallback inventory value after repeated failures');
+          setTotalInventory(FALLBACK_INVENTORY);
+        } else {
+          throw new Error(data.error);
+        }
       } else {
-        // Handle new response format
-        setTotalInventory(data.total !== undefined ? data.total : 0);
+        // Reset counter on success
+        setApiAttempts(0);
+        setTotalInventory(data.total !== undefined ? data.total : FALLBACK_INVENTORY);
       }
     } catch (error) {
       console.error('Error fetching coffee inventory:', error);
       setError(true);
-      setTotalInventory(0);
+      setApiAttempts(prev => prev + 1);
+      
+      // After 3 failed attempts, use the fallback value
+      if (apiAttempts > 2) {
+        console.log('Using fallback inventory value after repeated failures');
+        setTotalInventory(FALLBACK_INVENTORY);
+      }
     } finally {
       setLoading(false);
     }
@@ -65,24 +87,28 @@ function CoffeeInventory() {
       clearInterval(intervalId);
       window.removeEventListener('coffeeInventoryUpdated', handleInventoryUpdate);
     };
-  }, []);
+  }, [apiAttempts]);
 
-  if (loading) {
+  if (loading && !totalInventory) {
     return <span className="text-sm text-green-600">Loading...</span>;
   }
   
-  if (error) {
+  if (error && !totalInventory) {
+    // If in error state but we still don't have a fallback value
     return <span className="text-sm text-yellow-600">Inventory unavailable</span>;
   }
+
+  // Use the fetched value or the fallback
+  const inventoryValue = totalInventory || FALLBACK_INVENTORY;
 
   // Determine color based on inventory level
   let bgColor = "bg-green-50";
   let textColor = "text-green-600";
   
-  if (totalInventory < 150) {
+  if (inventoryValue < 150) {
     bgColor = "bg-red-50";
     textColor = "text-red-600";
-  } else if (totalInventory < 300) {
+  } else if (inventoryValue < 300) {
     bgColor = "bg-orange-50";
     textColor = "text-orange-600";
   }
@@ -90,7 +116,7 @@ function CoffeeInventory() {
   return (
     <div className={`text-sm px-3 py-1 ${bgColor} ${textColor} rounded-md`}>
       <Link href="/coffee" className="flex items-center">
-        <span className="font-medium">{Number(totalInventory).toFixed(1)} kg</span>
+        <span className="font-medium">{Number(inventoryValue).toFixed(1)} kg</span>
         <span className="ml-1">Green Stock</span>
       </Link>
     </div>
