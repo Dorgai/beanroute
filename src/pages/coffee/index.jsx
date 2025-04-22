@@ -88,7 +88,21 @@ export default function CoffeeListPage() {
       }
     } catch (err) {
       console.error('Error deleting coffee:', err);
-      alert(err.message || 'An error occurred while deleting the coffee.');
+      
+      // Show a more detailed error message for foreign key constraints
+      if (err.message.includes('associated inventory logs') || 
+          err.message.includes('retail inventory') ||
+          err.message.includes('orders')) {
+        // Remove the generic alert and use a more elegant approach
+        setError(`Cannot delete "${coffeeName}" because it has been used in inventory logs, shop inventory, or orders. 
+                 You should mark it as inactive instead of deleting it.`);
+        
+        // Scroll to the top where the error message is displayed
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        // Show generic error message for other issues
+        alert(err.message || 'An error occurred while deleting the coffee.');
+      }
     }
   };
 

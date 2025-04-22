@@ -105,7 +105,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
       <Typography variant="subtitle1" sx={{ 
         fontWeight: 'bold', 
         mb: 2, 
-        color: showCritical ? 'error.main' : hasWarning ? 'warning.main' : 'inherit',
+        color: '#333333',
         fontSize: '0.9rem',
         textShadow: showCritical || hasWarning ? '0px 0px 1px rgba(0,0,0,0.1)' : 'none'
       }}>

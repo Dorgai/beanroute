@@ -175,13 +175,36 @@ export async function updateCoffee(id, data) {
 export async function deleteCoffee(id) {
   // Check if coffee exists
   const coffee = await prisma.greenCoffee.findUnique({
-    where: { id }
+    where: { id },
+    include: {
+      inventoryLogs: { select: { id: true }, take: 1 },
+      retailInventory: { select: { id: true }, take: 1 },
+      retailOrders: { select: { id: true }, take: 1 }
+    }
   });
   
   if (!coffee) {
     throw new Error('Coffee not found');
   }
   
+  // Check if there are any related records
+  const hasInventoryLogs = coffee.inventoryLogs && coffee.inventoryLogs.length > 0;
+  const hasRetailInventory = coffee.retailInventory && coffee.retailInventory.length > 0;
+  const hasRetailOrders = coffee.retailOrders && coffee.retailOrders.length > 0;
+  
+  if (hasInventoryLogs || hasRetailInventory || hasRetailOrders) {
+    // If the coffee is referenced by other records, we need to handle this gracefully
+    console.log(`Cannot delete coffee ${coffee.name} (${id}) due to existing references:`, {
+      hasInventoryLogs,
+      hasRetailInventory,
+      hasRetailOrders
+    });
+    
+    // Throw specific error for better error handling in UI
+    throw new Error(`Cannot delete ${coffee.name} because it has associated inventory logs, retail inventory, or orders. Consider marking it as inactive instead.`);
+  }
+  
+  // If no foreign key constraints, proceed with deletion
   return await prisma.greenCoffee.delete({
     where: { id }
   });
