@@ -42,6 +42,7 @@ import { format } from 'date-fns';
 import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
 import IconlessAlert from '../components/ui/IconlessAlert';
 import ShopStockSummary from '../components/retail/ShopStockSummary';
+import PendingOrdersSummary from '../components/retail/PendingOrdersSummary';
 
 // Simple Order Dialog Component
 function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
@@ -69,7 +70,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
   
   // Calculate total quantity for a coffee item in kg
   const calculateTotalQuantity = (smallBags, largeBags) => {
-    return (smallBags * 0.25) + (largeBags * 1.0);
+    return (smallBags * 0.2) + (largeBags * 1.0);
   };
   
   // Validate if the requested quantity is within available limits
@@ -188,11 +189,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
             const requestedInKg = parseFloat(requestedStr);
             
             const maxLargeBags = Math.floor(availableInKg);
-            const maxSmallBags = Math.floor(availableInKg / 0.25);
+            const maxSmallBags = Math.floor(availableInKg / 0.2);
             
             setError(`Insufficient quantity for ${coffeeName}. Available: ${availableInKg.toFixed(2)}kg, Requested: ${requestedInKg.toFixed(2)}kg. Maximum possible order:
             - ${maxLargeBags} large bags (1kg each)
-            - ${maxSmallBags} small bags (250g each)`);
+            - ${maxSmallBags} small bags (200g each)`);
           }
         } else if (responseData.details) {
           // Include additional error details if available
@@ -218,7 +219,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         <IconlessAlert severity="info" sx={{ mb: 3 }}>
           <Typography variant="subtitle2" gutterBottom>Order Information</Typography>
           <ul style={{ paddingLeft: '20px', margin: '0' }}>
-            <li>Small bags = 250g each (0.25kg)</li>
+            <li>Small bags = 200g each (0.2kg)</li>
             <li>Large bags = 1kg each</li>
             <li>Orders cannot exceed available coffee quantity</li>
             <li>Enter the number of bags you want to order</li>
@@ -249,7 +250,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
                 <TableRow>
                   <TableCell>Coffee</TableCell>
                   <TableCell>Available</TableCell>
-                  <TableCell>Small Bags (250g)</TableCell>
+                  <TableCell>Small Bags (200g)</TableCell>
                   <TableCell>Large Bags (1kg)</TableCell>
                 </TableRow>
               </TableHead>
@@ -678,6 +679,8 @@ export default function RetailOrders() {
   const [recentAlertLogs, setRecentAlertLogs] = useState([]);
   const [checkingInventory, setCheckingInventory] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
+  const [allPendingOrders, setAllPendingOrders] = useState([]);
+  const [allPendingOrdersLoading, setAllPendingOrdersLoading] = useState(false);
   
   // Check user role for conditional UI elements
   const userRole = session?.user?.role || '';
@@ -1312,6 +1315,56 @@ export default function RetailOrders() {
     }
   };
 
+  // Fetch all pending orders across all shops
+  useEffect(() => {
+    const fetchAllPendingOrders = async () => {
+      if (tabIndex !== getTabsForUserRole().length - 1) return; // Only fetch when on the Pending Orders tab
+      
+      try {
+        setAllPendingOrdersLoading(true);
+        const response = await fetch('/api/retail/orders?status=PENDING');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch pending orders');
+        }
+        
+        const data = await response.json();
+        setAllPendingOrders(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error fetching all pending orders:', error);
+      } finally {
+        setAllPendingOrdersLoading(false);
+      }
+    };
+    
+    fetchAllPendingOrders();
+  }, [tabIndex]);
+
+  // Tabs for different users
+  const getTabsForUserRole = () => {
+    if (isRoaster) {
+      return [
+        { label: "Orders", id: "tab-0" },
+        { label: "Pending Orders Summary", id: "tab-1" }
+      ];
+    } else if (isRetailer || isBarista) {
+      return [
+        { label: "Inventory", id: "tab-0" },
+        { label: "Inventory History", id: "tab-1" },
+        { label: "Orders", id: "tab-2" },
+        { label: "Pending Orders Summary", id: "tab-3" }
+      ];
+    } else if (isAdmin || isOwner) {
+      return [
+        { label: "Inventory", id: "tab-0" },
+        { label: "Inventory History", id: "tab-1" },
+        { label: "Orders", id: "tab-2" },
+        { label: "Pending Orders Summary", id: "tab-3" }
+      ];
+    }
+    return [];
+  };
+
   if (!session) {
     return null;
   }
@@ -1449,9 +1502,9 @@ export default function RetailOrders() {
                 scrollButtons="auto"
                 allowScrollButtonsMobile
               >
-                {!isRoaster && <Tab label="Inventory" id="tab-0" />}
-                {!isRoaster && <Tab label="Inventory History" id="tab-1" />}
-                <Tab label="Orders" id={isRoaster ? "tab-0" : "tab-2"} />
+                {getTabsForUserRole().map((tab, index) => (
+                  <Tab key={tab.id} label={tab.label} id={tab.id} />
+                ))}
               </Tabs>
             </Box>
             
@@ -1488,7 +1541,7 @@ export default function RetailOrders() {
                             )}
                             <TableCell>Coffee</TableCell>
                             <TableCell>Grade</TableCell>
-                            <TableCell align="right">Small Bags (250g)</TableCell>
+                            <TableCell align="right">Small Bags (200g)</TableCell>
                             <TableCell align="right">Large Bags (1kg)</TableCell>
                             <TableCell align="right">Total Quantity (kg)</TableCell>
                             <TableCell>Last Order Date</TableCell>
@@ -1788,110 +1841,145 @@ export default function RetailOrders() {
               ) : orders.length === 0 ? (
                 <IconlessAlert severity="info">No orders available for this shop</IconlessAlert>
               ) : (
-                <Paper elevation={1}>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableRow>
-                          <TableCell padding="checkbox" />
-                          <TableCell align="right">Actions</TableCell>
-                          <TableCell>Date</TableCell>
-                          <TableCell>Status</TableCell>
-                          <TableCell>Ordered By</TableCell>
-                          <TableCell>Items</TableCell>
-                          <TableCell>Total Quantity</TableCell>
-                          <TableCell>Order ID</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {orders.map((order) => (
-                          <React.Fragment key={order.id}>
-                            <TableRow hover>
-                              <TableCell padding="checkbox">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => toggleRowExpanded(order.id)}
-                                  aria-label="expand row"
-                                >
-                                  {expandedRows[order.id] ? (
-                                    <KeyboardArrowUpIcon />
-                                  ) : (
-                                    <KeyboardArrowDownIcon />
-                                  )}
-                                </IconButton>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Tooltip title="Update Status">
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => handleOpenStatusDialog(order)}
+                <>
+                  {/* Add the PendingOrdersSummary component for Owner, Retailer and Roaster users */}
+                  {(isOwner || isRetailer || isRoaster) && (
+                    <PendingOrdersSummary orders={orders} showShopInfo={true} />
+                  )}
+                  
+                  <Paper elevation={1}>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                          <TableRow>
+                            <TableCell padding="checkbox" />
+                            <TableCell align="right">Actions</TableCell>
+                            <TableCell>Date</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell>Ordered By</TableCell>
+                            <TableCell>Items</TableCell>
+                            <TableCell>Total Quantity</TableCell>
+                            <TableCell>Order ID</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {orders.map((order) => (
+                            <React.Fragment key={order.id}>
+                              <TableRow hover>
+                                <TableCell padding="checkbox">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => toggleRowExpanded(order.id)}
+                                    aria-label="expand row"
                                   >
-                                    <EditIcon fontSize="small" />
+                                    {expandedRows[order.id] ? (
+                                      <KeyboardArrowUpIcon />
+                                    ) : (
+                                      <KeyboardArrowDownIcon />
+                                    )}
                                   </IconButton>
-                                </Tooltip>
-                              </TableCell>
-                              <TableCell>
-                                {order.createdAt 
-                                  ? format(new Date(order.createdAt), 'MMM d, yyyy') 
-                                  : 'Unknown'}
-                              </TableCell>
-                              <TableCell>
-                                <StatusChip status={order.status} />
-                              </TableCell>
-                              <TableCell>
-                                {order.orderedBy?.firstName 
-                                  ? `${order.orderedBy.firstName} ${order.orderedBy.lastName || ''}` 
-                                  : order.orderedBy?.username || 'Unknown'}
-                              </TableCell>
-                              <TableCell>{order.items?.length || 0}</TableCell>
-                              <TableCell>
-                                {order.items?.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
-                              </TableCell>
-                              <TableCell>{order.id.substring(0, 8)}</TableCell>
-                            </TableRow>
-                            {expandedRows[order.id] && Array.isArray(order.items) && order.items.length > 0 && (
-                              <TableRow>
-                                <TableCell colSpan={8} sx={{ py: 0 }}>
-                                  <Box sx={{ margin: 1 }}>
-                                    <Typography variant="subtitle2" gutterBottom>
-                                      Order Details
-                                    </Typography>
-                                    <Table size="small">
-                                      <TableHead>
-                                        <TableRow>
-                                          <TableCell>Coffee</TableCell>
-                                          <TableCell>Grade</TableCell>
-                                          <TableCell align="right">Small Bags (250g)</TableCell>
-                                          <TableCell align="right">Large Bags (1kg)</TableCell>
-                                          <TableCell align="right">Total Quantity</TableCell>
-                                        </TableRow>
-                                      </TableHead>
-                                      <TableBody>
-                                        {order.items.map((item) => (
-                                          <TableRow key={item.id}>
-                                            <TableCell>
-                                              {item.coffee?.name || 'Unknown Coffee'}
-                                            </TableCell>
-                                            <TableCell>
-                                              {item.coffee?.grade?.replace('_', ' ') || 'Unknown'}
-                                            </TableCell>
-                                            <TableCell align="right">{item.smallBags ? item.smallBags.toFixed(2) : '0.00'}</TableCell>
-                                            <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
-                                            <TableCell align="right">{item.totalQuantity?.toFixed(2) || '0.00'} kg</TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </Box>
                                 </TableCell>
+                                <TableCell align="right">
+                                  <Tooltip title="Update Status">
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={() => handleOpenStatusDialog(order)}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </TableCell>
+                                <TableCell>
+                                  {order.createdAt 
+                                    ? format(new Date(order.createdAt), 'MMM d, yyyy') 
+                                    : 'Unknown'}
+                                </TableCell>
+                                <TableCell>
+                                  <StatusChip status={order.status} />
+                                </TableCell>
+                                <TableCell>
+                                  {order.orderedBy?.firstName 
+                                    ? `${order.orderedBy.firstName} ${order.orderedBy.lastName || ''}` 
+                                    : order.orderedBy?.username || 'Unknown'}
+                                </TableCell>
+                                <TableCell>{order.items?.length || 0}</TableCell>
+                                <TableCell>
+                                  {order.items?.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
+                                </TableCell>
+                                <TableCell>{order.id.substring(0, 8)}</TableCell>
                               </TableRow>
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
+                              {expandedRows[order.id] && Array.isArray(order.items) && order.items.length > 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={8} sx={{ py: 0 }}>
+                                    <Box sx={{ margin: 1 }}>
+                                      <Typography variant="subtitle2" gutterBottom>
+                                        Order Details
+                                      </Typography>
+                                      <Table size="small">
+                                        <TableHead>
+                                          <TableRow>
+                                            <TableCell>Coffee</TableCell>
+                                            <TableCell>Grade</TableCell>
+                                            <TableCell align="right">Small Bags (200g)</TableCell>
+                                            <TableCell align="right">Large Bags (1kg)</TableCell>
+                                            <TableCell align="right">Total Quantity</TableCell>
+                                          </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                          {order.items.map((item) => (
+                                            <TableRow key={item.id}>
+                                              <TableCell>
+                                                {item.coffee?.name || 'Unknown Coffee'}
+                                              </TableCell>
+                                              <TableCell>
+                                                {item.coffee?.grade?.replace('_', ' ') || 'Unknown'}
+                                              </TableCell>
+                                              <TableCell align="right">{item.smallBags ? item.smallBags.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.totalQuantity?.toFixed(2) || '0.00'} kg</TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </Box>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+                </>
+              )}
+            </Box>
+            
+            {/* Pending Orders Summary Tab - New tab for all pending orders across shops */}
+            <Box 
+              role="tabpanel" 
+              hidden={isRoaster ? tabIndex !== 1 : tabIndex !== 3} 
+              id={isRoaster ? "tabpanel-1" : "tabpanel-3"} 
+              aria-labelledby={isRoaster ? "tab-1" : "tab-3"} 
+              sx={{ py: 2 }}
+            >
+              {allPendingOrdersLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                  <CircularProgress size={24} sx={{ mr: 1 }} />
+                  <Typography>Loading pending orders summary...</Typography>
+                </Box>
+              ) : allPendingOrders.length === 0 ? (
+                <IconlessAlert severity="info">No pending orders found across any shops</IconlessAlert>
+              ) : (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Summary of All Pending Orders Across Shops
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    This table summarizes all pending orders from all shops, grouped by coffee type.
+                  </Typography>
+                  <PendingOrdersSummary orders={allPendingOrders} showShopInfo={false} hideHeader={true} aggregateAcrossShops={true} />
+                </>
               )}
             </Box>
           </Box>

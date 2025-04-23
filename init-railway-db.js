@@ -81,6 +81,37 @@ async function initDatabase() {
         console.log('✓ Default shop already exists');
       }
       
+      // Reset admin password
+      console.log('Resetting admin user password...');
+      try {
+        // Find admin user
+        const adminUser = await prisma.user.findUnique({
+          where: { username: 'admin' }
+        });
+        
+        if (adminUser) {
+          // Hash the new password
+          const bcrypt = require('bcrypt');
+          const newPassword = 'admin123';
+          const hashedPassword = await bcrypt.hash(newPassword, 10);
+          
+          // Update the admin user
+          await prisma.user.update({
+            where: { id: adminUser.id },
+            data: { 
+              password: hashedPassword,
+              status: 'ACTIVE' 
+            }
+          });
+          
+          console.log('Admin password reset to "admin123"');
+        } else {
+          console.log('Admin user not found, cannot reset password');
+        }
+      } catch (error) {
+        console.error('Error resetting admin password:', error);
+      }
+      
       console.log('✓ Database seeding completed');
       
     } catch (error) {

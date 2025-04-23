@@ -1,34 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-echo "=== Starting BeanRoute with Database Migration Fix ==="
-echo "Node version: $(node --version)"
-echo "Environment: $NODE_ENV"
-echo "Port: $PORT"
+echo "=== Starting BeanRoute Application ==="
 
-# Ensure prisma directory exists
-mkdir -p ./prisma
+# Configure database connections for Railway
+echo "Configuring database connections..."
+node railway-db-config.js
 
-# Check if schema.prisma exists in the prisma directory
-if [ ! -f ./prisma/schema.prisma ]; then
-  echo "ERROR: schema.prisma is missing in the prisma directory!"
-  
-  # Try to find it in other locations
-  if [ -f ./schema.prisma ]; then
-    echo "Found schema.prisma in root directory, copying to prisma/..."
-    cp -f ./schema.prisma ./prisma/schema.prisma
-  else
-    echo "ERROR: Could not find schema.prisma in any location!"
-    exit 1
-  fi
-fi
+# Check database connection
+echo "Checking database connection..."
+node api-health-check.js
 
-echo "Prisma schema found at ./prisma/schema.prisma"
+# Initialize the database
+echo "Initializing database..."
+node init-railway-db.js
 
-# Run the database initialization with migration fixes
-echo "Running database initialization..."
-node init-db.js
-
-echo "Starting Next.js server..."
-# Start the Next.js server with the proper port
-exec next start -p ${PORT:-3000}
+# Start the server
+echo "Starting server..."
+exec node server.js
