@@ -135,7 +135,7 @@ export default function CoffeeListPage() {
           <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search coffee by name, origin, or producer..."
+            placeholder="Search coffee by name, country, or producer..."
             className="w-full pl-10 py-2 pr-4 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
             value={searchTerm}
             onChange={handleSearchChange}
@@ -183,10 +183,9 @@ export default function CoffeeListPage() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origin</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country of Origin</th>
                   {canSeePrice && (
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                   )}
@@ -243,9 +242,6 @@ export default function CoffeeListPage() {
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <div className="text-sm text-gray-500">{coffee.grade?.replace('_', ' ') || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.origin || '-'}</div>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
