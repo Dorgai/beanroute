@@ -146,15 +146,17 @@ async function handleCreateCoffee(req, res, user) {
       return res.status(403).json({ message: 'Forbidden - Insufficient permissions' });
     }
 
-    const { name, grade, quantity, country, producer, notes } = req.body;
+    const { name, grade, quantity, country, producer, notes, price } = req.body;
+
+    console.log('Creating coffee with data:', req.body);
 
     // Validate required fields
     if (!name || !grade) {
       return res.status(400).json({ message: 'Name and grade are required' });
     }
 
-    // Create coffee entry
-    const newCoffee = await createCoffee({
+    // Prepare coffee data
+    const coffeeData = {
       name,
       grade,
       quantity: quantity || 0,
@@ -162,7 +164,17 @@ async function handleCreateCoffee(req, res, user) {
       producer,
       notes,
       createdById: user.id,
-    });
+    };
+
+    // Only add price if it's provided and user has permission to set it
+    if (price !== undefined && ['ADMIN', 'OWNER'].includes(user.role)) {
+      coffeeData.price = typeof price === 'string' ? parseFloat(price) : price;
+    }
+
+    console.log('Final coffee creation data:', coffeeData);
+
+    // Create coffee entry
+    const newCoffee = await createCoffee(coffeeData);
 
     return res.status(201).json(newCoffee);
   } catch (error) {
@@ -171,6 +183,6 @@ async function handleCreateCoffee(req, res, user) {
     if (error.code === 'P2002') {
       return res.status(409).json({ message: 'Coffee with this name already exists' });
     }
-    return res.status(500).json({ message: 'Error creating coffee' });
+    return res.status(500).json({ message: 'Error creating coffee: ' + error.message });
   }
 } 

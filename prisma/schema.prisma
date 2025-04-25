@@ -139,6 +139,7 @@ model GreenCoffee {
   country         String?
   producer        String?
   notes           String?
+  price           Float?
   createdAt       DateTime                  @default(now())
   updatedAt       DateTime                  @updatedAt
   createdById     String

@@ -86,6 +86,8 @@ export async function getCoffeeById(id) {
  * Create a new coffee entry
  */
 export async function createCoffee(data) {
+  console.log('Creating coffee with data:', data);
+  
   // Check if coffee with same name already exists
   const existingCoffee = await prisma.greenCoffee.findFirst({
     where: { 
@@ -98,32 +100,49 @@ export async function createCoffee(data) {
     throw new Error('Coffee with this name already exists');
   }
   
-  return await prisma.greenCoffee.create({
-    data: {
-      name: data.name,
-      grade: data.grade || 'SPECIALTY',
-      quantity: data.quantity || 0,
-      country: data.origin || '',
-      producer: data.roaster || '',
-      notes: data.notes || '',
-      createdById: data.createdBy
-    },
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          username: true,
-          email: true
+  // Prepare the coffee data
+  const coffeeData = {
+    name: data.name,
+    grade: data.grade || 'SPECIALTY',
+    quantity: data.quantity || 0,
+    country: data.origin || data.country || '',
+    producer: data.roaster || data.producer || '',
+    notes: data.notes || '',
+    createdById: data.createdBy || data.createdById
+  };
+  
+  // Add price if it exists
+  if (data.price !== undefined && data.price !== null) {
+    coffeeData.price = typeof data.price === 'string' ? parseFloat(data.price) : data.price;
+  }
+  
+  console.log('Final coffee data for creation:', coffeeData);
+  
+  try {
+    return await prisma.greenCoffee.create({
+      data: coffeeData,
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+            email: true
+          }
         }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error('Error creating coffee in database:', error);
+    throw error;
+  }
 }
 
 /**
  * Update an existing coffee entry
  */
 export async function updateCoffee(id, data) {
+  console.log(`Updating coffee with ID: ${id}`, data);
+  
   // Check if coffee exists
   const coffee = await prisma.greenCoffee.findUnique({
     where: { id }
@@ -132,6 +151,8 @@ export async function updateCoffee(id, data) {
   if (!coffee) {
     throw new Error('Coffee not found');
   }
+  
+  console.log('Found existing coffee:', coffee);
   
   // Check if new name conflicts with existing coffee (except self)
   if (data.name !== coffee.name) {
@@ -147,27 +168,41 @@ export async function updateCoffee(id, data) {
     }
   }
   
-  return await prisma.greenCoffee.update({
-    where: { id },
-    data: {
-      name: data.name,
-      grade: data.grade || coffee.grade,
-      country: data.origin || coffee.country,
-      producer: data.roaster || coffee.producer,
-      notes: data.notes || coffee.notes,
-      price: data.price !== undefined ? data.price : coffee.price,
-      updatedAt: new Date()
-    },
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          username: true,
-          email: true
+  // Prepare update data
+  const updateData = {
+    name: data.name,
+    grade: data.grade || coffee.grade,
+    country: data.origin || coffee.country,
+    producer: data.roaster || coffee.producer,
+    notes: data.notes || coffee.notes,
+    updatedAt: new Date()
+  };
+  
+  // Only update price if it's explicitly provided in the data
+  if ('price' in data) {
+    updateData.price = data.price;
+  }
+  
+  console.log('Final update data:', updateData);
+  
+  try {
+    return await prisma.greenCoffee.update({
+      where: { id },
+      data: updateData,
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+            email: true
+          }
         }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error('Error updating coffee in database:', error);
+    throw error;
+  }
 }
 
 /**

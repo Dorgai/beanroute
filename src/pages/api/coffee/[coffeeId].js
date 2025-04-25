@@ -65,20 +65,32 @@ async function handleUpdate(req, res, user, coffeeId) {
     
     const { name, grade, country, producer, notes, price } = req.body;
     
+    console.log('Update coffee request body:', req.body);
+    
     // Validate required fields
     if (!name || name.trim() === '') {
       return res.status(400).json({ error: 'Coffee name is required' });
     }
     
-    // Update the coffee
-    const updatedCoffee = await updateCoffee(coffeeId, {
+    // Prepare update data
+    const updateData = {
       name,
       grade,
       origin: country,
       roaster: producer,
-      notes,
-      price: price !== undefined ? price : undefined
-    });
+      notes
+    };
+
+    // Only add price if it's provided and user has permission
+    if (price !== undefined && ['ADMIN', 'OWNER'].includes(user.role)) {
+      // Convert string to number if needed
+      updateData.price = typeof price === 'string' ? parseFloat(price) : price;
+    }
+    
+    console.log('Updating coffee with data:', updateData);
+    
+    // Update the coffee
+    const updatedCoffee = await updateCoffee(coffeeId, updateData);
     
     // Log the activity
     await logActivity({
@@ -101,7 +113,7 @@ async function handleUpdate(req, res, user, coffeeId) {
       return res.status(409).json({ error: 'A coffee with this name already exists' });
     }
     
-    return res.status(500).json({ error: 'Failed to update coffee' });
+    return res.status(500).json({ error: 'Failed to update coffee: ' + error.message });
   }
 }
 
