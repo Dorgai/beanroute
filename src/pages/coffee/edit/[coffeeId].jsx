@@ -15,6 +15,7 @@ export default function EditCoffeePage() {
     country: '',
     producer: '',
     notes: '',
+    price: '',
   });
   
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,8 @@ export default function EditCoffeePage() {
 
   // Check if user has permission to edit coffee
   const canManageCoffee = user && ['ADMIN', 'OWNER', 'ROASTER'].includes(user.role);
+  // Only allow admin and owner to see price
+  const canSeePrice = user && ['ADMIN', 'OWNER'].includes(user.role);
 
   // Fetch coffee data
   useEffect(() => {
@@ -53,6 +56,7 @@ export default function EditCoffeePage() {
           country: data.country || '',
           producer: data.producer || '',
           notes: data.notes || '',
+          price: data.price || '',
         });
       } catch (error) {
         console.error('Error fetching coffee data:', error);
@@ -105,18 +109,25 @@ export default function EditCoffeePage() {
       console.log(`Submitting update for coffee ID: ${coffeeId}`);
       console.log('Form data:', formData);
       
+      const requestBody = {
+        name: formData.name,
+        grade: formData.grade,
+        country: formData.country,
+        producer: formData.producer,
+        notes: formData.notes
+      };
+      
+      // Only include price if user has permission to edit it
+      if (canSeePrice) {
+        requestBody.price = formData.price ? parseFloat(formData.price) : null;
+      }
+      
       const response = await fetch(`/api/coffee/${coffeeId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          grade: formData.grade,
-          country: formData.country,
-          producer: formData.producer,
-          notes: formData.notes
-        }),
+        body: JSON.stringify(requestBody),
       });
       
       if (!response.ok) {
@@ -253,6 +264,26 @@ export default function EditCoffeePage() {
                 className="w-full p-2 border border-gray-300 rounded"
               />
             </div>
+            
+            {/* Price - Only visible to admin and owner */}
+            {canSeePrice && (
+              <div>
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                  Price ($/kg)
+                </label>
+                <input
+                  type="number"
+                  id="price"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  className="w-full p-2 border border-gray-300 rounded"
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
 
           {/* Notes */}

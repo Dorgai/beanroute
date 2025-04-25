@@ -16,6 +16,7 @@ export default function CreateCoffeePage() {
     notes: '',
     grade: 'SPECIALTY',
     quantity: '0',
+    price: '',
   });
   
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,8 @@ export default function CreateCoffeePage() {
 
   // Check if user has permission to create coffee
   const canManageCoffee = user && ['ADMIN', 'OWNER', 'ROASTER'].includes(user.role);
+  // Only allow admin and owner to see price
+  const canSeePrice = user && ['ADMIN', 'OWNER'].includes(user.role);
 
   // Redirect if not authorized
   if (!canManageCoffee) {
@@ -58,19 +61,26 @@ export default function CreateCoffeePage() {
     setError(null);
 
     try {
+      const requestBody = {
+        name: formData.name,
+        grade: formData.grade,
+        country: formData.origin,
+        producer: formData.roaster,
+        notes: formData.notes,
+        quantity: parseFloat(formData.quantity) || 0
+      };
+      
+      // Only include price if user has permission
+      if (canSeePrice && formData.price) {
+        requestBody.price = parseFloat(formData.price);
+      }
+      
       const response = await fetch('/api/coffee', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          grade: formData.grade,
-          country: formData.origin,
-          producer: formData.roaster,
-          notes: formData.notes,
-          quantity: parseFloat(formData.quantity) || 0
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -201,6 +211,26 @@ export default function CreateCoffeePage() {
                 className="w-full p-2 border border-gray-300 rounded"
               />
             </div>
+            
+            {/* Price - Only visible to admin and owner */}
+            {canSeePrice && (
+              <div>
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                  Price ($/kg)
+                </label>
+                <input
+                  type="number"
+                  id="price"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  className="w-full p-2 border border-gray-300 rounded"
+                  placeholder="0.00"
+                />
+              </div>
+            )}
           </div>
 
           {/* Notes */}

@@ -63,7 +63,7 @@ async function handleUpdate(req, res, user, coffeeId) {
       return res.status(403).json({ error: 'You do not have permission to update coffee' });
     }
     
-    const { name, grade, country, producer, notes } = req.body;
+    const { name, grade, country, producer, notes, price } = req.body;
     
     // Validate required fields
     if (!name || name.trim() === '') {
@@ -76,7 +76,8 @@ async function handleUpdate(req, res, user, coffeeId) {
       grade,
       origin: country,
       roaster: producer,
-      notes
+      notes,
+      price: price !== undefined ? price : undefined
     });
     
     // Log the activity

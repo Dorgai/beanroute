@@ -155,6 +155,7 @@ export async function updateCoffee(id, data) {
       country: data.origin || coffee.country,
       producer: data.roaster || coffee.producer,
       notes: data.notes || coffee.notes,
+      price: data.price !== undefined ? data.price : coffee.price,
       updatedAt: new Date()
     },
     include: {
