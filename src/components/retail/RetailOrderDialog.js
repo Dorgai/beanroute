@@ -14,6 +14,7 @@ import {
   Tab,
   Box,
   Typography,
+  FormHelperText,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import IconlessAlert from '../ui/IconlessAlert';
@@ -40,6 +41,9 @@ export default function RetailOrderDialog({ open, onClose }) {
   const [availableCoffee, setAvailableCoffee] = useState({});
   const [currentTab, setCurrentTab] = useState(0);
   const [orderItems, setOrderItems] = useState({});
+  const [validationErrors, setValidationErrors] = useState({});
+  const [comment, setComment] = useState('');
+  const [commentCharCount, setCommentCharCount] = useState(0);
 
   // Fetch shops and available coffee on component mount
   useEffect(() => {
@@ -86,6 +90,12 @@ export default function RetailOrderDialog({ open, onClose }) {
     }));
   };
 
+  const handleCommentChange = (e) => {
+    const value = e.target.value;
+    setComment(value);
+    setCommentCharCount(value.length);
+  };
+
   const handleSubmit = async () => {
     try {
       setLoading(true);
@@ -110,6 +120,12 @@ export default function RetailOrderDialog({ open, onClose }) {
         return;
       }
 
+      // Validate comment length
+      if (comment && comment.length > 200) {
+        setError('Comment must be 200 characters or less');
+        return;
+      }
+
       // Create the order
       const response = await fetch('/api/retail/create-order', {
         method: 'POST',
@@ -118,7 +134,8 @@ export default function RetailOrderDialog({ open, onClose }) {
         },
         body: JSON.stringify({
           shopId: selectedShop,
-          items
+          items,
+          comment: comment.trim() || null
         }),
       });
 
@@ -162,6 +179,25 @@ export default function RetailOrderDialog({ open, onClose }) {
           </Select>
         </FormControl>
 
+        <TextField
+          label="Order Comment (Optional)"
+          placeholder="Enter any notes or special instructions for this order"
+          multiline
+          rows={2}
+          fullWidth
+          value={comment}
+          onChange={handleCommentChange}
+          sx={{ mb: 3 }}
+          inputProps={{ maxLength: 200 }}
+          helperText={`${commentCharCount}/200 characters`}
+          FormHelperTextProps={{
+            sx: { 
+              textAlign: 'right',
+              color: commentCharCount > 180 ? 'warning.main' : 'text.secondary'
+            }
+          }}
+        />
+
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={currentTab} onChange={handleTabChange}>
             {grades.map((grade, index) => (
@@ -180,12 +216,14 @@ export default function RetailOrderDialog({ open, onClose }) {
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
                   <TextField
-                    label="Small Bags (250g)"
+                    label="Small Bags (200g)"
                     type="number"
-                    InputProps={{ inputProps: { min: 0 } }}
                     value={orderItems[coffee.id]?.smallBags || 0}
                     onChange={(e) => handleQuantityChange(coffee.id, 'smallBags', e.target.value)}
-                    size="small"
+                    InputProps={{ inputProps: { min: 0 } }}
+                    fullWidth
+                    error={Boolean(validationErrors[coffee.id])}
+                    helperText={validationErrors[coffee.id] || ''}
                   />
                   <TextField
                     label="Large Bags (1kg)"

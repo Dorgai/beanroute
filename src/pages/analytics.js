@@ -403,8 +403,10 @@ export default function Analytics() {
                 <Table>
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
-                      <TableCell>Coffee Grade</TableCell>
-                      <TableCell align="right">Small Bags (250g)</TableCell>
+                      <TableCell>Coffee</TableCell>
+                      <TableCell>Origin</TableCell>
+                      <TableCell>Grade</TableCell>
+                      <TableCell align="right">Small Bags (200g)</TableCell>
                       <TableCell align="right">Large Bags (1kg)</TableCell>
                       <TableCell align="right">Total Orders</TableCell>
                     </TableRow>
@@ -416,6 +418,8 @@ export default function Analytics() {
                           <TableCell component="th" scope="row">
                             <strong>{row.grade}</strong>
                           </TableCell>
+                          <TableCell>{row.origin}</TableCell>
+                          <TableCell>{row.grade}</TableCell>
                           <TableCell align="right">{row.smallBags}</TableCell>
                           <TableCell align="right">{row.largeBags}</TableCell>
                           <TableCell align="right">{row.orderCount}</TableCell>
@@ -514,7 +518,7 @@ export default function Analytics() {
                               ...chartOptions.plugins,
                               title: {
                                 display: true,
-                                text: 'Small Bags (250g) Distribution'
+                                text: 'Small Bags (200g) Distribution'
                               }
                             }
                           }} 

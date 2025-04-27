@@ -8,25 +8,33 @@ export default function CoffeeListPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [coffeeList, setCoffeeList] = useState([]);
+  const [groupedCoffee, setGroupedCoffee] = useState({});
+  const [isGrouped, setIsGrouped] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTimeout, setSearchTimeout] = useState(null);
 
-  const fetchCoffee = async (page = 1, search = '') => {
+  const fetchCoffee = async (search = '') => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/coffee?page=${page}&pageSize=10${search ? `&search=${search}` : ''}`);
+      const response = await fetch(`/api/coffee?all=true&groupByGrade=true&sortByStock=true${search ? `&search=${search}` : ''}`);
       if (!response.ok) {
         throw new Error('Failed to fetch coffee data');
       }
       const data = await response.json();
-      setCoffeeList(data.coffee);
-      setTotalPages(data.totalPages || 1);
-      setCurrentPage(page);
+      
+      if (data.grouped) {
+        setIsGrouped(true);
+        setGroupedCoffee(data.coffee);
+        // Create a flat list for fallback
+        const flatList = Object.values(data.coffee).flat();
+        setCoffeeList(flatList);
+      } else {
+        setIsGrouped(false);
+        setCoffeeList(data.coffee);
+      }
     } catch (err) {
       console.error('Error fetching coffee:', err);
       setError('Failed to load coffee data. Please try again later.');
@@ -37,7 +45,7 @@ export default function CoffeeListPage() {
 
   // Initial fetch
   useEffect(() => {
-    fetchCoffee(1, searchTerm);
+    fetchCoffee(searchTerm);
   }, []);
 
   // Handle search with debounce
@@ -50,7 +58,7 @@ export default function CoffeeListPage() {
     }
     
     const timeoutId = setTimeout(() => {
-      fetchCoffee(1, value);
+      fetchCoffee(value);
     }, 500);
     
     setSearchTimeout(timeoutId);
@@ -80,12 +88,8 @@ export default function CoffeeListPage() {
       // Show success message
       alert(`Coffee "${coffeeName}" has been deleted successfully.`);
       
-      // Refresh the list if we deleted the last item on a page
-      if (coffeeList.length === 1 && currentPage > 1) {
-        fetchCoffee(currentPage - 1, searchTerm);
-      } else {
-        fetchCoffee(currentPage, searchTerm);
-      }
+      // Refresh the list
+      fetchCoffee(searchTerm);
     } catch (err) {
       console.error('Error deleting coffee:', err);
       
@@ -112,6 +116,117 @@ export default function CoffeeListPage() {
   const canAddCoffee = user && ['ADMIN', 'OWNER'].includes(user.role);
   // Only allow admin and owner to see price
   const canSeePrice = user && ['ADMIN', 'OWNER'].includes(user.role);
+
+  // Format grade for display
+  const formatGrade = (grade) => {
+    if (!grade) return 'Unknown';
+    return grade.charAt(0) + grade.slice(1).toLowerCase().replace('_', ' ');
+  };
+
+  // Get background color for grade header
+  const getGradeHeaderColor = (grade) => {
+    switch (grade) {
+      case 'SPECIALTY':
+        return 'bg-emerald-100 text-emerald-800';
+      case 'PREMIUM':
+        return 'bg-blue-100 text-blue-800';
+      case 'RARITY':
+        return 'bg-amber-100 text-amber-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Render coffee table rows
+  const renderCoffeeRow = (coffee, isLastInSection = false) => (
+    <tr key={coffee.id} className={`hover:bg-gray-50 ${coffee.quantity <= 0 ? 'bg-gray-50' : ''} ${isLastInSection ? 'border-b-2 border-gray-300' : ''}`}>
+      {canManageCoffee && (
+        <td className="px-4 py-2 whitespace-nowrap text-left text-sm">
+          <div className="flex space-x-2">
+            <Link
+              href={`/coffee/${coffee.id}`}
+              className="text-blue-600 hover:text-blue-800"
+              title="View details"
+            >
+              View
+            </Link>
+            <Link
+              href={`/coffee/${coffee.id}`}
+              className="text-indigo-600 hover:text-indigo-800"
+              title="Update inventory"
+            >
+              Inventory
+            </Link>
+            {canAddCoffee && (
+              <>
+                <Link
+                  href={`/coffee/edit/${coffee.id}`}
+                  className="text-indigo-600 hover:text-indigo-800"
+                  title="Edit coffee"
+                >
+                  <FiEdit2 className="inline" />
+                </Link>
+                <button
+                  onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
+                  className="text-red-600 hover:text-red-800"
+                  title="Delete coffee"
+                >
+                  <FiTrash2 className="inline" />
+                </button>
+              </>
+            )}
+          </div>
+        </td>
+      )}
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="text-sm font-medium text-gray-900">{coffee.name}</div>
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className={`text-sm ${coffee.quantity > 0 ? 'text-green-600 font-medium' : 'text-red-500'}`}>
+          {coffee.quantity > 0 ? `${parseFloat(coffee.quantity).toFixed(2)} kg` : 'Out of stock'}
+        </div>
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="text-sm text-gray-500">{formatGrade(coffee.grade)}</div>
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="text-sm text-gray-500">{coffee.producer || '-'}</div>
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="text-sm text-gray-500">{coffee.country || '-'}</div>
+      </td>
+      {canSeePrice && (
+        <td className="px-4 py-2 whitespace-nowrap">
+          <div className="text-sm text-gray-500">
+            {coffee.price ? `$${parseFloat(coffee.price).toFixed(2)}` : '-'}
+          </div>
+        </td>
+      )}
+    </tr>
+  );
+
+  // Render grade headers and coffee items
+  const renderGradeSections = () => {
+    return Object.entries(groupedCoffee).map(([grade, coffees], gradeIndex) => (
+      <>
+        {/* Grade header row */}
+        <tr key={`header-${grade}`} className={`${getGradeHeaderColor(grade)}`}>
+          <td 
+            colSpan={canSeePrice ? 8 : 7} 
+            className="px-4 py-1 text-left font-semibold"
+          >
+            {formatGrade(grade)} ({coffees.length})
+          </td>
+        </tr>
+        
+        {/* Coffee rows for this grade */}
+        {coffees.map((coffee, index) => renderCoffeeRow(coffee))}
+      </>
+    ));
+  };
 
   return (
     <div className="container mx-auto px-4 py-4">
@@ -162,7 +277,7 @@ export default function CoffeeListPage() {
               <button 
                 onClick={() => {
                   setSearchTerm('');
-                  fetchCoffee(1, '');
+                  fetchCoffee('');
                 }}
                 className="text-emerald-600 hover:underline text-sm"
               >
@@ -173,138 +288,55 @@ export default function CoffeeListPage() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto bg-white rounded-md border border-gray-200 shadow-sm">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {canManageCoffee && (
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  )}
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country of Origin</th>
-                  {canSeePrice && (
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {coffeeList.map((coffee) => (
-                  <tr key={coffee.id} className="hover:bg-gray-50">
+          {isGrouped ? (
+            // Single table with grouped coffee
+            <div className="overflow-x-auto bg-white rounded-md border border-gray-200 shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
                     {canManageCoffee && (
-                      <td className="px-4 py-2 whitespace-nowrap text-left text-sm">
-                        <div className="flex space-x-2">
-                          <Link
-                            href={`/coffee/${coffee.id}`}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="View details"
-                          >
-                            View
-                          </Link>
-                          <Link
-                            href={`/coffee/${coffee.id}`}
-                            className="text-indigo-600 hover:text-indigo-800"
-                            title="Update inventory"
-                          >
-                            Inventory
-                          </Link>
-                          {canAddCoffee && (
-                            <>
-                              <Link
-                                href={`/coffee/edit/${coffee.id}`}
-                                className="text-indigo-600 hover:text-indigo-800"
-                                title="Edit coffee"
-                              >
-                                <FiEdit2 className="inline" />
-                              </Link>
-                              <button
-                                onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Delete coffee"
-                              >
-                                <FiTrash2 className="inline" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     )}
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{coffee.name}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className={`text-sm ${coffee.quantity > 0 ? 'text-green-600 font-medium' : 'text-red-500'}`}>
-                        {coffee.quantity ? `${parseFloat(coffee.quantity).toFixed(2)} kg` : 'Out of stock'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.grade?.replace('_', ' ') || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.producer || '-'}</div>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{coffee.country || '-'}</div>
-                    </td>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country of Origin</th>
                     {canSeePrice && (
-                      <td className="px-4 py-2 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {coffee.price ? `$${parseFloat(coffee.price).toFixed(2)}` : '-'}
-                        </div>
-                      </td>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-4">
-              <nav className="flex items-center space-x-1">
-                <button
-                  onClick={() => fetchCoffee(currentPage - 1, searchTerm)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded-md text-xs ${
-                    currentPage === 1
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  Previous
-                </button>
-                {[...Array(totalPages).keys()].map((page) => (
-                  <button
-                    key={page + 1}
-                    onClick={() => fetchCoffee(page + 1, searchTerm)}
-                    className={`px-2 py-1 rounded-md text-xs ${
-                      currentPage === page + 1
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {page + 1}
-                  </button>
-                ))}
-                <button
-                  onClick={() => fetchCoffee(currentPage + 1, searchTerm)}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded-md text-xs ${
-                    currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  Next
-                </button>
-              </nav>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {renderGradeSections()}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            // Fallback to non-grouped display
+            <div className="overflow-x-auto bg-white rounded-md border border-gray-200 shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {canManageCoffee && (
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    )}
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country of Origin</th>
+                    {canSeePrice && (
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {coffeeList.map(coffee => renderCoffeeRow(coffee))}
+                </tbody>
+              </table>
             </div>
           )}
         </>

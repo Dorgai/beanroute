@@ -50,6 +50,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
+  const [comment, setComment] = useState('');
 
   useEffect(() => {
     // Reset order items when dialog opens with defensive checks
@@ -62,6 +63,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
       });
       setOrderItems(initialItems);
       setValidationErrors({});
+      setComment('');
     } else if (open) {
       // If coffeeItems is not a valid array or is empty
       console.warn('No valid coffee items available for ordering');
@@ -169,7 +171,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         },
         body: JSON.stringify({
           shopId: selectedShop,
-          items
+          items,
+          comment: comment.trim()
         }),
       });
 
@@ -240,6 +243,20 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
             {error}
           </IconlessAlert>
         )}
+        
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            label="Order Comment"
+            multiline
+            rows={2}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Add any special instructions or notes for this order (optional)"
+            fullWidth
+            inputProps={{ maxLength: 200 }}
+            helperText={`${comment.length}/200 characters`}
+          />
+        </Box>
         
         {!Array.isArray(coffeeItems) || coffeeItems.length === 0 ? (
           <IconlessAlert severity="info">No coffee available for ordering</IconlessAlert>
@@ -505,6 +522,17 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
                 : 'Unknown date'}
             </Typography>
             
+            {order.comment && (
+              <Box sx={{ mt: 1, mb: 2, p: 1.5, bgcolor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                <Typography variant="body2" fontWeight="medium" gutterBottom>
+                  Comment:
+                </Typography>
+                <Typography variant="body2">
+                  {order.comment}
+                </Typography>
+              </Box>
+            )}
+            
             {validNextStatuses.length === 0 && (isRoaster || isRetailer || isBarista) && (
               <IconlessAlert severity="info" sx={{ mt: 2, mb: 1 }}>
                 You cannot change the status of this order from its current state: {order.status}
@@ -602,39 +630,31 @@ function StatusChip({ status }) {
 }
 
 // Stock Level Alert component
-function StockLevelAlert({ inventory, shopMinQuantities }) {
+function StockLevelAlert({ inventory, shopMinQuantities, coffeeCount }) {
   if (!inventory || !shopMinQuantities) return null;
   
-  // Calculate the per-coffee thresholds based on shop minimums
-  // Take the minimum amount and divide by the number of coffees (2 in this case based on logs)
-  // If we don't know the exact number, we'll use a default of 2
-  const numberOfCoffees = 2; // Default to 2 as observed in the logs
+  // Use the coffeeCount prop with fallback to 1
+  const numberOfCoffees = coffeeCount || 1;
 
   // Calculate per-coffee minimums
   const perCoffeeMinSmall = shopMinQuantities.minCoffeeQuantitySmall / numberOfCoffees;
-  const perCoffeeMinLarge = shopMinQuantities.minCoffeeQuantityLarge / numberOfCoffees;
   
   // Calculate percentage thresholds: below 75% is low, below 50% is critical
   const smallBagsPercentage = perCoffeeMinSmall > 0 ? 
                              (inventory.smallBags / perCoffeeMinSmall) * 100 : 100;
-  const largeBagsPercentage = perCoffeeMinLarge > 0 ? 
-                             (inventory.largeBags / perCoffeeMinLarge) * 100 : 100;
   
   // Determine if stock is low (below 75%) or critical (below 50%)
   const isSmallBagsLow = perCoffeeMinSmall > 0 && smallBagsPercentage < 75 && smallBagsPercentage >= 50;
-  const isLargeBagsLow = perCoffeeMinLarge > 0 && largeBagsPercentage < 75 && largeBagsPercentage >= 50;
-  
   const isSmallBagsCritical = perCoffeeMinSmall > 0 && smallBagsPercentage < 50;
-  const isLargeBagsCritical = perCoffeeMinLarge > 0 && largeBagsPercentage < 50;
   
   // If no issues with this specific inventory item, don't show anything
-  if (!isSmallBagsLow && !isLargeBagsLow && !isSmallBagsCritical && !isLargeBagsCritical) {
+  if (!isSmallBagsLow && !isSmallBagsCritical) {
     return (
       <Chip label="In Stock" color="success" size="small" />
     );
   }
   
-  if (isSmallBagsCritical || isLargeBagsCritical) {
+  if (isSmallBagsCritical) {
     return (
       <Chip 
         label="Critical Low" 
@@ -1365,6 +1385,13 @@ export default function RetailOrders() {
     return [];
   };
 
+  // Update global count variable whenever availableCoffee changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.availableCoffeeCount = availableCoffee.length || 1;
+    }
+  }, [availableCoffee]);
+
   if (!session) {
     return null;
   }
@@ -1550,31 +1577,25 @@ export default function RetailOrders() {
                         </TableHead>
                         <TableBody>
                           {inventory.map((item) => {
-                            // Calculate stock status for row styling using the updated calculation method
-                            const numberOfCoffees = 2; // Default to 2 as observed in the logs
+                            // Calculate stock status for row styling based only on small bags
+                            // Get the actual number of available coffees instead of hardcoding to 2
+                            const numberOfCoffees = availableCoffee.length || 1; // Use actual coffee count with fallback to 1
                             
-                            // Calculate per-coffee minimums
+                            // Calculate per-coffee minimums for small bags only
                             const perCoffeeMinSmall = selectedShopDetails?.minCoffeeQuantitySmall > 0 ?
                                                      selectedShopDetails.minCoffeeQuantitySmall / numberOfCoffees : 0;
-                            const perCoffeeMinLarge = selectedShopDetails?.minCoffeeQuantityLarge > 0 ? 
-                                                     selectedShopDetails.minCoffeeQuantityLarge / numberOfCoffees : 0;
                             
-                            // Calculate percentage thresholds
+                            // Calculate percentage thresholds for small bags only
                             const smallBagsPercentage = perCoffeeMinSmall > 0 ? 
                                                        (item.smallBags / perCoffeeMinSmall) * 100 : 100;
-                            const largeBagsPercentage = perCoffeeMinLarge > 0 ? 
-                                                       (item.largeBags / perCoffeeMinLarge) * 100 : 100;
                             
-                            // Determine if stock is low (below 75%) or critical (below 50%)
+                            // Determine if small bags stock is low (below 75%) or critical (below 50%)
                             const isSmallBagsLow = perCoffeeMinSmall > 0 && smallBagsPercentage < 75 && smallBagsPercentage >= 50;
-                            const isLargeBagsLow = perCoffeeMinLarge > 0 && largeBagsPercentage < 75 && largeBagsPercentage >= 50;
-                            
                             const isSmallBagsCritical = perCoffeeMinSmall > 0 && smallBagsPercentage < 50;
-                            const isLargeBagsCritical = perCoffeeMinLarge > 0 && largeBagsPercentage < 50;
                             
-                            // Determine row background color
-                            const isCritical = isSmallBagsCritical || isLargeBagsCritical;
-                            const isWarning = (isSmallBagsLow || isLargeBagsLow) && !isCritical;
+                            // Determine row background color based only on small bags status
+                            const isCritical = isSmallBagsCritical;
+                            const isWarning = isSmallBagsLow && !isCritical;
                             const rowBgColor = isCritical 
                               ? '#fff8f8' // light red for critical
                               : isWarning 
@@ -1626,6 +1647,7 @@ export default function RetailOrders() {
                                     <StockLevelAlert
                                       inventory={item}
                                       shopMinQuantities={selectedShopDetails}
+                                      coffeeCount={availableCoffee.length || 1}
                                     />
                                   )}
                                 </TableCell>
@@ -1915,6 +1937,26 @@ export default function RetailOrders() {
                                       <Typography variant="subtitle2" gutterBottom>
                                         Order Details
                                       </Typography>
+                                      
+                                      {order.comment && (
+                                        <Box 
+                                          sx={{ 
+                                            mb: 2, 
+                                            p: 1.5, 
+                                            bgcolor: '#f5f5f5', 
+                                            borderRadius: 1,
+                                            border: '1px solid #e0e0e0'
+                                          }}
+                                        >
+                                          <Typography variant="body2" fontWeight="medium" gutterBottom>
+                                            Comment:
+                                          </Typography>
+                                          <Typography variant="body2">
+                                            {order.comment}
+                                          </Typography>
+                                        </Box>
+                                      )}
+                                      
                                       <Table size="small">
                                         <TableHead>
                                           <TableRow>

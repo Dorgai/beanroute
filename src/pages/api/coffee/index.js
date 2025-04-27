@@ -34,17 +34,18 @@ export default async function handler(req, res) {
 async function handleGet(req, res) {
   try {
     const page = parseInt(req.query.page, 10) || 1;
-    const pageSize = parseInt(req.query.pageSize, 10) || 10;
+    const pageSize = req.query.all === 'true' ? null : parseInt(req.query.pageSize, 10) || 10;
     const search = req.query.search || '';
+    const groupByGrade = req.query.groupByGrade === 'true';
+    const sortByStock = req.query.sortByStock === 'true';
     
-    const { coffee, total } = await getAllCoffee({ page, pageSize, search });
+    const result = await getAllCoffee({ page, pageSize, search, groupByGrade, sortByStock });
     
     return res.status(200).json({
-      coffee,
-      total,
+      ...result,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize)
+      totalPages: pageSize ? Math.ceil(result.total / pageSize) : 1
     });
   } catch (error) {
     console.error('Error getting coffee list:', error);

@@ -38,7 +38,7 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
   const updateTotalQuantity = (small, large) => {
     const smallValue = parseInt(small) || 0;
     const largeValue = parseInt(large) || 0;
-    const total = (smallValue * 0.25) + (largeValue * 1.0);
+    const total = (smallValue * 0.2) + (largeValue * 1.0);
     setTotalQuantity(total);
   };
 
@@ -139,25 +139,27 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
           <Typography variant="body2" sx={{ mb: 1 }}>
             Current Inventory:
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            • Small Bags (250g): {inventoryItem.smallBags || 0}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            • Small Bags (200g): {inventoryItem.smallBags || 0}
+            <br />
             • Large Bags (1kg): {inventoryItem.largeBags || 0}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            • Total Quantity: {inventoryItem.totalQuantity ? inventoryItem.totalQuantity.toFixed(2) : '0.00'} kg
+            <br />
+            • Total: {inventoryItem.totalQuantity || 0} kg
           </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <TextField
-            label="Small Bags (250g)"
+            fullWidth
+            label="Small Bags (200g)"
             type="number"
             value={smallBags}
-            onChange={handleSmallBagsChange}
-            InputProps={{ inputProps: { min: 0 } }}
-            fullWidth
+            onChange={(e) => setSmallBags(e.target.value)}
+            margin="normal"
+            size="small"
+            InputProps={{
+              inputProps: { min: 0, step: 1 }
+            }}
           />
           <TextField
             label="Large Bags (1kg)"

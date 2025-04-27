@@ -168,6 +168,7 @@ model RetailOrder {
   shopId      String
   orderedById String
   status      OrderStatus       @default(PENDING)
+  comment     String?           @db.VarChar(200)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   orderedBy   User              @relation("OrderedBy", fields: [orderedById], references: [id])

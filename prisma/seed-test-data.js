@@ -147,8 +147,8 @@ async function main() {
   for (const shop of shops_list) {
     for (const coffee of coffees_list) {
       // Set some shops to have low inventory for certain coffees
-      let smallBags = Math.floor(Math.random() * 30) + 1;
-      let largeBags = Math.floor(Math.random() * 15) + 1;
+      let smallBags = Math.floor(Math.random() * 20);
+      let largeBags = Math.floor(Math.random() * 5);
       
       // Make some items low in inventory for testing
       if (shop.name === 'Downtown Coffee Shop' && coffee.name === 'Colombian Supremo') {
@@ -159,8 +159,8 @@ async function main() {
         largeBags = 4; // Warning level
       }
       
-      // Calculate total quantity (1 small bag = 0.25kg, 1 large bag = 1kg)
-      const totalQuantity = (smallBags * 0.25) + (largeBags * 1);
+      // Calculate total quantity
+      const totalQuantity = (smallBags * 0.2) + (largeBags * 1);
       
       await prisma.retailInventory.upsert({
         where: {

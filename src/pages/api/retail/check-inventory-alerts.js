@@ -124,13 +124,23 @@ export default async function handler(req, res) {
         continue;
       }
 
+      // Get count of different coffee types for this shop
+      const uniqueCoffeeTypes = new Set(inventory.map(item => item.coffee?.id).filter(Boolean)).size;
+      const numberOfCoffees = uniqueCoffeeTypes || 1; // Fallback to 1 if no unique coffees found
+      
+      console.log(`[check-inventory-alerts] Shop ${shop.name} has ${numberOfCoffees} unique coffee types`);
+
       // Calculate total quantities
       const totalSmallBags = inventory.reduce((sum, item) => sum + (item.smallBags || 0), 0);
       const totalLargeBags = inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0);
       
-      // Get minimum requirements
+      // Get minimum requirements and adjust per coffee type
       const minSmallBags = shop.minCoffeeQuantitySmall || 10;
       const minLargeBags = shop.minCoffeeQuantityLarge || 5;
+      
+      // Calculate per-coffee minimum requirements
+      const perCoffeeMinSmall = minSmallBags / numberOfCoffees;
+      const perCoffeeMinLarge = minLargeBags / numberOfCoffees;
       
       // Calculate percentages
       const smallBagsPercentage = Math.min(100, (totalSmallBags / minSmallBags) * 100);
@@ -140,20 +150,19 @@ export default async function handler(req, res) {
       const isSmallBagsCritical = totalSmallBags < minSmallBags * 0.3;
       const isSmallBagsWarning = totalSmallBags < minSmallBags * 0.7 && !isSmallBagsCritical;
       
-      const isLargeBagsCritical = totalLargeBags < minLargeBags * 0.3;
-      const isLargeBagsWarning = totalLargeBags < minLargeBags * 0.7 && !isLargeBagsCritical;
+      // Remove large bags checks
       
-      // Determine overall status
-      const hasCritical = isSmallBagsCritical || isLargeBagsCritical;
-      const hasWarning = (isSmallBagsWarning || isLargeBagsWarning) && !hasCritical;
+      // Determine overall status based only on small bags
+      const hasCritical = isSmallBagsCritical;
+      const hasWarning = isSmallBagsWarning && !hasCritical;
 
       console.log(`[check-inventory-alerts] Shop ${shop.name} inventory status:`, {
         totalSmallBags,
-        totalLargeBags,
+        totalLargeBags, // Keep for reference but don't use for alerts
         minSmallBags,
-        minLargeBags,
+        minLargeBags, // Keep for reference but don't use for alerts
         smallBagsPercentage: smallBagsPercentage.toFixed(1) + '%',
-        largeBagsPercentage: largeBagsPercentage.toFixed(1) + '%',
+        largeBagsPercentage: largeBagsPercentage.toFixed(1) + '%', // Keep for reference but don't use for alerts
         hasCritical,
         hasWarning
       });
@@ -201,18 +210,33 @@ export default async function handler(req, res) {
           continue; // Skip to next shop
         }
 
-        // Generate alert message
-        const alertType = hasCritical ? 'CRITICAL' : 'WARNING';
-        let alertText = `${alertType}: Retail inventory levels for ${shop.name} are ${hasCritical ? 'dangerously low' : 'running low'}!`;
-        let alertDetails = `
-          <p><strong>Current Inventory Status:</strong></p>
-          <ul>
-            <li>Small Bags: ${totalSmallBags} / ${minSmallBags} minimum (${smallBagsPercentage.toFixed(1)}%)</li>
-            <li>Large Bags: ${totalLargeBags} / ${minLargeBags} minimum (${largeBagsPercentage.toFixed(1)}%)</li>
-          </ul>
-          <p>Please replenish your stock as soon as possible.</p>
-          <p><a href="${process.env.BASE_URL || 'https://your-app-url.com'}/orders">Go to Retail Inventory</a></p>
-        `;
+        // Prepare email content
+        let emailTitle = '';
+        let emailContent = '';
+
+        if (hasCritical) {
+          emailTitle = `🚨 CRITICAL: Low Inventory at ${shop.name}`;
+          emailContent = `
+            <h2>🚨 CRITICAL INVENTORY ALERT</h2>
+            <p>The following inventory at <strong>${shop.name}</strong> is critically low:</p>
+            <ul>
+              ${isSmallBagsCritical ? `<li>Small Bags: <strong>${totalSmallBags}</strong> remaining (${smallBagsPercentage.toFixed(1)}% of minimum)</li>` : ''}
+            </ul>
+            <p>Please restock as soon as possible.</p>
+            <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}/coffee">Go to Coffee Management</a></p>
+          `;
+        } else if (hasWarning) {
+          emailTitle = `⚠️ WARNING: Low Inventory at ${shop.name}`;
+          emailContent = `
+            <h2>⚠️ INVENTORY WARNING</h2>
+            <p>The following inventory at <strong>${shop.name}</strong> is running low:</p>
+            <ul>
+              ${isSmallBagsWarning ? `<li>Small Bags: <strong>${totalSmallBags}</strong> remaining (${smallBagsPercentage.toFixed(1)}% of minimum)</li>` : ''}
+            </ul>
+            <p>Please consider restocking soon.</p>
+            <p><a href="${process.env.NEXT_PUBLIC_SITE_URL}/coffee">Go to Coffee Management</a></p>
+          `;
+        }
         
         // Create an inventory alert log entry if the table exists
         let alertLog = null;
@@ -224,7 +248,7 @@ export default async function handler(req, res) {
             alertLog = await prisma.inventoryAlertLog.create({
               data: {
                 shopId: shop.id,
-                alertType,
+                alertType: hasCritical ? 'CRITICAL' : 'WARNING',
                 totalSmallBags,
                 totalLargeBags,
                 minSmallBags,
@@ -258,14 +282,8 @@ export default async function handler(req, res) {
               await transporter.sendMail({
                 from: process.env.EMAIL_FROM || '"Bean Route System" <no-reply@beanroute.com>',
                 to: recipient.email,
-                subject: `${alertType} - Low Inventory Alert for ${shop.name}`,
-                html: `
-                  <h2>Inventory Alert for ${shop.name}</h2>
-                  <p>Hello ${recipient.firstName || recipient.email},</p>
-                  <p>${alertText}</p>
-                  ${alertDetails}
-                  <p>This is an automated alert from the Bean Route system.</p>
-                `,
+                subject: emailTitle,
+                html: emailContent,
               });
 
               emailsSent = true;
@@ -275,7 +293,7 @@ export default async function handler(req, res) {
                 shopName: shop.name,
                 recipientId: recipient.id,
                 recipientEmail: recipient.email,
-                alertType,
+                alertType: hasCritical ? 'CRITICAL' : 'WARNING',
                 timestamp: new Date().toISOString()
               });
             } catch (emailError) {
@@ -292,7 +310,7 @@ export default async function handler(req, res) {
               shopName: shop.name,
               recipientId: recipient.id,
               recipientEmail: recipient.email,
-              alertType,
+              alertType: hasCritical ? 'CRITICAL' : 'WARNING',
               timestamp: new Date().toISOString(),
               note: 'Email not sent - SMTP not configured'
             });

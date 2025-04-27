@@ -96,7 +96,7 @@ async function main() {
               coffeeId: coffee.id,
               smallBags: 5,
               largeBags: 2,
-              totalQuantity: 5 * 0.25 + 2 * 1.0,  // Calculate based on bag weights
+              totalQuantity: 5 * 0.2 + 2 * 1.0,  // Calculate based on bag weights
             }
           ]
         }

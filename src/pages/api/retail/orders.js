@@ -84,6 +84,7 @@ export default async function handler(req, res) {
           shopId: true,
           orderedById: true,
           status: true,
+          comment: true,
           createdAt: true,
           updatedAt: true
         },
@@ -175,6 +176,7 @@ export default async function handler(req, res) {
           select: {
             id: true,
             status: true,
+            comment: true,
             createdAt: true,
             updatedAt: true
           },

@@ -137,7 +137,7 @@ export default function EditShopPage() {
           </div>
           {/* Min Small */}
           <div>
-            <label htmlFor="minSmall" className="block text-sm font-medium text-gray-700">Min Small Bags (250g)</label>
+            <label htmlFor="minSmall" className="block text-sm font-medium text-gray-700">Min Small Bags (200g)</label>
             <input type="number" id="minSmall" value={formData.minCoffeeQuantitySmall} onChange={(e) => setFormData({ ...formData, minCoffeeQuantitySmall: e.target.value })} min="0" required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"/>
           </div>
           {/* Min Large */}

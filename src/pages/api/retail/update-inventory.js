@@ -54,8 +54,8 @@ export default async function handler(req, res) {
     }
     
     // Validate numeric values
-    const smallBagsValue = smallBags !== undefined ? parseInt(smallBags, 10) : undefined;
-    const largeBagsValue = largeBags !== undefined ? parseInt(largeBags, 10) : undefined;
+    const smallBagsValue = smallBags !== undefined ? parseFloat(smallBags) : undefined;
+    const largeBagsValue = largeBags !== undefined ? parseFloat(largeBags) : undefined;
     
     if ((smallBags !== undefined && (isNaN(smallBagsValue) || smallBagsValue < 0)) || 
         (largeBags !== undefined && (isNaN(largeBagsValue) || largeBagsValue < 0))) {
@@ -106,7 +106,9 @@ export default async function handler(req, res) {
       // Calculate the new total quantity
       const newSmallBags = smallBagsValue !== undefined ? smallBagsValue : currentInventory.smallBags;
       const newLargeBags = largeBagsValue !== undefined ? largeBagsValue : currentInventory.largeBags;
-      const newTotalQuantity = (newSmallBags * 0.25) + (newLargeBags * 1.0);
+      
+      // Calculate new total quantity in kg
+      const newTotalQuantity = (newSmallBags * 0.2) + (newLargeBags * 1.0);
       
       console.log('[update-inventory] Updating inventory with new values:', {
         smallBags: newSmallBags,

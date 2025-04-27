@@ -1,23 +1,37 @@
 // Script to delete specific data from Railway production database
 const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
 
 /**
  * This script safely removes production data while preserving system functionality.
  * It deletes:
  * 1. Retail orders
  * 2. Inventory logs and history
- * 3. Green coffee inventory (resets to 0)
- * 4. User activity logs
- * 5. Alert logs
+ * 3. Green coffee inventory history
+ * 4. Most green coffee entries (keeping one)
+ * 5. User activity logs
+ * 6. Alert logs
  */
 async function deleteData() {
   console.log('Starting production data cleanup...');
+  
+  // Check if running on Railway
+  if (process.env.RAILWAY_ENVIRONMENT === 'production') {
+    console.log('Running in Railway environment');
+    
+    // Use PUBLIC_URL for database connection if available
+    if (process.env.DATABASE_PUBLIC_URL) {
+      console.log('Using DATABASE_PUBLIC_URL for connection');
+      process.env.DATABASE_URL = process.env.DATABASE_PUBLIC_URL;
+    }
+  }
   
   // Create prisma client
   const prisma = new PrismaClient();
   
   try {
     console.log('Connecting to database...');
+    console.log('Database URL: ' + (process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) + '...' : 'Not set'));
     await prisma.$connect();
     
     // First, verify database connectivity
@@ -70,79 +84,69 @@ async function deleteData() {
       console.log('✓ InventoryAlertLog table not found, skipping');
     }
     
-    // STEP 4: Reset green coffee inventory to 0
-    if (tableNames.includes('greencoffeeinventory')) {
-      const updatedGreenCoffee = await prisma.greenCoffeeInventory.updateMany({
-        data: {
-          quantity: 0
-        }
-      });
-      console.log(`✓ Reset ${updatedGreenCoffee.count} green coffee inventory records to 0 kg`);
-    } else {
-      console.log('✓ GreenCoffeeInventory table not found, skipping');
-    }
-    
-    // STEP 5: Reset retail inventory to 0 (small and large bags)
+    // STEP 4: Delete retail inventory records completely (must be done before deleting green coffee)
     if (tableNames.includes('retailinventory')) {
-      const updatedRetailInventory = await prisma.retailInventory.updateMany({
-        data: {
-          smallBags: 0,
-          largeBags: 0,
-          totalQuantity: 0
-        }
-      });
-      console.log(`✓ Reset ${updatedRetailInventory.count} retail inventory records to 0`);
+      const deletedRetailInventory = await prisma.retailInventory.deleteMany({});
+      console.log(`✓ Deleted ${deletedRetailInventory.count} retail inventory records`);
     } else {
       console.log('✓ RetailInventory table not found, skipping');
     }
     
-    // STEP 6: Clear user activity logs
+    // STEP 5: Delete green coffee inventory logs and history
+    if (tableNames.includes('greencoffeeinventorylog')) {
+      const deletedGreenCoffeeInventoryLogs = await prisma.greenCoffeeInventoryLog.deleteMany({});
+      console.log(`✓ Deleted ${deletedGreenCoffeeInventoryLogs.count} green coffee inventory logs`);
+    } else {
+      console.log('✓ GreenCoffeeInventoryLog table not found, skipping');
+    }
+    
+    // STEP 6: Handle green coffee inventory - delete all records first
+    if (tableNames.includes('greencoffeeinventory')) {
+      const deletedGreenCoffeeInventory = await prisma.greenCoffeeInventory.deleteMany({});
+      console.log(`✓ Deleted ${deletedGreenCoffeeInventory.count} green coffee inventory records`);
+    } else {
+      console.log('✓ GreenCoffeeInventory table not found, skipping');
+    }
+    
+    // STEP 7: Delete most green coffee entries but keep one
+    if (tableNames.includes('greencoffee')) {
+      // Find one coffee to keep
+      const coffeeToKeep = await prisma.greenCoffee.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      if (coffeeToKeep) {
+        // Delete all except the one to keep
+        const deletedGreenCoffee = await prisma.greenCoffee.deleteMany({
+          where: {
+            id: {
+              not: coffeeToKeep.id
+            }
+          }
+        });
+        console.log(`✓ Deleted ${deletedGreenCoffee.count} green coffee entries (keeping ID: ${coffeeToKeep.id})`);
+        
+        // Add a small inventory amount to the kept coffee
+        await prisma.greenCoffeeInventory.create({
+          data: {
+            coffeeId: coffeeToKeep.id,
+            quantity: 25 // Small amount to show system is working
+          }
+        });
+        console.log(`✓ Added 25kg inventory to kept coffee ID: ${coffeeToKeep.id}`);
+      } else {
+        console.log('✓ No green coffee entries found to keep');
+      }
+    } else {
+      console.log('✓ GreenCoffee table not found, skipping');
+    }
+    
+    // STEP 8: Clear user activity logs
     if (tableNames.includes('useractivity')) {
       const deletedUserActivity = await prisma.userActivity.deleteMany({});
       console.log(`✓ Deleted ${deletedUserActivity.count} user activity records`);
     } else {
       console.log('✓ UserActivity table not found, skipping');
-    }
-    
-    // STEP 7: Create a minimal green coffee entry to prevent system errors
-    if (tableNames.includes('greencoffee') && tableNames.includes('greencoffeeinventory')) {
-      // Find existing green coffee items
-      const coffeeItems = await prisma.greenCoffee.findMany({
-        take: 2,
-        orderBy: { createdAt: 'desc' }
-      });
-      
-      // If there are coffee entries, update one with minimal inventory
-      if (coffeeItems && coffeeItems.length > 0) {
-        try {
-          // Add small inventory to the first coffee to prevent "no coffee" errors
-          await prisma.greenCoffeeInventory.upsert({
-            where: {
-              coffeeId: coffeeItems[0].id
-            },
-            update: {
-              quantity: 5 // Small amount to show system is working
-            },
-            create: {
-              coffeeId: coffeeItems[0].id,
-              quantity: 5
-            }
-          });
-          console.log(`✓ Added minimal inventory (5kg) to coffee ID: ${coffeeItems[0].id}`);
-        } catch (error) {
-          console.error('Error updating coffee inventory:', error.message);
-          // Try an alternative approach if upsert fails
-          await prisma.greenCoffeeInventory.updateMany({
-            where: { coffeeId: coffeeItems[0].id },
-            data: { quantity: 5 }
-          });
-          console.log(`✓ Alternative: Updated inventory for coffee ID: ${coffeeItems[0].id}`);
-        }
-      } else {
-        console.log('✓ No coffee items found, skipping inventory initialization');
-      }
-    } else {
-      console.log('✓ GreenCoffee or GreenCoffeeInventory table not found, skipping inventory setup');
     }
     
     console.log('\nProduction data cleanup completed successfully');

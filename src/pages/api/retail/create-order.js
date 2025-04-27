@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Roasters cannot create retail orders' });
     }
 
-    const { shopId, items } = req.body;
+    const { shopId, items, comment } = req.body;
     console.log('Create order request for shop:', shopId, 'items count:', items?.length);
 
     // Validate request data
@@ -49,12 +49,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Order must contain at least one item' });
     }
 
+    // Validate comment length if provided
+    if (comment && comment.length > 200) {
+      await prisma.$disconnect();
+      return res.status(400).json({ error: 'Comment must be 200 characters or less' });
+    }
+
     // Validate each item has a valid coffeeId and at least one bag
     const processedItems = items.map(item => ({
       coffeeId: item.coffeeId,
       smallBags: parseInt(item.smallBags) || 0,
       largeBags: parseInt(item.largeBags) || 0,
-      totalQuantity: ((parseInt(item.smallBags) || 0) * 0.25) + ((parseInt(item.largeBags) || 0) * 1.0)
+      totalQuantity: ((parseInt(item.smallBags) || 0) * 0.2) + ((parseInt(item.largeBags) || 0) * 1.0)
     }));
     
     const invalidItems = processedItems.filter(item => 
@@ -78,7 +84,8 @@ export default async function handler(req, res) {
         data: {
           shopId,
           orderedById: session.user.id,
-          status: 'PENDING'
+          status: 'PENDING',
+          comment: comment || null
         }
       });
       console.log('Created order:', newOrder.id);

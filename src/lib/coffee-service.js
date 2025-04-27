@@ -1,11 +1,9 @@
 import prisma from './prisma';
 
 /**
- * Get all coffee entries with pagination and search options
+ * Get all coffee entries with optional pagination, search, and grouping options
  */
-export async function getAllCoffee({ page = 1, pageSize = 10, search = '' }) {
-  const skip = (page - 1) * pageSize;
-  
+export async function getAllCoffee({ page = 1, pageSize = null, search = '', groupByGrade = false, sortByStock = false }) {
   // Build search filter if search term provided
   const where = search 
     ? {
@@ -18,13 +16,38 @@ export async function getAllCoffee({ page = 1, pageSize = 10, search = '' }) {
       } 
     : {};
   
+  // Determine if we should use pagination
+  const pagination = pageSize ? {
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  } : {};
+
+  // Define order based on params
+  const orderBy = [];
+  
+  // If sorting by grade and stock, add those to the orderBy
+  if (sortByStock) {
+    // First by grade in custom order (SPECIALTY, PREMIUM, RARITY)
+    // Then by stock status (in stock first, then out of stock)
+    orderBy.push(
+      {
+        grade: 'asc', // We'll handle custom ordering in frontend
+      },
+      {
+        quantity: 'desc', // Higher quantities first
+      }
+    );
+  } else {
+    // Default ordering
+    orderBy.push({ createdAt: 'desc' });
+  }
+  
   // Get coffee entries and count in parallel for efficiency
   const [coffee, total] = await Promise.all([
     prisma.greenCoffee.findMany({
       where,
-      skip,
-      take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      ...pagination,
+      orderBy,
       include: {
         createdBy: {
           select: {
@@ -37,6 +60,55 @@ export async function getAllCoffee({ page = 1, pageSize = 10, search = '' }) {
     }),
     prisma.greenCoffee.count({ where }),
   ]);
+  
+  // If grouping by grade is requested, organize the results
+  if (groupByGrade) {
+    // Define grade order for sorting
+    const gradeOrder = {
+      'SPECIALTY': 1,
+      'PREMIUM': 2,
+      'RARITY': 3,
+      'UNKNOWN': 4
+    };
+
+    // Group coffee by grade
+    const groupedCoffee = coffee.reduce((acc, coffeeItem) => {
+      const grade = coffeeItem.grade || 'UNKNOWN';
+      if (!acc[grade]) {
+        acc[grade] = [];
+      }
+      acc[grade].push(coffeeItem);
+      return acc;
+    }, {});
+    
+    // Sort each group by stock status if requested
+    if (sortByStock) {
+      Object.keys(groupedCoffee).forEach(grade => {
+        groupedCoffee[grade].sort((a, b) => {
+          // Sort by stock status (in stock first)
+          if ((a.quantity > 0) !== (b.quantity > 0)) {
+            return a.quantity > 0 ? -1 : 1;
+          }
+          // If same stock status, sort by name
+          return a.name.localeCompare(b.name);
+        });
+      });
+    }
+
+    // Sort the grades in the specified order
+    const sortedGroupedCoffee = Object.keys(groupedCoffee)
+      .sort((a, b) => (gradeOrder[a] || 999) - (gradeOrder[b] || 999))
+      .reduce((obj, key) => {
+        obj[key] = groupedCoffee[key];
+        return obj;
+      }, {});
+    
+    return {
+      coffee: sortedGroupedCoffee,
+      total,
+      grouped: true
+    };
+  }
   
   return {
     coffee,

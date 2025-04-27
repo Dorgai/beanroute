@@ -5,6 +5,14 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// Fix Railway database connection if needed
+try {
+  console.log('Checking Railway database connection...');
+  require('./fix-railway-db');
+} catch (error) {
+  console.error('Error fixing Railway database connection:', error);
+}
+
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
