@@ -3,9 +3,16 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 
 async function resetAdminPassword() {
-  console.log('Starting admin password reset...');
+  console.log('Starting admin password reset in Railway production...');
   
-  const prisma = new PrismaClient();
+  // Use Railway production database URL
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL
+      }
+    }
+  });
   
   try {
     // Find admin user by username
@@ -33,7 +40,7 @@ async function resetAdminPassword() {
       }
     });
     
-    console.log(`Admin password reset successfully!`);
+    console.log(`Admin password reset successfully in Railway production!`);
     console.log(`Username: admin`);
     console.log(`Password: ${newPassword}`);
     
