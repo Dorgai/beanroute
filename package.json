@@ -12,7 +12,7 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "node prisma/seed.js",
     "prisma:studio": "prisma studio",
-    "postinstall": "chmod +x ./fix-prisma-railway.sh && ./fix-prisma-railway.sh",
+    "postinstall": "prisma generate",
     "db:setup": "prisma migrate deploy && prisma db seed",
     "local": "npm run db:setup && npm run dev",
     "local:clean": "rm -rf .next && npm run db:setup && npm run dev",
@@ -22,12 +22,10 @@
     "start:prod": "./start-prod.sh",
     "railway:start": "chmod +x ./fix-and-run.sh && ./fix-and-run.sh",
     "fix:migrations": "rm -rf prisma/migrations && npx prisma migrate dev --name init",
-    "start:fixed": "chmod +x ./fix-and-run.sh && ./fix-and-run.sh",
-    "prepare:railway": "chmod +x ./fix-prisma-railway.sh && ./fix-prisma-railway.sh"
+    "start:fixed": "chmod +x ./fix-and-run.sh && ./fix-and-run.sh"
   },
   "prisma": {
-    "seed": "node prisma/seed.js",
-    "schema": "./prisma/schema.prisma"
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -40,8 +38,7 @@
     "@mui/lab": "^7.0.0-beta.11",
     "@mui/material": "^7.0.2",
     "@prisma/client": "^6.6.0",
-    "axios": "^1.8.4",
-    "bcrypt": "^5.1.1",
+    "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.4.9",
     "cookie": "^0.6.0",
