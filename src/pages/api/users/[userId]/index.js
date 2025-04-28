@@ -58,7 +58,8 @@ export default async function handler(req, res) {
       const { username, email, firstName, lastName, role, status } = req.body;
       
       // Regular users can only update their own profile and can't change role or status
-      if (isOwnProfile && !canManageUsers(user.role)) {
+      // Admin users can update their own profile including role and status
+      if (isOwnProfile && !canManageUsers(user.role) && user.role !== 'ADMIN') {
         // Only allow updating personal info for regular users
         const updatedUser = await updateUser(userId, {
           firstName: firstName || existingUser.firstName,
@@ -86,8 +87,12 @@ export default async function handler(req, res) {
       if (email) updateData.email = email;
       if (firstName !== undefined) updateData.firstName = firstName;
       if (lastName !== undefined) updateData.lastName = lastName;
-      if (role && canManageUsers(user.role)) updateData.role = role;
-      if (status && canManageUsers(user.role)) updateData.status = status;
+      if (role && (canManageUsers(user.role) || (isOwnProfile && user.role === 'ADMIN'))) {
+        updateData.role = role;
+      }
+      if (status && (canManageUsers(user.role) || (isOwnProfile && user.role === 'ADMIN'))) {
+        updateData.status = status;
+      }
       
       const updatedUser = await updateUser(userId, updateData);
       

@@ -109,9 +109,10 @@ export async function getUserByEmail(email) {
 /**
  * Check if a user has permission to manage users
  * Only ADMIN and OWNER roles can manage users
+ * Admin users can also manage their own account
  */
-export function canManageUsers(userRole) {
-  return userRole === 'ADMIN' || userRole === 'OWNER';
+export function canManageUsers(userRole, isOwnProfile = false) {
+  return userRole === 'ADMIN' || userRole === 'OWNER' || (isOwnProfile && userRole === 'ADMIN');
 }
 
 /**

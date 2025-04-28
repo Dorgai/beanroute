@@ -97,7 +97,8 @@ export default function EditUser() {
       const updateData = { ...formData };
       
       // Only include role and status if the current user can manage users
-      if (currentUser?.id === userId || 
+      // or if it's their own profile and they're an admin
+      if ((currentUser?.id === userId && currentUser?.role !== 'ADMIN') || 
           !['ADMIN', 'OWNER'].includes(currentUser?.role)) {
         delete updateData.role;
         delete updateData.status;
@@ -149,7 +150,8 @@ export default function EditUser() {
   }
   
   const isOwnProfile = currentUser?.id === userId;
-  const canChangeRoleStatus = ['ADMIN', 'OWNER'].includes(currentUser?.role);
+  const canChangeRoleStatus = ['ADMIN', 'OWNER'].includes(currentUser?.role) || 
+                            (isOwnProfile && currentUser?.role === 'ADMIN');
   
   return (
     <div className="max-w-3xl mx-auto py-4">
