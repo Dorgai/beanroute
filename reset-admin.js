@@ -21,7 +21,7 @@ async function resetAdminPassword() {
     console.log(`Found admin user with ID: ${adminUser.id}`);
     
     // New password to set
-    const newPassword = 'admin123';
+    const newPassword = 'adminisztrator';
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     // Update the admin user with new password

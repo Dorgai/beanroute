@@ -470,7 +470,8 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
         console.warn('refreshData is not a function, skipping refresh');
       }
       
-      onClose(true); // Pass true to indicate successful update
+      // Pass the updated status back to the parent component
+      onClose(true, status); // Pass true to indicate successful update along with the new status
     } catch (error) {
       console.error('Error updating order status:', error);
       setError(error.message || 'An unexpected error occurred');
@@ -1210,10 +1211,20 @@ export default function RetailOrders() {
     setStatusDialogOpen(true);
   };
   
-  const handleCloseStatusDialog = (success) => {
+  const handleCloseStatusDialog = (success, newStatus) => {
+    const wasChangedToDelivered = newStatus === 'DELIVERED' && success;
+    setSelectedOrder(null);
     setStatusDialogOpen(false);
+    
     if (success) {
       fetchData();
+      
+      // If the order status was changed to DELIVERED and user is not a Roaster,
+      // switch to the Inventory tab automatically since inventory will have been updated
+      if (wasChangedToDelivered && !isRoaster) {
+        // For non-roaster users, the Inventory tab is at index 0
+        setTabIndex(0);
+      }
     }
   };
   
