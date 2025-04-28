@@ -1,0 +1,16 @@
+{
+  "name": "beanroute-password-update",
+  "version": "1.0.0",
+  "description": "Service to update admin password in BeanRoute",
+  "main": "update-production-password.js",
+  "scripts": {
+    "start": "node update-production-password.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.6.0",
+    "bcrypt": "^5.1.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.6.0"
+  }
+} 
