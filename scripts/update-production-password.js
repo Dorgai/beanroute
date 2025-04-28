@@ -4,9 +4,15 @@ const bcrypt = require('bcrypt');
 
 async function updateProductionPassword() {
   console.log('Starting admin password update in production...');
-  console.log('Database URL:', process.env.DATABASE_URL);
   
-  const prisma = new PrismaClient();
+  // Use direct database URL
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL
+      }
+    }
+  });
   
   try {
     // Find admin user by username
@@ -42,6 +48,9 @@ async function updateProductionPassword() {
   } catch (error) {
     console.error('Error updating admin password:', error);
     console.error('Error details:', error.message);
+    // Log the database URL (with credentials removed)
+    const dbUrl = (process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL || '').replace(/:\/\/[^@]+@/, '://****:****@');
+    console.log('Database URL being used:', dbUrl);
   } finally {
     await prisma.$disconnect();
   }
