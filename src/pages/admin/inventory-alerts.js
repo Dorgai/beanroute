@@ -139,13 +139,27 @@ export default function InventoryAlerts() {
       setLoading(true);
       setError(null);
       
+      // First, get a valid shop ID from the shops API
+      const shopsResponse = await fetch('/api/retail/shops');
+      if (!shopsResponse.ok) {
+        throw new Error('Failed to fetch shops');
+      }
+      
+      const shopsData = await shopsResponse.json();
+      if (!shopsData || shopsData.length === 0) {
+        throw new Error('No shops available for testing');
+      }
+      
+      // Use the first available shop
+      const testShopId = shopsData[0].id;
+      
       const response = await fetch('/api/retail/log-inventory-alert', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          shopId: "90a7cbc1-1c31-4b02-9efa-7d54b6ad4b2a", // Use a valid shop ID from your database
+          shopId: testShopId,
           alertType: "WARNING",
           totalSmallBags: 5,
           totalLargeBags: 2,
