@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { createActivityLog } from '@/lib/activity-service';
+import orderEmailService from '@/lib/order-email-service';
 
 export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
@@ -255,6 +256,26 @@ export default async function handler(req, res) {
     } catch (logError) {
       // Don't fail the request if activity log fails
       console.error('Failed to create activity log:', logError);
+    }
+
+    // Send email notification for new order (PENDING status)
+    console.log(`[create-order] Sending email notifications for new order ${newOrder.id} with PENDING status`);
+    try {
+      const emailResult = await orderEmailService.sendOrderStatusChangeNotification(
+        newOrder.id, 
+        null, // No previous status for new orders
+        'PENDING', 
+        session.user.id
+      );
+      
+      if (emailResult.success) {
+        console.log(`[create-order] Email notifications sent successfully: ${emailResult.message}`);
+      } else {
+        console.log(`[create-order] Email notifications not sent: ${emailResult.error || emailResult.message}`);
+      }
+    } catch (emailError) {
+      // Don't fail the entire operation if email sending fails
+      console.error('[create-order] Error sending email notifications:', emailError);
     }
 
     // Make sure to disconnect the Prisma client

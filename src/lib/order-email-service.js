@@ -95,7 +95,9 @@ class OrderEmailService {
       'CANCELLED': '#f44336'
     };
 
-    const subject = `Order Status Update - ${shop.name} - Order #${order.id.slice(-8)}`;
+    const subject = oldStatus 
+      ? `Order Status Update - ${shop.name} - Order #${order.id.slice(-8)}`
+      : `New Order Created - ${shop.name} - Order #${order.id.slice(-8)}`;
 
     const html = `
       <!DOCTYPE html>
@@ -128,6 +130,7 @@ class OrderEmailService {
           </div>
           
           <div class="content">
+            ${oldStatus ? `
             <h2>Order Status Changed</h2>
             <p>Hello,</p>
             <p>The status of order <strong>#${order.id.slice(-8)}</strong> for <strong>${shop.name}</strong> has been updated.</p>
@@ -143,6 +146,19 @@ class OrderEmailService {
             </div>
             
             <p>Your order is now <strong>${statusDescriptions[newStatus] || newStatus.toLowerCase()}</strong>.</p>
+            ` : `
+            <h2>New Order Created</h2>
+            <p>Hello,</p>
+            <p>A new order <strong>#${order.id.slice(-8)}</strong> has been created for <strong>${shop.name}</strong>.</p>
+            
+            <div class="status-change">
+              <span class="status-badge" style="background-color: ${statusColors[newStatus] || '#6c757d'}">
+                ${newStatus}
+              </span>
+            </div>
+            
+            <p>The order is <strong>${statusDescriptions[newStatus] || newStatus.toLowerCase()}</strong> and waiting for processing.</p>
+            `}
             
             <div class="order-details">
               <h3 style="margin-top: 0;">Order Details</h3>
