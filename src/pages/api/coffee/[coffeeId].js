@@ -63,7 +63,7 @@ async function handleUpdate(req, res, user, coffeeId) {
       return res.status(403).json({ error: 'You do not have permission to update coffee' });
     }
     
-    const { name, grade, country, producer, notes, price } = req.body;
+    const { name, grade, country, producer, process, notes, price, isEspresso, isFilter, isSignature } = req.body;
     
     console.log('Update coffee request body:', req.body);
     
@@ -78,7 +78,11 @@ async function handleUpdate(req, res, user, coffeeId) {
       grade,
       origin: country,
       roaster: producer,
-      notes
+      process,
+      notes,
+      isEspresso,
+      isFilter,
+      isSignature
     };
 
     // Only add price if it's provided and user has permission

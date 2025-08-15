@@ -26,6 +26,8 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import IconlessAlert from '../components/ui/IconlessAlert';
+import * as XLSX from 'xlsx';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 // Import chart components
 import {
@@ -330,6 +332,58 @@ export default function Analytics() {
     },
   };
   
+  // Function to handle Excel export
+  const handleExport = () => {
+    if (!analyticsData || analyticsData.length === 0) {
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = analyticsData.map(row => ({
+      'Coffee': row.grade,
+      'Origin': row.origin,
+      'Grade': row.grade,
+      'Small Bags (200g)': row.smallBags,
+      'Large Bags (1kg)': row.largeBags,
+      'Total Orders': row.orderCount,
+      'Total Quantity (kg)': (row.smallBags * 0.2 + row.largeBags * 1.0).toFixed(2)
+    }));
+
+    // Add totals row
+    const totals = analyticsData.reduce((acc, row) => ({
+      smallBags: acc.smallBags + row.smallBags,
+      largeBags: acc.largeBags + row.largeBags,
+      orderCount: acc.orderCount + row.orderCount
+    }), { smallBags: 0, largeBags: 0, orderCount: 0 });
+
+    const totalKg = (totals.smallBags * 0.2 + totals.largeBags * 1.0).toFixed(2);
+
+    exportData.push({
+      'Coffee': 'TOTAL',
+      'Origin': '',
+      'Grade': '',
+      'Small Bags (200g)': totals.smallBags,
+      'Large Bags (1kg)': totals.largeBags,
+      'Total Orders': totals.orderCount,
+      'Total Quantity (kg)': totalKg
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Delivered Orders');
+
+    // Generate filename with date range
+    const startDateStr = format(new Date(startDate), 'yyyy-MM-dd');
+    const endDateStr = format(new Date(endDate), 'yyyy-MM-dd');
+    const filename = `delivered_orders_${startDateStr}_to_${endDateStr}.xlsx`;
+
+    // Generate Excel file
+    XLSX.writeFile(wb, filename);
+  };
+  
   // If session is loading or user doesn't have access, show loading or nothing
   if (sessionLoading || (session && (session.user.role !== 'ADMIN' && session.user.role !== 'OWNER' && session.user.role !== 'RETAILER'))) {
     return (
@@ -368,7 +422,7 @@ export default function Analytics() {
               </IconlessAlert>
             )}
             
-            <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               <TextField
                 label="Start Date"
                 type="datetime-local"
@@ -392,6 +446,16 @@ export default function Analytics() {
               >
                 {loading ? 'Loading...' : 'Update Report'}
               </Button>
+              {analyticsData && analyticsData.length > 0 && (
+                <Button
+                  variant="outlined"
+                  startIcon={<FileDownloadIcon />}
+                  onClick={handleExport}
+                  disabled={loading}
+                >
+                  Export to Excel
+                </Button>
+              )}
             </Box>
             
             {loading ? (
@@ -399,42 +463,147 @@ export default function Analytics() {
                 <CircularProgress />
               </Box>
             ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableRow>
-                      <TableCell>Coffee</TableCell>
-                      <TableCell>Origin</TableCell>
-                      <TableCell>Grade</TableCell>
-                      <TableCell align="right">Small Bags (200g)</TableCell>
-                      <TableCell align="right">Large Bags (1kg)</TableCell>
-                      <TableCell align="right">Total Orders</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {analyticsData && analyticsData.length > 0 ? (
-                      analyticsData.map((row) => (
-                        <TableRow key={row.grade} hover>
-                          <TableCell component="th" scope="row">
-                            <strong>{row.grade}</strong>
-                          </TableCell>
-                          <TableCell>{row.origin}</TableCell>
-                          <TableCell>{row.grade}</TableCell>
-                          <TableCell align="right">{row.smallBags}</TableCell>
-                          <TableCell align="right">{row.largeBags}</TableCell>
-                          <TableCell align="right">{row.orderCount}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
+              <>
+                {/* Original Table (100%) */}
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  Total Delivered Orders
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                       <TableRow>
-                        <TableCell colSpan={4} align="center">
-                          No delivered orders found in the selected date range
-                        </TableCell>
+                        <TableCell>Grade</TableCell>
+                        <TableCell align="right">Small Bags (200g)</TableCell>
+                        <TableCell align="right">Large Bags (1kg)</TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {analyticsData && analyticsData.length > 0 ? (
+                        analyticsData.map((row) => (
+                          <TableRow key={row.grade} hover>
+                            <TableCell component="th" scope="row">
+                              <strong>{row.grade}</strong>
+                            </TableCell>
+                            <TableCell align="right">
+                              {row.smallBags}
+                              {(row.smallBagsEspresso > 0 || row.smallBagsFilter > 0) && (
+                                <Typography variant="caption" display="block" color="text.secondary">
+                                  (E: {row.smallBagsEspresso || 0}, F: {row.smallBagsFilter || 0})
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell align="right">{row.largeBags}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">
+                            No delivered orders found in the selected date range
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* 70% Split Table */}
+                <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+                  70% Split of Delivered Orders
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                      <TableRow>
+                        <TableCell>Grade</TableCell>
+                        <TableCell align="right">Small Bags (200g)</TableCell>
+                        <TableCell align="right">Large Bags (1kg)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {analyticsData && analyticsData.length > 0 ? (
+                        analyticsData.map((row) => (
+                          <TableRow key={row.grade} hover>
+                            <TableCell component="th" scope="row">
+                              <strong>{row.grade}</strong>
+                            </TableCell>
+                            <TableCell align="right">
+                              {Math.round(row.smallBags * 0.7)}
+                              {(row.smallBagsEspresso > 0 || row.smallBagsFilter > 0) && (
+                                <Typography variant="caption" display="block" color="text.secondary">
+                                  (E: {Math.round((row.smallBagsEspresso || 0) * 0.7)}, F: {Math.round((row.smallBagsFilter || 0) * 0.7)})
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell align="right">{Math.round(row.largeBags * 0.7)}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">
+                            No delivered orders found in the selected date range
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* 30% Split Table */}
+                <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+                  30% Split of Delivered Orders
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                      <TableRow>
+                        <TableCell>Grade</TableCell>
+                        <TableCell align="right">Small Bags (200g)</TableCell>
+                        <TableCell align="right">Large Bags (1kg)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {analyticsData && analyticsData.length > 0 ? (
+                        analyticsData.map((row) => {
+                          // Calculate 30% values ensuring they add up to the original total
+                          const smallBags70 = Math.round(row.smallBags * 0.7);
+                          const largeBags70 = Math.round(row.largeBags * 0.7);
+                          const smallBags30 = row.smallBags - smallBags70;
+                          const largeBags30 = row.largeBags - largeBags70;
+                          
+                          // Calculate espresso/filter splits for 30%
+                          const espresso70 = Math.round((row.smallBagsEspresso || 0) * 0.7);
+                          const filter70 = Math.round((row.smallBagsFilter || 0) * 0.7);
+                          const espresso30 = (row.smallBagsEspresso || 0) - espresso70;
+                          const filter30 = (row.smallBagsFilter || 0) - filter70;
+
+                          return (
+                            <TableRow key={row.grade} hover>
+                              <TableCell component="th" scope="row">
+                                <strong>{row.grade}</strong>
+                              </TableCell>
+                              <TableCell align="right">
+                                {smallBags30}
+                                {(row.smallBagsEspresso > 0 || row.smallBagsFilter > 0) && (
+                                  <Typography variant="caption" display="block" color="text.secondary">
+                                    (E: {espresso30}, F: {filter30})
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell align="right">{largeBags30}</TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">
+                            No delivered orders found in the selected date range
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
             )}
           </TabPanel>
           

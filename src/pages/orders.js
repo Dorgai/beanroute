@@ -51,6 +51,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
   const [error, setError] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
   const [comment, setComment] = useState('');
+  const [pendingOrdersData, setPendingOrdersData] = useState({});
 
   useEffect(() => {
     // Reset order items when dialog opens with defensive checks
@@ -58,7 +59,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
       const initialItems = {};
       coffeeItems.forEach(coffee => {
         if (coffee && coffee.id) {
-          initialItems[coffee.id] = { smallBags: 0, largeBags: 0 };
+          initialItems[coffee.id] = { 
+            smallBagsEspresso: '', 
+            smallBagsFilter: '', 
+            largeBags: '' 
+          };
         }
       });
       setOrderItems(initialItems);
@@ -69,27 +74,78 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
       console.warn('No valid coffee items available for ordering');
     }
   }, [open, coffeeItems]);
+
+  // Fetch pending orders data when dialog opens
+  useEffect(() => {
+    const fetchPendingOrdersData = async () => {
+      if (!open) return;
+      
+      try {
+        const response = await fetch('/api/retail/pending-orders-by-coffee');
+        if (!response.ok) {
+          console.error('Failed to fetch pending orders data');
+          return;
+        }
+        
+        const data = await response.json();
+        
+        // Convert to a map for easy lookup
+        const pendingMap = {};
+        data.forEach(item => {
+          pendingMap[item.coffeeId] = item;
+        });
+        
+        setPendingOrdersData(pendingMap);
+      } catch (error) {
+        console.error('Error fetching pending orders data:', error);
+      }
+    };
+
+    fetchPendingOrdersData();
+  }, [open]);
   
   // Calculate total quantity for a coffee item in kg
-  const calculateTotalQuantity = (smallBags, largeBags) => {
-    return (smallBags * 0.2) + (largeBags * 1.0);
+  const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, largeBags) => {
+    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + (largeBags * 1.0);
   };
   
   // Validate if the requested quantity is within available limits
-  const validateQuantity = (coffeeId, smallBags, largeBags) => {
+  const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, largeBags) => {
     const coffee = coffeeItems.find(c => c.id === coffeeId);
     if (!coffee) return true; // Can't validate if coffee not found
     
-    const requestedQuantity = calculateTotalQuantity(smallBags, largeBags);
-    const isValid = coffee.quantity >= requestedQuantity;
+    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, largeBags);
+    const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
+    const isValid = realTimeAvailable >= requestedQuantity;
     
     // Update validation errors
     setValidationErrors(prev => ({
       ...prev,
-      [coffeeId]: isValid ? null : `Exceeds available quantity (${coffee.quantity.toFixed(2)}kg)`
+      [coffeeId]: isValid ? null : `Exceeds available quantity (${realTimeAvailable.toFixed(2)}kg)`
     }));
     
     return isValid;
+  };
+
+  // Calculate real-time available quantity for a coffee considering current order inputs
+  const calculateRealTimeAvailableQuantity = (coffee) => {
+    if (!coffee || typeof coffee.quantity !== 'number') return 0;
+    
+    // Start with the original available quantity (after haircut)
+    let availableQuantity = coffee.quantity;
+    
+    // Subtract current order inputs from this dialog
+    const currentOrder = orderItems[coffee.id];
+    if (currentOrder) {
+      const espressoInput = parseInt(currentOrder.smallBagsEspresso) || 0;
+      const filterInput = parseInt(currentOrder.smallBagsFilter) || 0;
+      const largeBagsInput = parseInt(currentOrder.largeBags) || 0;
+      
+      const currentOrderQuantity = ((espressoInput + filterInput) * 0.2) + (largeBagsInput * 1.0);
+      availableQuantity -= currentOrderQuantity;
+    }
+    
+    return Math.max(0, availableQuantity); // Never go below 0
   };
 
   const handleQuantityChange = (coffeeId, field, value) => {
@@ -98,11 +154,10 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
       return;
     }
     
-    const numValue = parseInt(value) || 0;
-    const currentValues = orderItems[coffeeId] || { smallBags: 0, largeBags: 0 };
+    // Allow empty string or valid numbers
     const updatedValues = {
-      ...currentValues,
-      [field]: numValue
+      ...orderItems[coffeeId],
+      [field]: value
     };
     
     setOrderItems(prev => ({
@@ -110,11 +165,13 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
       [coffeeId]: updatedValues
     }));
     
+    // Only validate if we have actual numeric values
+    const espressoValue = parseInt(updatedValues.smallBagsEspresso) || 0;
+    const filterValue = parseInt(updatedValues.smallBagsFilter) || 0;
+    const largeBagsValue = parseInt(updatedValues.largeBags) || 0;
+    
     // Validate after updating
-    validateQuantity(coffeeId, 
-      field === 'smallBags' ? numValue : updatedValues.smallBags,
-      field === 'largeBags' ? numValue : updatedValues.largeBags
-    );
+    validateQuantity(coffeeId, espressoValue, filterValue, largeBagsValue);
   };
 
   const handleSubmit = async () => {
@@ -141,12 +198,16 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         .filter(([coffeeId, item]) => {
           // Validate that coffeeId exists and item is valid
           if (!coffeeId || !item) return false;
-          return (item.smallBags > 0 || item.largeBags > 0);
+          const espressoValue = parseInt(item.smallBagsEspresso) || 0;
+          const filterValue = parseInt(item.smallBagsFilter) || 0;
+          const largeBagsValue = parseInt(item.largeBags) || 0;
+          return (espressoValue > 0 || filterValue > 0 || largeBagsValue > 0);
         })
         .map(([coffeeId, item]) => ({
           coffeeId,
-          smallBags: item.smallBags || 0,
-          largeBags: item.largeBags || 0
+          smallBagsEspresso: parseInt(item.smallBagsEspresso) || 0,
+          smallBagsFilter: parseInt(item.smallBagsFilter) || 0,
+          largeBags: parseInt(item.largeBags) || 0
         }));
 
       if (items.length === 0) {
@@ -222,7 +283,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         <IconlessAlert severity="info" sx={{ mb: 3 }}>
           <Typography variant="subtitle2" gutterBottom>Order Information</Typography>
           <ul style={{ paddingLeft: '20px', margin: '0' }}>
-            <li>Small bags = 200g each (0.2kg)</li>
+            <li>Espresso bags = 200g each (0.2kg)</li>
+            <li>Filter bags = 200g each (0.2kg)</li>
             <li>Large bags = 1kg each</li>
             <li>Orders cannot exceed available coffee quantity</li>
             <li>Enter the number of bags you want to order</li>
@@ -261,58 +323,218 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         {!Array.isArray(coffeeItems) || coffeeItems.length === 0 ? (
           <IconlessAlert severity="info">No coffee available for ordering</IconlessAlert>
         ) : (
-          <TableContainer component={Paper} sx={{ mt: 2 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Coffee</TableCell>
-                  <TableCell>Available</TableCell>
-                  <TableCell>Small Bags (200g)</TableCell>
-                  <TableCell>Large Bags (1kg)</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {coffeeItems.map((coffee) => coffee && coffee.id ? (
-                  <TableRow key={coffee.id} hover>
-                    <TableCell>
-                      <strong>{coffee.name || 'Unknown'}</strong> 
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {coffee.grade ? coffee.grade.replace('_', ' ') : 'Unknown grade'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{typeof coffee.quantity === 'number' ? `${coffee.quantity.toFixed(2)} kg` : 'Unknown'}</TableCell>
-                    <TableCell>
-                      <TextField
-                        type="number"
-                        InputProps={{ inputProps: { min: 0 } }}
-                        value={orderItems[coffee.id]?.smallBags || 0}
-                        onChange={(e) => handleQuantityChange(coffee.id, 'smallBags', e.target.value)}
-                        size="small"
-                        fullWidth
-                        error={Boolean(validationErrors[coffee.id])}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        type="number"
-                        InputProps={{ inputProps: { min: 0 } }}
-                        value={orderItems[coffee.id]?.largeBags || 0}
-                        onChange={(e) => handleQuantityChange(coffee.id, 'largeBags', e.target.value)}
-                        size="small"
-                        fullWidth
-                        error={Boolean(validationErrors[coffee.id])}
-                      />
-                      {validationErrors[coffee.id] && (
-                        <Typography color="error" variant="caption" display="block" sx={{ mt: 1 }}>
-                          {validationErrors[coffee.id]}
-                        </Typography>
-                      )}
-                    </TableCell>
+          <>
+            <IconlessAlert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>Available Quantities</Typography>
+              <Typography variant="body2">
+                Available quantities shown are after applying a 15% haircut for processing losses. 
+                The actual green stock is higher than what's available for ordering.
+              </Typography>
+            </IconlessAlert>
+            
+            <TableContainer component={Paper} sx={{ mt: 2 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Coffee</TableCell>
+                    <TableCell>Available (After 15% Haircut)</TableCell>
+                    <TableCell>Pending Espresso Bags (All Shops)</TableCell>
+                    <TableCell>Pending Filter Bags (All Shops)</TableCell>
+                    <TableCell>Espresso Bags (200g)</TableCell>
+                    <TableCell>Filter Bags (200g)</TableCell>
+                    <TableCell>Large Bags (1kg)</TableCell>
                   </TableRow>
-                ) : null)}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {coffeeItems
+                    .filter(coffee => {
+                      // Only show coffees with available stock after haircut
+                      return coffee && coffee.quantity > 0;
+                    })
+                    .map((coffee) => {
+                    if (!coffee || !coffee.id) return null;
+                    
+                    const pendingData = pendingOrdersData[coffee.id];
+                    const pendingEspressoBags = pendingData ? pendingData.totalEspressoBags : 0;
+                    const pendingFilterBags = pendingData ? pendingData.totalFilterBags : 0;
+                    
+                    // Calculate real-time available quantity
+                    const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
+                    
+                    return (
+                      <TableRow key={coffee.id} hover>
+                        <TableCell>
+                          <strong>{coffee.name || 'Unknown'}</strong> 
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {coffee.grade ? coffee.grade.replace('_', ' ') : 'Unknown grade'}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                            {coffee.isEspresso && (
+                              <Chip 
+                                label="E" 
+                                size="small" 
+                                sx={{ 
+                                  backgroundColor: '#fff3e0', 
+                                  color: '#e65100',
+                                  fontSize: '0.7rem',
+                                  height: '20px'
+                                }} 
+                              />
+                            )}
+                            {coffee.isFilter && (
+                              <Chip 
+                                label="F" 
+                                size="small" 
+                                sx={{ 
+                                  backgroundColor: '#e3f2fd', 
+                                  color: '#1565c0',
+                                  fontSize: '0.7rem',
+                                  height: '20px'
+                                }} 
+                              />
+                            )}
+                            {coffee.isSignature && (
+                              <Chip 
+                                label="S" 
+                                size="small" 
+                                sx={{ 
+                                  backgroundColor: '#f3e5f5', 
+                                  color: '#7b1fa2',
+                                  fontSize: '0.7rem',
+                                  height: '20px'
+                                }} 
+                              />
+                            )}
+                          </Box>
+                          {coffee.originalQuantity && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Green stock: {coffee.originalQuantity.toFixed(2)} kg
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Typography 
+                            sx={{ 
+                              fontWeight: 'bold',
+                              color: realTimeAvailable <= 0 ? 'error.main' : 'text.primary'
+                            }}
+                          >
+                            {realTimeAvailable.toFixed(2)} kg
+                          </Typography>
+                          {coffee.haircutAmount && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              (-{coffee.haircutAmount.toFixed(2)} kg haircut)
+                            </Typography>
+                          )}
+                          {realTimeAvailable !== coffee.quantity && (
+                            <Typography variant="caption" color="warning.main" display="block">
+                              ({(coffee.quantity - realTimeAvailable).toFixed(2)} kg in current order)
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {pendingEspressoBags > 0 ? (
+                            <Box>
+                              <Typography variant="body2" color="warning.main" fontWeight="bold">
+                                {pendingEspressoBags} bags ({(pendingEspressoBags * 0.2).toFixed(1)}kg)
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                in {pendingData.orderCount} pending order{pendingData.orderCount !== 1 ? 's' : ''}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              No pending orders
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {pendingFilterBags > 0 ? (
+                            <Box>
+                              <Typography variant="body2" color="warning.main" fontWeight="bold">
+                                {pendingFilterBags} bags ({(pendingFilterBags * 0.2).toFixed(1)}kg)
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                in {pendingData.orderCount} pending order{pendingData.orderCount !== 1 ? 's' : ''}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              No pending orders
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            InputProps={{ inputProps: { min: 0 } }}
+                            value={orderItems[coffee.id]?.smallBagsEspresso || ''}
+                            placeholder="0"
+                            onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsEspresso', e.target.value)}
+                            size="small"
+                            fullWidth
+                            error={Boolean(validationErrors[coffee.id])}
+                            sx={{
+                              '& .MuiInputBase-input::placeholder': {
+                                color: '#bbb',
+                                opacity: 1
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            InputProps={{ inputProps: { min: 0 } }}
+                            value={orderItems[coffee.id]?.smallBagsFilter || ''}
+                            placeholder="0"
+                            onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsFilter', e.target.value)}
+                            size="small"
+                            fullWidth
+                            error={Boolean(validationErrors[coffee.id])}
+                            sx={{
+                              '& .MuiInputBase-input::placeholder': {
+                                color: '#bbb',
+                                opacity: 1
+                              }
+                            }}
+                          />
+                          {validationErrors[coffee.id] && (
+                            <Typography color="error" variant="caption" display="block" sx={{ mt: 1 }}>
+                              {validationErrors[coffee.id]}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            InputProps={{ inputProps: { min: 0 } }}
+                            value={orderItems[coffee.id]?.largeBags || ''}
+                            placeholder="0"
+                            onChange={(e) => handleQuantityChange(coffee.id, 'largeBags', e.target.value)}
+                            size="small"
+                            fullWidth
+                            error={Boolean(validationErrors[coffee.id])}
+                            sx={{
+                              '& .MuiInputBase-input::placeholder': {
+                                color: '#bbb',
+                                opacity: 1
+                              }
+                            }}
+                          />
+                          {validationErrors[coffee.id] && (
+                            <Typography color="error" variant="caption" display="block" sx={{ mt: 1 }}>
+                              {validationErrors[coffee.id]}
+                            </Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
         )}
       </DialogContent>
       <DialogActions sx={{ borderTop: '1px solid #eee', pt: 2, pb: 2 }}>
@@ -642,7 +864,7 @@ function StockLevelAlert({ inventory, shopMinQuantities, coffeeCount }) {
   
   // Calculate percentage thresholds: below 75% is low, below 50% is critical
   const smallBagsPercentage = perCoffeeMinSmall > 0 ? 
-                             (inventory.smallBags / perCoffeeMinSmall) * 100 : 100;
+                             (inventory.smallBagsEspresso / perCoffeeMinSmall) * 100 : 100;
   
   // Determine if stock is low (below 75%) or critical (below 50%)
   const isSmallBagsLow = perCoffeeMinSmall > 0 && smallBagsPercentage < 75 && smallBagsPercentage >= 50;
@@ -1033,7 +1255,7 @@ export default function RetailOrders() {
     const fetchAvailableCoffee = async () => {
       try {
         console.log('Fetching available coffee');
-        const coffeeResponse = await fetch('/api/retail/available-coffee');
+        const coffeeResponse = await fetch(`/api/retail/available-coffee?shopId=${selectedShop}`);
         if (!coffeeResponse.ok) {
           throw new Error(`Failed to fetch available coffee (${coffeeResponse.status})`);
         }
@@ -1042,13 +1264,12 @@ export default function RetailOrders() {
           const coffeeData = await coffeeResponse.json();
           console.log('Available coffee API response:', coffeeData);
           
-          if (!coffeeData || typeof coffeeData !== 'object') {
+          if (!coffeeData || !Array.isArray(coffeeData)) {
             console.error('Invalid coffee data format:', coffeeData);
             setAvailableCoffee([]);
           } else {
-            const flatCoffee = Object.values(coffeeData).flat().filter(Boolean);
-            console.log('Processed coffee:', flatCoffee);
-            setAvailableCoffee(Array.isArray(flatCoffee) ? flatCoffee : []);
+            console.log('Processed coffee:', coffeeData);
+            setAvailableCoffee(coffeeData);
           }
         } catch (jsonError) {
           console.error('Error parsing coffee JSON:', jsonError);
@@ -1061,7 +1282,7 @@ export default function RetailOrders() {
     };
     
     fetchAvailableCoffee();
-  }, []);
+  }, [selectedShop]);
 
   // Process orders to check for pending orders and recent changes
   useEffect(() => {
@@ -1564,7 +1785,8 @@ export default function RetailOrders() {
                           Shop Minimum Inventory Requirements
                         </Typography>
                         <Typography variant="body2">
-                          Small bags: {selectedShopDetails.minCoffeeQuantitySmall} |
+                          Espresso bags: {selectedShopDetails.minCoffeeQuantityEspresso} |
+                          Filter bags: {selectedShopDetails.minCoffeeQuantityFilter} |
                           Large bags: {selectedShopDetails.minCoffeeQuantityLarge} 
                         </Typography>
                       </IconlessAlert>
@@ -1579,9 +1801,9 @@ export default function RetailOrders() {
                             )}
                             <TableCell>Coffee</TableCell>
                             <TableCell>Grade</TableCell>
-                            <TableCell align="right">Small Bags (200g)</TableCell>
+                            <TableCell align="right">Espresso Bags (200g)</TableCell>
+                            <TableCell align="right">Filter Bags (200g)</TableCell>
                             <TableCell align="right">Large Bags (1kg)</TableCell>
-                            <TableCell align="right">Total Quantity (kg)</TableCell>
                             <TableCell>Last Order Date</TableCell>
                             <TableCell>Stock Status</TableCell>
                           </TableRow>
@@ -1593,24 +1815,33 @@ export default function RetailOrders() {
                             const numberOfCoffees = availableCoffee.length || 1; // Use actual coffee count with fallback to 1
                             
                             // Calculate per-coffee minimums for small bags only
-                            const perCoffeeMinSmall = selectedShopDetails?.minCoffeeQuantitySmall > 0 ?
-                                                     selectedShopDetails.minCoffeeQuantitySmall / numberOfCoffees : 0;
+                            const perCoffeeMinEspresso = selectedShopDetails?.minCoffeeQuantityEspresso > 0 ?
+                                                     selectedShopDetails.minCoffeeQuantityEspresso / numberOfCoffees : 0;
+                            
+                            const perCoffeeMinFilter = selectedShopDetails?.minCoffeeQuantityFilter > 0 ?
+                                                     selectedShopDetails.minCoffeeQuantityFilter / numberOfCoffees : 0;
                             
                             // Calculate percentage thresholds for small bags only
-                            const smallBagsPercentage = perCoffeeMinSmall > 0 ? 
-                                                       (item.smallBags / perCoffeeMinSmall) * 100 : 100;
+                            const espressoBagsPercentage = perCoffeeMinEspresso > 0 ? 
+                                                       (item.smallBagsEspresso / perCoffeeMinEspresso) * 100 : 100;
+                            
+                            const filterBagsPercentage = perCoffeeMinFilter > 0 ? 
+                                                       (item.smallBagsFilter / perCoffeeMinFilter) * 100 : 100;
                             
                             // Determine if small bags stock is low (below 75%) or critical (below 50%)
-                            const isSmallBagsLow = perCoffeeMinSmall > 0 && smallBagsPercentage < 75 && smallBagsPercentage >= 50;
-                            const isSmallBagsCritical = perCoffeeMinSmall > 0 && smallBagsPercentage < 50;
+                            const isEspressoBagsLow = perCoffeeMinEspresso > 0 && espressoBagsPercentage < 75 && espressoBagsPercentage >= 50;
+                            const isEspressoBagsCritical = perCoffeeMinEspresso > 0 && espressoBagsPercentage < 50;
+                            
+                            const isFilterBagsLow = perCoffeeMinFilter > 0 && filterBagsPercentage < 75 && filterBagsPercentage >= 50;
+                            const isFilterBagsCritical = perCoffeeMinFilter > 0 && filterBagsPercentage < 50;
                             
                             // Determine row background color based only on small bags status
-                            const isCritical = isSmallBagsCritical;
-                            const isWarning = isSmallBagsLow && !isCritical;
+                            const isCritical = isEspressoBagsCritical || isFilterBagsCritical;
+                            const isWarning = (isEspressoBagsLow || isFilterBagsLow) && !isCritical;
                             const rowBgColor = isCritical 
-                              ? '#fff8f8' // light red for critical
+                              ? '#fff8f8' // light red for critical bags
                               : isWarning 
-                                ? '#fffaf0' // light orange/yellow for warning
+                                ? '#fffaf0' // light orange/yellow for warning bags
                                 : 'inherit'; // default for normal stock
                             
                             return (
@@ -1645,9 +1876,9 @@ export default function RetailOrders() {
                                   <strong>{item.coffee?.name || 'Unknown'}</strong>
                                 </TableCell>
                                 <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
-                                <TableCell align="right">{item.smallBags ? item.smallBags.toFixed(2) : '0.00'}</TableCell>
+                                <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
+                                <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
                                 <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
-                                <TableCell align="right">{item.totalQuantity ? item.totalQuantity.toFixed(2) : '0.00'} kg</TableCell>
                                 <TableCell>
                                   {item.lastOrderDate
                                     ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
@@ -1681,13 +1912,13 @@ export default function RetailOrders() {
                                 <Typography variant="subtitle2">TOTAL</Typography>
                               </TableCell>
                               <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.smallBags || 0), 0)}
+                                {inventory.reduce((sum, item) => sum + (item.smallBagsEspresso || 0), 0)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {inventory.reduce((sum, item) => sum + (item.smallBagsFilter || 0), 0)}
                               </TableCell>
                               <TableCell align="right">
                                 {inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0)}
-                              </TableCell>
-                              <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
                               </TableCell>
                               <TableCell colSpan={2} />
                             </TableRow>
@@ -1726,7 +1957,8 @@ export default function RetailOrders() {
                                 <TableRow>
                                   <TableCell>Date</TableCell>
                                   <TableCell>Alert Type</TableCell>
-                                  <TableCell>Small Bags</TableCell>
+                                  <TableCell>Espresso Bags</TableCell>
+                                  <TableCell>Filter Bags</TableCell>
                                   <TableCell>Large Bags</TableCell>
                                   <TableCell>Emails Sent</TableCell>
                                 </TableRow>
@@ -1743,8 +1975,12 @@ export default function RetailOrders() {
                                       />
                                     </TableCell>
                                     <TableCell>
-                                      {log.totalSmallBags} / {log.minSmallBags} 
-                                      ({Math.round(log.smallBagsPercentage)}%)
+                                      {log.totalEspressoBags} / {log.minEspressoBags} 
+                                      ({Math.round(log.espressoBagsPercentage)}%)
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.totalFilterBags} / {log.minFilterBags}
+                                      ({Math.round(log.filterBagsPercentage)}%)
                                     </TableCell>
                                     <TableCell>
                                       {log.totalLargeBags} / {log.minLargeBags}
@@ -1844,7 +2080,9 @@ export default function RetailOrders() {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="caption">
-                                  Small bags: {item.changes?.previousValues?.smallBags || 0} → {item.changes?.newValues?.smallBags || 0}
+                                  Espresso bags: {item.changes?.previousValues?.smallBagsEspresso || 0} → {item.changes?.newValues?.smallBagsEspresso || 0}
+                                  <br />
+                                  Filter bags: {item.changes?.previousValues?.smallBagsFilter || 0} → {item.changes?.newValues?.smallBagsFilter || 0}
                                   <br />
                                   Large bags: {item.changes?.previousValues?.largeBags || 0} → {item.changes?.newValues?.largeBags || 0}
                                 </Typography>
@@ -1973,7 +2211,8 @@ export default function RetailOrders() {
                                           <TableRow>
                                             <TableCell>Coffee</TableCell>
                                             <TableCell>Grade</TableCell>
-                                            <TableCell align="right">Small Bags (200g)</TableCell>
+                                            <TableCell align="right">Espresso Bags (200g)</TableCell>
+                                            <TableCell align="right">Filter Bags (200g)</TableCell>
                                             <TableCell align="right">Large Bags (1kg)</TableCell>
                                             <TableCell align="right">Total Quantity</TableCell>
                                           </TableRow>
@@ -1987,7 +2226,8 @@ export default function RetailOrders() {
                                               <TableCell>
                                                 {item.coffee?.grade?.replace('_', ' ') || 'Unknown'}
                                               </TableCell>
-                                              <TableCell align="right">{item.smallBags ? item.smallBags.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.totalQuantity?.toFixed(2) || '0.00'} kg</TableCell>
                                             </TableRow>

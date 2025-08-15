@@ -17,6 +17,9 @@ export default function CreateCoffeePage() {
     grade: 'SPECIALTY',
     quantity: '0',
     price: '',
+    isEspresso: false,
+    isFilter: false,
+    isSignature: false,
   });
   
   const [loading, setLoading] = useState(false);
@@ -47,10 +50,10 @@ export default function CreateCoffeePage() {
 
   // Handle input changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -66,8 +69,12 @@ export default function CreateCoffeePage() {
         grade: formData.grade,
         country: formData.origin,
         producer: formData.roaster,
+        process: formData.process,
         notes: formData.notes,
-        quantity: parseFloat(formData.quantity) || 0
+        quantity: parseFloat(formData.quantity) || 0,
+        isEspresso: formData.isEspresso,
+        isFilter: formData.isFilter,
+        isSignature: formData.isSignature
       };
       
       // Only include price if user has permission
@@ -193,6 +200,48 @@ export default function CreateCoffeePage() {
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded"
               />
+            </div>
+
+            {/* Brewing Methods */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Brewing Methods *
+              </label>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="isEspresso"
+                    checked={formData.isEspresso}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Espresso (E)</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="isFilter"
+                    checked={formData.isFilter}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Filter (F)</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="isSignature"
+                    checked={formData.isSignature}
+                    onChange={handleChange}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Signature (S)</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                At least one brewing method (Espresso or Filter) is required. Signature is optional.
+              </p>
             </div>
 
             {/* Initial Quantity */}

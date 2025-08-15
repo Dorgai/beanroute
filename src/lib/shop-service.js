@@ -42,17 +42,20 @@ export async function getShops(page = 1, limit = 10, search = '') {
     console.log(`Retrieved ${shops.length} shops`);
     
     // Get creator info separately to avoid schema issues
-    const creatorIds = [...new Set(shops.map(shop => shop.createdById))];
+    const creatorIds = [...new Set(shops.map(shop => shop.createdById).filter(Boolean))];
     let creators = [];
-    
-    try {
-      creators = await prisma.user.findMany({
-        where: { id: { in: creatorIds } },
-        select: { id: true, username: true }
-      });
-      console.log(`Retrieved ${creators.length} creators`);
-    } catch (creatorError) {
-      console.error('Error fetching shop creators:', creatorError);
+    if (creatorIds.length > 0) {
+      try {
+        creators = await prisma.user.findMany({
+          where: { id: { in: creatorIds } },
+          select: { id: true, username: true }
+        });
+        console.log(`Retrieved ${creators.length} creators`);
+      } catch (creatorError) {
+        console.error('Error fetching shop creators:', creatorError);
+      }
+    } else {
+      console.log('No creatorIds found to fetch creators.');
     }
     
     // Map creator info to shops
@@ -60,7 +63,7 @@ export async function getShops(page = 1, limit = 10, search = '') {
       const creator = creators.find(c => c.id === shop.createdById);
       return {
         ...shop,
-        createdBy: creator || { id: shop.createdById, username: 'Unknown' }
+        createdBy: creator || { id: shop.createdById || 'unknown', username: 'Unknown' }
       };
     });
     

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext.js';
+import MessageBoard from './MessageBoard';
 
 // Component to fetch and display coffee inventory
 function CoffeeInventory() {
@@ -127,6 +128,7 @@ export default function Layout({ children }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -135,6 +137,20 @@ export default function Layout({ children }) {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+
+  // Close admin dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (adminDropdownOpen && !event.target.closest('.admin-dropdown')) {
+        setAdminDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [adminDropdownOpen]);
 
   if (loading) {
     return (
@@ -162,6 +178,12 @@ export default function Layout({ children }) {
     { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER'] },
     { href: '/orders', label: 'Retail', roles: [] }, // Available to all
     { href: '/analytics', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+  ];
+
+  // Admin submenu items
+  const adminLinks = [
+    { href: '/admin/inventory-alerts', label: 'Inventory Alerts', roles: ['ADMIN', 'OWNER'] },
+    { href: '/admin/order-email-notifications', label: 'Order Email Notifications', roles: ['ADMIN', 'OWNER'] },
   ];
 
   return (
@@ -201,6 +223,43 @@ export default function Layout({ children }) {
                   }
                   return null;
                 })}
+                
+                {/* Admin Dropdown */}
+                {user && ['ADMIN', 'OWNER'].includes(user.role) && (
+                  <div className="relative admin-dropdown">
+                    <button
+                      onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
+                      className={`text-sm font-normal text-gray-500 hover:text-gray-900 flex items-center ${router.pathname.startsWith('/admin') ? 'font-medium text-gray-900' : ''}`}
+                    >
+                      Admin
+                      <svg 
+                        className={`ml-1 h-4 w-4 transform transition-transform ${adminDropdownOpen ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {adminDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                        <div className="py-1">
+                          {adminLinks.map((adminLink) => (
+                            <Link 
+                              key={adminLink.href}
+                              href={adminLink.href}
+                              className={`block px-4 py-2 text-sm hover:bg-gray-100 ${router.pathname === adminLink.href ? 'font-medium text-gray-900 bg-gray-50' : 'text-gray-700'}`}
+                              onClick={() => setAdminDropdownOpen(false)}
+                            >
+                              {adminLink.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </nav>
             </div>
             
@@ -261,6 +320,31 @@ export default function Layout({ children }) {
                   }
                   return null;
                 })}
+
+                {/* Admin Section for Mobile */}
+                {user && ['ADMIN', 'OWNER'].includes(user.role) && (
+                  <>
+                    <div className="border-t border-gray-200 pt-2 mt-2">
+                      <div className="px-3 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Admin
+                      </div>
+                      {adminLinks.map((adminLink) => (
+                        <Link 
+                          key={adminLink.href}
+                          href={adminLink.href}
+                          className={`block px-3 py-2 rounded-md text-sm ${
+                            router.pathname === adminLink.href 
+                              ? 'font-medium bg-gray-100' 
+                              : 'font-normal text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                          }`}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {adminLink.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                )}
                 
                 {/* Mobile user info and logout */}
                 <div className="border-t border-gray-200 pt-3 mt-2">
@@ -299,6 +383,9 @@ export default function Layout({ children }) {
           {children}
         </div>
       </main>
+
+      {/* Message Board - only show for authenticated users */}
+      {user && <MessageBoard />}
     </div>
   );
 } 

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { verifyRequestAndGetUser } from '@/lib/auth';
+import orderEmailService from '@/lib/order-email-service';
 
 export default async function handler(req, res) {
   console.log(`[update-order-status] Handling ${req.method} request`);
@@ -292,6 +293,26 @@ export default async function handler(req, res) {
         error: 'Failed to update order status in the database',
         details: dbError.message
       });
+    }
+
+    // Send email notifications for status change
+    console.log(`[update-order-status] Sending email notifications for status change from ${existingOrder.status} to ${status}`);
+    try {
+      const emailResult = await orderEmailService.sendOrderStatusChangeNotification(
+        orderId, 
+        existingOrder.status, 
+        status, 
+        user.id
+      );
+      
+      if (emailResult.success) {
+        console.log(`[update-order-status] Email notifications sent successfully: ${emailResult.message}`);
+      } else {
+        console.log(`[update-order-status] Email notifications not sent: ${emailResult.error || emailResult.message}`);
+      }
+    } catch (emailError) {
+      // Don't fail the entire operation if email sending fails
+      console.error('[update-order-status] Error sending email notifications:', emailError);
     }
 
     // Success! Return the updated order with minimal data

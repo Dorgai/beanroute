@@ -43,5 +43,21 @@ echo "🚀 Deploying to Railway service: $SERVICE_NAME..."
 railway up --service "$SERVICE_NAME"
 
 echo "✅ Deployment initiated successfully!"
-echo "📊 View deployment status: railway status"
-echo "📝 View logs: railway logs --service $SERVICE_NAME" 
+
+# Check if email environment variables are set in Railway
+echo "🔍 Checking email configuration..."
+railway run "echo 'EMAIL_USER: '\$EMAIL_USER; echo 'EMAIL_FROM: '\$EMAIL_FROM" 2>/dev/null | grep -q "EMAIL_USER:" && {
+    echo "✅ Email environment variables are configured"
+} || {
+    echo "⚠️  WARNING: Email environment variables may not be set!"
+    echo "📧 Don't forget to set EMAIL_USER, EMAIL_PASSWORD, and EMAIL_FROM in Railway dashboard"
+    echo "📚 See RAILWAY_PRODUCTION_DEPLOYMENT.md for details"
+}
+
+echo ""
+echo "🎯 Next Steps:"
+echo "1. 📊 View deployment status: railway status"
+echo "2. 📝 View logs: railway logs --service $SERVICE_NAME"
+echo "3. 🗄️  Apply database migration (see RAILWAY_PRODUCTION_DEPLOYMENT.md)"
+echo "4. 🧪 Test email system: https://your-app.railway.app/admin/order-email-notifications"
+echo "5. 📧 Create your first email notification rule" 

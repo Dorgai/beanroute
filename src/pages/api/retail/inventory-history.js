@@ -89,6 +89,8 @@ export default async function handler(req, res) {
             select: {
               id: true,
               smallBags: true,
+              smallBagsEspresso: true,
+              smallBagsFilter: true,
               largeBags: true,
               totalQuantity: true,
               coffee: {

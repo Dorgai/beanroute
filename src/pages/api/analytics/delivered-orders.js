@@ -77,9 +77,30 @@ export default async function handler(req, res) {
     const groupedData = {};
     
     // Initialize the object with all coffee grades
-    groupedData['SPECIALTY'] = { grade: 'Specialty', smallBags: 0, largeBags: 0, orderCount: 0 };
-    groupedData['PREMIUM'] = { grade: 'Premium', smallBags: 0, largeBags: 0, orderCount: 0 };
-    groupedData['RARITY'] = { grade: 'Rarity', smallBags: 0, largeBags: 0, orderCount: 0 };
+    groupedData['SPECIALTY'] = { 
+      grade: 'Specialty', 
+      smallBags: 0, 
+      smallBagsEspresso: 0, 
+      smallBagsFilter: 0, 
+      largeBags: 0, 
+      orderCount: 0 
+    };
+    groupedData['PREMIUM'] = { 
+      grade: 'Premium', 
+      smallBags: 0, 
+      smallBagsEspresso: 0, 
+      smallBagsFilter: 0, 
+      largeBags: 0, 
+      orderCount: 0 
+    };
+    groupedData['RARITY'] = { 
+      grade: 'Rarity', 
+      smallBags: 0, 
+      smallBagsEspresso: 0, 
+      smallBagsFilter: 0, 
+      largeBags: 0, 
+      orderCount: 0 
+    };
     
     // Process orders
     deliveredOrders.forEach(order => {
@@ -87,7 +108,14 @@ export default async function handler(req, res) {
       order.items.forEach(item => {
         const grade = item.coffee.grade;
         if (groupedData[grade]) {
-          groupedData[grade].smallBags += item.smallBags;
+          // For backward compatibility, use smallBags if available, otherwise sum espresso + filter
+          const totalSmallBags = item.smallBags || (item.smallBagsEspresso + item.smallBagsFilter);
+          const espressoBags = item.smallBagsEspresso || 0;
+          const filterBags = item.smallBagsFilter || 0;
+          
+          groupedData[grade].smallBags += totalSmallBags;
+          groupedData[grade].smallBagsEspresso += espressoBags;
+          groupedData[grade].smallBagsFilter += filterBags;
           groupedData[grade].largeBags += item.largeBags;
           groupedData[grade].orderCount += 1;
         }

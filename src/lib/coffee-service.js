@@ -28,13 +28,13 @@ export async function getAllCoffee({ page = 1, pageSize = null, search = '', gro
   // If sorting by grade and stock, add those to the orderBy
   if (sortByStock) {
     // First by grade in custom order (SPECIALTY, PREMIUM, RARITY)
-    // Then by stock status (in stock first, then out of stock)
+    // Then by stock quantity in descending order (largest first)
     orderBy.push(
       {
         grade: 'asc', // We'll handle custom ordering in frontend
       },
       {
-        quantity: 'desc', // Higher quantities first
+        quantity: 'desc', // Higher quantities first (largest stock on top)
       }
     );
   } else {
@@ -81,17 +81,26 @@ export async function getAllCoffee({ page = 1, pageSize = null, search = '', gro
       return acc;
     }, {});
     
-    // Sort each group by stock status if requested
+    // Sort each group by stock quantity in descending order if requested
     if (sortByStock) {
       Object.keys(groupedCoffee).forEach(grade => {
         groupedCoffee[grade].sort((a, b) => {
-          // Sort by stock status (in stock first)
-          if ((a.quantity > 0) !== (b.quantity > 0)) {
-            return a.quantity > 0 ? -1 : 1;
+          // Sort by quantity in descending order (largest stock first)
+          const quantityA = a.quantity || 0;
+          const quantityB = b.quantity || 0;
+          
+          if (quantityA !== quantityB) {
+            return quantityB - quantityA; // Descending order
           }
-          // If same stock status, sort by name
+          
+          // If same quantity, sort by name alphabetically
           return a.name.localeCompare(b.name);
         });
+      });
+    } else {
+      // Default sorting by name within each grade
+      Object.keys(groupedCoffee).forEach(grade => {
+        groupedCoffee[grade].sort((a, b) => a.name.localeCompare(b.name));
       });
     }
 
@@ -172,6 +181,11 @@ export async function createCoffee(data) {
     throw new Error('Coffee with this name already exists');
   }
   
+  // Validate that at least one brewing method is selected
+  if (!data.isEspresso && !data.isFilter) {
+    throw new Error('At least one brewing method (Espresso or Filter) must be selected');
+  }
+  
   // Prepare the coffee data
   const coffeeData = {
     name: data.name,
@@ -179,7 +193,11 @@ export async function createCoffee(data) {
     quantity: data.quantity || 0,
     country: data.origin || data.country || '',
     producer: data.roaster || data.producer || '',
+    process: data.process || '',
     notes: data.notes || '',
+    isEspresso: data.isEspresso || false,
+    isFilter: data.isFilter || false,
+    isSignature: data.isSignature || false,
     createdById: data.createdBy || data.createdById
   };
   
@@ -240,15 +258,37 @@ export async function updateCoffee(id, data) {
     }
   }
   
+  // Validate that at least one brewing method is selected if brewing methods are being updated
+  if ('isEspresso' in data || 'isFilter' in data) {
+    const newIsEspresso = 'isEspresso' in data ? data.isEspresso : coffee.isEspresso;
+    const newIsFilter = 'isFilter' in data ? data.isFilter : coffee.isFilter;
+    
+    if (!newIsEspresso && !newIsFilter) {
+      throw new Error('At least one brewing method (Espresso or Filter) must be selected');
+    }
+  }
+  
   // Prepare update data
   const updateData = {
     name: data.name,
     grade: data.grade || coffee.grade,
     country: data.origin || coffee.country,
     producer: data.roaster || coffee.producer,
+    process: data.process || coffee.process,
     notes: data.notes || coffee.notes,
     updatedAt: new Date()
   };
+  
+  // Add brewing method fields if provided
+  if ('isEspresso' in data) {
+    updateData.isEspresso = data.isEspresso;
+  }
+  if ('isFilter' in data) {
+    updateData.isFilter = data.isFilter;
+  }
+  if ('isSignature' in data) {
+    updateData.isSignature = data.isSignature;
+  }
   
   // Only update price if it's explicitly provided in the data
   if ('price' in data) {

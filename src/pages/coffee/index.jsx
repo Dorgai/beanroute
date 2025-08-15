@@ -9,6 +9,8 @@ export default function CoffeeListPage() {
   const { user } = useAuth();
   const [coffeeList, setCoffeeList] = useState([]);
   const [groupedCoffee, setGroupedCoffee] = useState({});
+  const [zeroStockCoffee, setZeroStockCoffee] = useState([]);
+  const [stockSummaries, setStockSummaries] = useState({});
   const [isGrouped, setIsGrouped] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,13 +29,22 @@ export default function CoffeeListPage() {
       
       if (data.grouped) {
         setIsGrouped(true);
-        setGroupedCoffee(data.coffee);
+        
+        // Separate zero-stock coffees and calculate summaries
+        const { groupedWithStock, zeroStock, summaries } = processCoffeeData(data.coffee);
+        
+        setGroupedCoffee(groupedWithStock);
+        setZeroStockCoffee(zeroStock);
+        setStockSummaries(summaries);
+        
         // Create a flat list for fallback
-        const flatList = Object.values(data.coffee).flat();
+        const flatList = Object.values(groupedWithStock).flat();
         setCoffeeList(flatList);
       } else {
         setIsGrouped(false);
         setCoffeeList(data.coffee);
+        setZeroStockCoffee([]);
+        setStockSummaries({});
       }
     } catch (err) {
       console.error('Error fetching coffee:', err);
@@ -41,6 +52,38 @@ export default function CoffeeListPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to process coffee data and separate zero-stock items
+  const processCoffeeData = (groupedData) => {
+    const groupedWithStock = {};
+    const zeroStock = [];
+    const summaries = {};
+
+    Object.entries(groupedData).forEach(([grade, coffees]) => {
+      const stockCoffees = [];
+      let totalStock = 0;
+
+      coffees.forEach(coffee => {
+        const stock = coffee.quantity || 0;
+        if (stock > 0) {
+          stockCoffees.push(coffee);
+          totalStock += stock;
+        } else {
+          zeroStock.push({ ...coffee, grade });
+        }
+      });
+
+      if (stockCoffees.length > 0) {
+        groupedWithStock[grade] = stockCoffees;
+        summaries[grade] = {
+          count: stockCoffees.length,
+          totalStock: totalStock.toFixed(2)
+        };
+      }
+    });
+
+    return { groupedWithStock, zeroStock, summaries };
   };
 
   // Initial fetch
@@ -139,64 +182,74 @@ export default function CoffeeListPage() {
 
   // Render coffee table rows
   const renderCoffeeRow = (coffee, isLastInSection = false) => (
-    <tr key={coffee.id} className={`hover:bg-gray-50 ${coffee.quantity <= 0 ? 'bg-gray-50' : ''} ${isLastInSection ? 'border-b-2 border-gray-300' : ''}`}>
+    <tr key={coffee.id} className="hover:bg-gray-50">
       {canManageCoffee && (
-        <td className="px-4 py-2 whitespace-nowrap text-left text-sm">
-          <div className="flex space-x-2">
-            <Link
-              href={`/coffee/${coffee.id}`}
-              className="text-blue-600 hover:text-blue-800"
-              title="View details"
-            >
-              View
+        <td className="px-4 py-2 whitespace-nowrap">
+          <div className="flex space-x-1">
+            <Link href={`/coffee/${coffee.id}`} className="text-emerald-600 hover:text-emerald-800">
+              <FiEdit2 className="w-4 h-4" />
             </Link>
-            <Link
-              href={`/coffee/${coffee.id}`}
-              className="text-indigo-600 hover:text-indigo-800"
-              title="Update inventory"
+            <button
+              onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
+              className="text-red-600 hover:text-red-800"
             >
-              Inventory
-            </Link>
-            {canAddCoffee && (
-              <>
-                <Link
-                  href={`/coffee/edit/${coffee.id}`}
-                  className="text-indigo-600 hover:text-indigo-800"
-                  title="Edit coffee"
-                >
-                  <FiEdit2 className="inline" />
-                </Link>
-                <button
-                  onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
-                  className="text-red-600 hover:text-red-800"
-                  title="Delete coffee"
-                >
-                  <FiTrash2 className="inline" />
-                </button>
-              </>
-            )}
+              <FiTrash2 className="w-4 h-4" />
+            </button>
           </div>
         </td>
       )}
-      <td className="px-4 py-2 whitespace-nowrap">
-        <div className="text-sm font-medium text-gray-900">{coffee.name}</div>
-      </td>
-      <td className="px-4 py-2 whitespace-nowrap">
-        <div className={`text-sm ${coffee.quantity > 0 ? 'text-green-600 font-medium' : 'text-red-500'}`}>
-          {coffee.quantity > 0 ? `${parseFloat(coffee.quantity).toFixed(2)} kg` : 'Out of stock'}
+      <td className="px-4 py-2">
+        <div>
+          <div className="font-medium text-gray-900">{coffee.name}</div>
+          {coffee.country && (
+            <div className="text-sm text-gray-500">{coffee.country}</div>
+          )}
         </div>
       </td>
       <td className="px-4 py-2 whitespace-nowrap">
-        <div className="text-sm text-gray-500">{formatGrade(coffee.grade)}</div>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          coffee.quantity > 0 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {coffee.quantity.toFixed(2)} kg
+        </span>
       </td>
       <td className="px-4 py-2 whitespace-nowrap">
-        <div className="text-sm text-gray-500">{coffee.process || '-'}</div>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeHeaderColor(coffee.grade)}`}>
+          {formatGrade(coffee.grade)}
+        </span>
       </td>
       <td className="px-4 py-2 whitespace-nowrap">
-        <div className="text-sm text-gray-500">{coffee.producer || '-'}</div>
+        <div className="flex space-x-1">
+          {coffee.isEspresso && (
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
+              E
+            </span>
+          )}
+          {coffee.isFilter && (
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+              F
+            </span>
+          )}
+          {coffee.isSignature && (
+            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+              S
+            </span>
+          )}
+          {!coffee.isEspresso && !coffee.isFilter && !coffee.isSignature && (
+            <span className="text-gray-400 text-xs">Not set</span>
+          )}
+        </div>
       </td>
-      <td className="px-4 py-2 whitespace-nowrap">
-        <div className="text-sm text-gray-500">{coffee.country || '-'}</div>
+      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+        {coffee.producer || '-'}
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+        {coffee.process || '-'}
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+        {coffee.country || '-'}
       </td>
       {canSeePrice && (
         <td className="px-4 py-2 whitespace-nowrap">
@@ -210,22 +263,30 @@ export default function CoffeeListPage() {
 
   // Render grade headers and coffee items
   const renderGradeSections = () => {
-    return Object.entries(groupedCoffee).map(([grade, coffees], gradeIndex) => (
-      <>
-        {/* Grade header row */}
-        <tr key={`header-${grade}`} className={`${getGradeHeaderColor(grade)}`}>
-          <td 
-            colSpan={canSeePrice ? 8 : 7} 
-            className="px-4 py-1 text-left font-semibold"
-          >
-            {formatGrade(grade)} ({coffees.length})
-          </td>
-        </tr>
-        
-        {/* Coffee rows for this grade */}
-        {coffees.map((coffee, index) => renderCoffeeRow(coffee))}
-      </>
-    ));
+    return Object.entries(groupedCoffee).map(([grade, coffees], gradeIndex) => {
+      const summary = stockSummaries[grade];
+      return (
+        <>
+          {/* Grade header row */}
+          <tr key={`header-${grade}`} className={`${getGradeHeaderColor(grade)}`}>
+            <td 
+              colSpan={canSeePrice ? 9 : 8} 
+              className="px-4 py-2 text-left font-semibold"
+            >
+              <div className="flex justify-between items-center">
+                <span>{formatGrade(grade)} ({summary?.count || coffees.length} coffees)</span>
+                <span className="text-sm font-normal">
+                  Total Stock: {summary?.totalStock || '0.00'} kg
+                </span>
+              </div>
+            </td>
+          </tr>
+          
+          {/* Coffee rows for this grade */}
+          {coffees.map((coffee, index) => renderCoffeeRow(coffee))}
+        </>
+      );
+    });
   };
 
   return (
@@ -300,8 +361,9 @@ export default function CoffeeListPage() {
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brewing Method</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country of Origin</th>
                     {canSeePrice && (
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
@@ -325,8 +387,9 @@ export default function CoffeeListPage() {
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brewing Method</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country of Origin</th>
                     {canSeePrice && (
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
@@ -337,6 +400,37 @@ export default function CoffeeListPage() {
                   {coffeeList.map(coffee => renderCoffeeRow(coffee))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Zero Stock Section */}
+          {isGrouped && zeroStockCoffee.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Zero Stock Coffee</h3>
+              <div className="overflow-x-auto bg-white rounded-md border border-gray-200 shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {canManageCoffee && (
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      )}
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brewing Method</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country of Origin</th>
+                      {canSeePrice && (
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {zeroStockCoffee.map(coffee => renderCoffeeRow(coffee))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

@@ -56,16 +56,29 @@ export default async function handler(req, res) {
     }
 
     // Validate each item has a valid coffeeId and at least one bag
-    const processedItems = items.map(item => ({
-      coffeeId: item.coffeeId,
-      smallBags: parseInt(item.smallBags) || 0,
-      largeBags: parseInt(item.largeBags) || 0,
-      totalQuantity: ((parseInt(item.smallBags) || 0) * 0.2) + ((parseInt(item.largeBags) || 0) * 1.0)
-    }));
+    const processedItems = items.map(item => {
+      const smallBagsEspresso = parseInt(item.smallBagsEspresso) || 0;
+      const smallBagsFilter = parseInt(item.smallBagsFilter) || 0;
+      const largeBags = parseInt(item.largeBags) || 0;
+      
+      // For backward compatibility, if smallBags is provided but not espresso/filter, use it as espresso
+      const legacySmallBags = parseInt(item.smallBags) || 0;
+      const finalEspresso = smallBagsEspresso || legacySmallBags;
+      const finalFilter = smallBagsFilter;
+      
+      return {
+        coffeeId: item.coffeeId,
+        smallBags: finalEspresso + finalFilter, // Keep for backward compatibility
+        smallBagsEspresso: finalEspresso,
+        smallBagsFilter: finalFilter,
+        largeBags: largeBags,
+        totalQuantity: ((finalEspresso + finalFilter) * 0.2) + (largeBags * 1.0)
+      };
+    });
     
     const invalidItems = processedItems.filter(item => 
       !item.coffeeId || 
-      (item.smallBags <= 0 && item.largeBags <= 0)
+      (item.smallBagsEspresso <= 0 && item.smallBagsFilter <= 0 && item.largeBags <= 0)
     );
 
     if (invalidItems.length > 0) {
@@ -109,6 +122,8 @@ export default async function handler(req, res) {
             orderId: newOrder.id,
             coffeeId: item.coffeeId,
             smallBags: item.smallBags,
+            smallBagsEspresso: item.smallBagsEspresso,
+            smallBagsFilter: item.smallBagsFilter,
             largeBags: item.largeBags,
             totalQuantity: item.totalQuantity
           }

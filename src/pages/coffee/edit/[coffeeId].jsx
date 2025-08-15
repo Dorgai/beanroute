@@ -14,8 +14,12 @@ export default function EditCoffeePage() {
     grade: 'SPECIALTY',
     country: '',
     producer: '',
+    process: '',
     notes: '',
     price: '',
+    isEspresso: false,
+    isFilter: false,
+    isSignature: false,
   });
   
   const [loading, setLoading] = useState(true);
@@ -55,8 +59,12 @@ export default function EditCoffeePage() {
           grade: data.grade || 'SPECIALTY',
           country: data.country || '',
           producer: data.producer || '',
+          process: data.process || '',
           notes: data.notes || '',
           price: data.price || '',
+          isEspresso: data.isEspresso || false,
+          isFilter: data.isFilter || false,
+          isSignature: data.isSignature || false,
         });
       } catch (error) {
         console.error('Error fetching coffee data:', error);
@@ -91,10 +99,10 @@ export default function EditCoffeePage() {
 
   // Handle input changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -114,7 +122,11 @@ export default function EditCoffeePage() {
         grade: formData.grade,
         country: formData.country,
         producer: formData.producer,
-        notes: formData.notes
+        process: formData.process,
+        notes: formData.notes,
+        isEspresso: formData.isEspresso,
+        isFilter: formData.isFilter,
+        isSignature: formData.isSignature
       };
       
       // Only include price if user has permission to edit it
@@ -264,6 +276,22 @@ export default function EditCoffeePage() {
                 className="w-full p-2 border border-gray-300 rounded"
               />
             </div>
+
+            {/* Process */}
+            <div>
+              <label htmlFor="process" className="block text-sm font-medium text-gray-700 mb-1">
+                Process
+              </label>
+              <input
+                type="text"
+                id="process"
+                name="process"
+                value={formData.process}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded"
+                placeholder="e.g., Washed, Natural, Honey"
+              />
+            </div>
             
             {/* Price - Only visible to admin and owner */}
             {canSeePrice && (
@@ -284,6 +312,48 @@ export default function EditCoffeePage() {
                 />
               </div>
             )}
+          </div>
+
+          {/* Brewing Methods */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Brewing Methods *
+            </label>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isEspresso"
+                  checked={formData.isEspresso}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span className="text-sm">Espresso (E)</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isFilter"
+                  checked={formData.isFilter}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span className="text-sm">Filter (F)</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isSignature"
+                  checked={formData.isSignature}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span className="text-sm">Signature (S)</span>
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              At least one brewing method (Espresso or Filter) is required. Signature is optional.
+            </p>
           </div>
 
           {/* Notes */}

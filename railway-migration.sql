@@ -122,4 +122,64 @@ VALUES (
     NULL, 
     CURRENT_TIMESTAMP, 
     1
+) ON CONFLICT DO NOTHING;
+
+-- =========================================================================================
+-- EMAIL NOTIFICATION SYSTEM - Added for order status change notifications
+-- =========================================================================================
+
+-- Create OrderEmailNotification table for managing email notifications on order status changes
+CREATE TABLE IF NOT EXISTS "OrderEmailNotification" (
+    "id" TEXT NOT NULL,
+    "shopId" TEXT NOT NULL,
+    "orderStatus" "OrderStatus" NOT NULL,
+    "emails" TEXT[],
+    "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "OrderEmailNotification_pkey" PRIMARY KEY ("id")
+);
+
+-- Create indexes for OrderEmailNotification
+CREATE INDEX IF NOT EXISTS "OrderEmailNotification_orderStatus_idx" ON "OrderEmailNotification"("orderStatus");
+CREATE INDEX IF NOT EXISTS "OrderEmailNotification_shopId_idx" ON "OrderEmailNotification"("shopId");
+CREATE UNIQUE INDEX IF NOT EXISTS "OrderEmailNotification_shopId_orderStatus_key" ON "OrderEmailNotification"("shopId", "orderStatus");
+
+-- Add foreign key constraints for OrderEmailNotification
+ALTER TABLE "OrderEmailNotification" 
+ADD CONSTRAINT "OrderEmailNotification_createdById_fkey" 
+FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "OrderEmailNotification" 
+ADD CONSTRAINT "OrderEmailNotification_shopId_fkey" 
+FOREIGN KEY ("shopId") REFERENCES "Shop"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Add email notification relation to User table (already exists in schema, just documenting)
+-- The User table now has: createdEmailNotifications OrderEmailNotification[] @relation("OrderEmailNotificationCreator")
+
+-- Add email notification relation to Shop table (already exists in schema, just documenting)  
+-- The Shop table now has: emailNotifications OrderEmailNotification[]
+
+-- Insert migration record for email notification system
+INSERT INTO "_prisma_migrations" (
+    "id", 
+    "checksum", 
+    "finished_at", 
+    "migration_name", 
+    "logs", 
+    "rolled_back_at", 
+    "started_at", 
+    "applied_steps_count"
+) 
+VALUES (
+    'email-notification-migration-1', 
+    'email notification system migration', 
+    CURRENT_TIMESTAMP, 
+    '20250417000000_add_order_email_notifications', 
+    'Added OrderEmailNotification table for order status change email notifications', 
+    NULL, 
+    CURRENT_TIMESTAMP, 
+    1
 ) ON CONFLICT DO NOTHING; 

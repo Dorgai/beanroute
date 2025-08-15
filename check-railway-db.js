@@ -1,82 +1,42 @@
 const { PrismaClient } = require('@prisma/client');
 
-// Create a custom Prisma client with logging
+// Use the Railway public connection string
 const prisma = new PrismaClient({
-  log: [
-    {
-      emit: 'stdout',
-      level: 'error',
-    },
-    {
-      emit: 'stdout',
-      level: 'info',
-    },
-    {
-      emit: 'stdout',
-      level: 'warn',
-    },
-  ],
+  datasources: {
+    db: {
+      url: "postgresql://postgres:VHjNXYBUlYdBagSGERFfKXnMJHRVvGTF@postgres-production-948f.up.railway.app:5432/railway"
+    }
+  }
 });
 
-// Log queries for debugging
-prisma.$on('query', (e) => {
-  console.log('Query: ' + e.query);
-  console.log('Params: ' + e.params);
-  console.log('Duration: ' + e.duration + 'ms');
-});
-
-async function checkDatabase() {
-  console.log('Starting database check...');
-  const prisma = new PrismaClient();
-  
+async function checkConnection() {
   try {
-    // Connect to the database
-    console.log('Connecting to database...');
-    await prisma.$connect();
-    console.log('Database connection successful.');
+    console.log('Attempting to connect to Railway database...');
+    
+    // Test the connection
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        status: true
+      }
+    });
 
-    // Check if essential tables exist
-    console.log('\nChecking database tables...');
-    
-    // Try to fetch one user to verify User table exists
-    try {
-      const userCount = await prisma.user.count();
-      console.log(`✓ User table exists with ${userCount} records`);
-    } catch (e) {
-      console.error('✗ User table not found or has issues:', e.message);
-    }
-    
-    // Try to fetch one shop to verify Shop table exists
-    try {
-      const shopCount = await prisma.shop.count();
-      console.log(`✓ Shop table exists with ${shopCount} records`);
-    } catch (e) {
-      console.error('✗ Shop table not found or has issues:', e.message);
-    }
-    
-    // Check if any orders exist
-    try {
-      const orderCount = await prisma.retailOrder.count();
-      console.log(`✓ RetailOrder table exists with ${orderCount} records`);
-    } catch (e) {
-      console.error('✗ RetailOrder table not found or has issues:', e.message);
-    }
-    
-    // Check migrations table if it exists
-    try {
-      const result = await prisma.$queryRaw`SELECT COUNT(*) FROM _prisma_migrations`;
-      console.log(`✓ _prisma_migrations table exists with ${result[0].count} migrations`);
-    } catch (e) {
-      console.log('✗ _prisma_migrations table not found. Database may not be using Prisma migrations.');
-    }
+    console.log('\nConnected successfully! Found users:');
+    console.log('==================================');
+    users.forEach(user => {
+      console.log(`\nUser: ${user.email || user.username}`);
+      console.log(`Role: ${user.role}`);
+      console.log(`Status: ${user.status}`);
+    });
 
-    console.log('\nDatabase check complete.');
-    
   } catch (error) {
-    console.error('Database check failed:', error);
+    console.error('Error connecting to database:', error);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-checkDatabase(); 
+checkConnection(); 
