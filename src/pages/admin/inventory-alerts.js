@@ -655,11 +655,15 @@ export default function InventoryAlerts() {
                       label="Shop"
                     >
                       <MenuItem value="">All Shops</MenuItem>
-                      {shops.map((shop) => (
-                        <MenuItem key={shop.id} value={shop.id}>
-                          {shop.name}
-                        </MenuItem>
-                      ))}
+                      {shops.length === 0 ? (
+                        <MenuItem disabled>No shops available</MenuItem>
+                      ) : (
+                        shops.map((shop) => (
+                          <MenuItem key={shop.id} value={shop.id}>
+                            {shop.name}
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
