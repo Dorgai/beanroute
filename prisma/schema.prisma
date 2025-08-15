@@ -34,7 +34,8 @@ model User {
   receivedAlertNotifications InventoryAlertLog[]       @relation("AlertNotifications")
   messagesSent               Message[]                 @relation("MessageSender")
   messagesRead               MessageRead[]             @relation("MessageReader")
-  createdEmailNotifications  OrderEmailNotification[]  @relation("OrderEmailNotificationCreator")
+  createdEmailNotifications     OrderEmailNotification[]     @relation("OrderEmailNotificationCreator")
+  createdInventoryNotifications InventoryEmailNotification[] @relation("InventoryEmailNotificationCreator")
 }
 
 model Shop {
@@ -55,7 +56,8 @@ model Shop {
   inventoryAlertLogs     InventoryAlertLog[]
   retailInventory        RetailInventory[]
   retailOrders           RetailOrder[]
-  emailNotifications     OrderEmailNotification[]
+  emailNotifications          OrderEmailNotification[]
+  inventoryEmailNotifications InventoryEmailNotification[]
   createdBy              User                @relation(fields: [createdById], references: [id])
   users                  UserShop[]
 }
@@ -284,6 +286,23 @@ model OrderEmailNotification {
   @@unique([shopId, orderStatus])
   @@index([shopId])
   @@index([orderStatus])
+}
+
+model InventoryEmailNotification {
+  id          String   @id @default(uuid())
+  shopId      String?  // Optional - if null, applies to all shops
+  emails      String[] // Array of email addresses to notify
+  isEnabled   Boolean  @default(true)
+  alertType   String   @default("ALL") // "WARNING", "CRITICAL", or "ALL"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  shop        Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("InventoryEmailNotificationCreator", fields: [createdById], references: [id])
+
+  @@unique([shopId, alertType])
+  @@index([shopId])
+  @@index([alertType])
 }
 
 enum Role {
