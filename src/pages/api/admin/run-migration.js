@@ -52,17 +52,17 @@ export default async function handler(req, res) {
 
     console.log('[run-migration] Creating InventoryEmailNotification table...');
     
-    // Create the table
+    // Create the table with TEXT type for UUID fields to match Prisma's string-based UUIDs
     await prisma.$executeRawUnsafe(`
       CREATE TABLE "public"."InventoryEmailNotification" (
-        "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-        "shopId" UUID,
+        "id" TEXT NOT NULL,
+        "shopId" TEXT,
         "emails" TEXT[] NOT NULL,
         "isEnabled" BOOLEAN NOT NULL DEFAULT true,
         "alertType" TEXT NOT NULL DEFAULT 'ALL',
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "createdById" UUID NOT NULL,
+        "createdById" TEXT NOT NULL,
         CONSTRAINT "InventoryEmailNotification_pkey" PRIMARY KEY ("id")
       );
     `);
