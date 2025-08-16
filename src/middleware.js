@@ -18,6 +18,7 @@ export const publicPaths = [
   '/api/health-basic',
   '/api/admin/create-admin',
   '/api/admin/fix-admin', // Add our fix-admin endpoint
+  '/api/admin/temp-migration', // TEMPORARY: Allow one-time migration endpoint
   '/api/retail/check-inventory-alerts', // Allow inventory checks with API key
   '/api/public/coffee-inventory-total', // Public coffee inventory endpoint
 ];
