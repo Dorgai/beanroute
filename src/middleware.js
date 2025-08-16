@@ -21,6 +21,7 @@ export const publicPaths = [
   '/api/admin/temp-migration', // TEMPORARY: Allow one-time migration endpoint
   '/api/retail/check-inventory-alerts', // Allow inventory checks with API key
   '/api/public/coffee-inventory-total', // Public coffee inventory endpoint
+  '/api/public/create-table', // TEMPORARY: Public migration endpoint
 ];
 
 // Check if a path is public
