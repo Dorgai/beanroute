@@ -22,6 +22,7 @@ export const publicPaths = [
   '/api/retail/check-inventory-alerts', // Allow inventory checks with API key
   '/api/public/coffee-inventory-total', // Public coffee inventory endpoint
   '/api/public/create-table', // TEMPORARY: Public migration endpoint
+  '/api/debug/check-inventory-table', // TEMPORARY: Debug endpoint
 ];
 
 // Check if a path is public
