@@ -16,11 +16,12 @@ export default async function handler(req, res) {
     
     console.log('[debug] Shops query successful:', shops.length);
     
-    // Try to query the InventoryEmailNotification table
+    // Try to query the InventoryEmailNotification table using raw SQL (bypassing Prisma)
     let notifications = [];
     let tableError = null;
     
     try {
+      // First try Prisma query
       notifications = await prisma.inventoryEmailNotification.findMany({
         select: {
           id: true,
@@ -33,7 +34,21 @@ export default async function handler(req, res) {
       console.log('[debug] InventoryEmailNotification query successful:', notifications.length);
     } catch (error) {
       tableError = error.message;
-      console.error('[debug] InventoryEmailNotification query failed:', error.message);
+      console.error('[debug] InventoryEmailNotification Prisma query failed:', error.message);
+      
+      // Fallback to raw SQL query
+      try {
+        notifications = await prisma.$queryRaw`
+          SELECT id, "shopId", "alertType", emails, "isEnabled", "createdAt", "updatedAt"
+          FROM "InventoryEmailNotification"
+          ORDER BY "createdAt" DESC;
+        `;
+        console.log('[debug] InventoryEmailNotification raw SQL query successful:', notifications.length);
+        tableError = null; // Clear the error since raw SQL worked
+      } catch (rawError) {
+        console.error('[debug] InventoryEmailNotification raw SQL query also failed:', rawError.message);
+        tableError += ' | Raw SQL also failed: ' + rawError.message;
+      }
     }
     
     // Check table structure using raw query

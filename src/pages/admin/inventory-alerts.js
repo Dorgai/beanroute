@@ -99,15 +99,21 @@ export default function InventoryAlerts() {
           }
         }
 
-        // Fetch email notifications
-        const emailResponse = await fetch('/api/admin/inventory-email-notifications');
-        if (emailResponse.ok) {
-          const emailData = await emailResponse.json();
-          setEmailNotifications(emailData.notifications || []);
-          setShops(emailData.shops || []);
-        } else {
-          // Fallback: fetch shops separately if main API fails
-          console.log('Main API failed, fetching shops separately...');
+        // Fetch email notifications and shops with fallback mechanism
+        try {
+          const emailResponse = await fetch('/api/admin/inventory-email-notifications');
+          if (emailResponse.ok) {
+            const emailData = await emailResponse.json();
+            setEmailNotifications(emailData.notifications || []);
+            setShops(emailData.shops || []);
+          } else {
+            throw new Error('Main API failed');
+          }
+        } catch (mainApiError) {
+          // Fallback: Main API failed, use alternative approach
+          console.log('Main API failed, using fallback approach...', mainApiError.message);
+          
+          // Fetch shops separately (this works)
           try {
             const shopsResponse = await fetch('/api/retail/shops');
             if (shopsResponse.ok) {
@@ -115,8 +121,32 @@ export default function InventoryAlerts() {
               setShops(shopsData || []);
               console.log('Fallback shops fetch successful:', shopsData?.length || 0);
             }
-          } catch (fallbackError) {
-            console.error('Fallback shops fetch also failed:', fallbackError);
+          } catch (shopsError) {
+            console.error('Fallback shops fetch failed:', shopsError);
+          }
+
+          // Use direct database query to fetch notifications (bypassing Prisma)
+          try {
+            const directResponse = await fetch('/api/debug/check-inventory-table');
+            if (directResponse.ok) {
+              const directData = await directResponse.json();
+              if (directData.success && directData.notifications && directData.notifications.data) {
+                // Transform the raw data to match expected format
+                const transformedNotifications = directData.notifications.data.map(n => ({
+                  id: n.id,
+                  shopId: n.shopId,
+                  alertType: n.alertType,
+                  emails: n.emails,
+                  isEnabled: n.isEnabled,
+                  shop: directData.shops?.data?.find(s => s.id === n.shopId) || null,
+                  createdBy: { username: 'admin' } // Placeholder since we can't fetch user details
+                }));
+                setEmailNotifications(transformedNotifications);
+                console.log('Direct query fetch successful:', transformedNotifications.length);
+              }
+            }
+          } catch (directError) {
+            console.error('Direct query fetch also failed:', directError);
           }
         }
       } catch (err) {
