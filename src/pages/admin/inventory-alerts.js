@@ -105,6 +105,19 @@ export default function InventoryAlerts() {
           const emailData = await emailResponse.json();
           setEmailNotifications(emailData.notifications || []);
           setShops(emailData.shops || []);
+        } else {
+          // Fallback: fetch shops separately if main API fails
+          console.log('Main API failed, fetching shops separately...');
+          try {
+            const shopsResponse = await fetch('/api/retail/shops');
+            if (shopsResponse.ok) {
+              const shopsData = await shopsResponse.json();
+              setShops(shopsData || []);
+              console.log('Fallback shops fetch successful:', shopsData?.length || 0);
+            }
+          } catch (fallbackError) {
+            console.error('Fallback shops fetch also failed:', fallbackError);
+          }
         }
       } catch (err) {
         console.error('Error fetching data:', err);
