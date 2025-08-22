@@ -1,8 +1,9 @@
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import { getServerSession } from '@/lib/session';
 import prisma from '@/lib/prisma';
+import { wrapApiHandler } from '@/lib/safe-api-wrapper';
 
-export default async function handler(req, res) {
+async function inventoryEmailNotificationsHandler(req, res) {
   try {
     // Handle authentication - hybrid approach for API tokens and browser sessions
     let user;
@@ -224,3 +225,5 @@ async function handlePost(req, res, user) {
     });
   }
 }
+
+export default wrapApiHandler(inventoryEmailNotificationsHandler);

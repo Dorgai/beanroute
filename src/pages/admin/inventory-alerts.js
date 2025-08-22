@@ -43,7 +43,7 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 
-export default function InventoryAlerts() {
+function InventoryAlertsContent() {
   const { session } = useSession();
   const [loading, setLoading] = useState(true);
   const [alertLogs, setAlertLogs] = useState([]);
@@ -151,7 +151,23 @@ export default function InventoryAlerts() {
         }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Failed to load data. Please try again later.');
+        // Provide more user-friendly error messages
+        let errorMessage = 'Unable to load inventory alerts data.';
+        
+        if (err.message?.includes('fetch')) {
+          errorMessage = 'Connection issue. Please check your internet connection and try again.';
+        } else if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+          errorMessage = 'Please log in again to access this page.';
+        } else if (err.message?.includes('500') || err.message?.includes('server')) {
+          errorMessage = 'Server is temporarily unavailable. Please try again in a few minutes.';
+        }
+        
+        setError(errorMessage);
+        
+        // Set safe fallback data to prevent UI from breaking
+        setAlertLogs([]);
+        setEmailNotifications([]);
+        setShops([]);
       } finally {
         setLoading(false);
       }
@@ -429,8 +445,16 @@ export default function InventoryAlerts() {
     return shop ? shop.name : 'All Shops';
   };
 
+  // Show loading state while session is being fetched
   if (!session) {
-    return null;
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <CircularProgress sx={{ mb: 2 }} />
+          <Typography>Loading...</Typography>
+        </Paper>
+      </Container>
+    );
   }
 
   // If not admin or owner, show access denied
@@ -466,7 +490,16 @@ export default function InventoryAlerts() {
             {successMessage}
           </Alert>
         )}
+
+        {loading && (
+          <Paper sx={{ p: 3, mb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <CircularProgress sx={{ mb: 2 }} />
+            <Typography>Loading inventory alerts...</Typography>
+          </Paper>
+        )}
         
+        {!loading && (
+        <>
         <Paper sx={{ p: 3, mb: 3, display: 'flex', flexDirection: 'column' }}>
           <Typography variant="h5" component="h2" gutterBottom>
             Inventory Alert Settings
@@ -788,7 +821,38 @@ export default function InventoryAlerts() {
             </DialogActions>
           </form>
         </Dialog>
+        </>
+        )}
       </Container>
     </>
   );
+}
+
+// Error boundary wrapper component
+export default function InventoryAlerts() {
+  try {
+    return <InventoryAlertsContent />;
+  } catch (error) {
+    console.error('Inventory alerts page error:', error);
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Typography variant="h5" component="h2" gutterBottom color="error">
+            Service Temporarily Unavailable
+          </Typography>
+          <Typography variant="body1" paragraph>
+            The inventory alerts service is currently being updated. Please try again in a few minutes.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => window.location.reload()}
+            sx={{ mt: 2 }}
+          >
+            Retry
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
 } 

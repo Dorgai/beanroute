@@ -130,27 +130,32 @@ export default async function handler(req, res) {
       });
       
       // Log the activity for audit
-      await prisma.userActivity.create({
-        data: {
-          userId: session.user.id,
-          action: 'UPDATE',
-          resource: 'RETAIL_INVENTORY',
-          resourceId: inventoryId,
-          details: JSON.stringify({
-            shopId: currentInventory.shopId,
-            previousValues: {
-              smallBags: currentInventory.smallBags,
-              largeBags: currentInventory.largeBags,
-              totalQuantity: currentInventory.totalQuantity
-            },
-            newValues: {
-              smallBags: newSmallBags,
-              largeBags: newLargeBags,
-              totalQuantity: newTotalQuantity
-            }
-          })
-        }
-      });
+      try {
+        await prisma.userActivity.create({
+          data: {
+            userId: session.user.id,
+            action: 'UPDATE',
+            resource: 'RETAIL_INVENTORY',
+            resourceId: inventoryId,
+            details: JSON.stringify({
+              shopId: currentInventory.shopId,
+              previousValues: {
+                smallBags: currentInventory.smallBags,
+                largeBags: currentInventory.largeBags,
+                totalQuantity: currentInventory.totalQuantity
+              },
+              newValues: {
+                smallBags: newSmallBags,
+                largeBags: newLargeBags,
+                totalQuantity: newTotalQuantity
+              }
+            })
+          }
+        });
+      } catch (activityError) {
+        console.error('Failed to log user activity:', activityError);
+        // Continue without failing the main operation
+      }
       
       console.log('[update-inventory] Successfully updated inventory:', inventoryId);
       await prisma.$disconnect();

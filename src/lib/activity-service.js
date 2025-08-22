@@ -65,19 +65,40 @@ export async function logActivity({ userId, action, resource, resourceId = null,
         data: activityData
       });
     } catch (error) {
-      // If there's a specific error about unknown fields, try with just the basic fields
+      // If there's a specific error about missing required fields or schema issues
       if (error.message && (
           error.message.includes('unknown field') || 
-          error.message.includes('Unknown arg')
+          error.message.includes('Unknown arg') ||
+          error.message.includes('Argument `resource` is missing') ||
+          error.message.includes('missing')
       )) {
         console.warn('Schema mismatch in UserActivity model, falling back to basic fields');
-        return await prisma.userActivity.create({
-          data: {
-            userId,
-            action,
-            details: details || ''
+        try {
+          // Try with empty resource field in case it's required
+          return await prisma.userActivity.create({
+            data: {
+              userId,
+              action,
+              details: details || '',
+              resource: ''  // Provide empty string for required field
+            }
+          });
+        } catch (secondError) {
+          console.warn('Second attempt with empty resource failed:', secondError.message);
+          try {
+            // Final attempt - absolutely minimal data
+            return await prisma.userActivity.create({
+              data: {
+                userId,
+                action: action || 'SYSTEM',
+                details: details || 'Activity logged'
+              }
+            });
+          } catch (finalError) {
+            console.error('All UserActivity creation attempts failed:', finalError.message);
+            return null; // Don't crash the main operation
           }
-        });
+        }
       }
       
       // Re-throw other errors

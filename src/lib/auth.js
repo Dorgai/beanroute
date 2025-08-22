@@ -218,16 +218,51 @@ export async function logUserActivity(userId, action, details = {}, req) {
     const ipAddress = req?.headers['x-real-ip'] || req?.socket?.remoteAddress || null;
     const userAgent = req?.headers['user-agent'] || null;
     
-    await prisma.userActivity.create({
-      data: {
-        userId,
-        action,
-        resource: 'USER',
-        details: typeof details === 'string' ? details : JSON.stringify(details),
-        ipAddress,
-        userAgent
+    try {
+      await prisma.userActivity.create({
+        data: {
+          userId,
+          action,
+          resource: 'USER',
+          details: typeof details === 'string' ? details : JSON.stringify(details),
+          ipAddress,
+          userAgent
+        }
+      });
+    } catch (schemaError) {
+      // Fallback for missing resource field
+      if (schemaError.message && (schemaError.message.includes('resource') || schemaError.message.includes('missing'))) {
+        console.warn('UserActivity schema missing resource field, using fallback');
+        try {
+          // Try with empty resource field
+          await prisma.userActivity.create({
+            data: {
+              userId,
+              action,
+              details: typeof details === 'string' ? details : JSON.stringify(details),
+              resource: ''  // Provide empty string for required field
+            }
+          });
+        } catch (secondError) {
+          console.warn('Auth fallback with resource failed, trying minimal:', secondError.message);
+          try {
+            // Final minimal attempt
+            await prisma.userActivity.create({
+              data: {
+                userId,
+                action,
+                details: typeof details === 'string' ? details : JSON.stringify(details)
+              }
+            });
+          } catch (finalError) {
+            console.error('All auth UserActivity attempts failed:', finalError.message);
+            // Don't throw, just log and continue
+          }
+        }
+      } else {
+        throw schemaError;
       }
-    });
+    }
   } catch (error) {
     console.error('Error logging user activity:', error);
     // Non-critical error, don't throw

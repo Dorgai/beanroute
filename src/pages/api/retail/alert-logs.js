@@ -1,7 +1,8 @@
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { wrapApiHandler } from '@/lib/safe-api-wrapper';
 
-export default async function handler(req, res) {
+async function alertLogsHandler(req, res) {
   try {
     console.log('[api/retail/alert-logs] Starting alert logs fetch');
     
@@ -87,4 +88,6 @@ export default async function handler(req, res) {
     console.error('[api/retail/alert-logs] Error fetching alert logs:', error);
     return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
-} 
+}
+
+export default wrapApiHandler(alertLogsHandler); 
