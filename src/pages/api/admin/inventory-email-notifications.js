@@ -49,29 +49,48 @@ async function handleGet(req, res, user) {
   try {
     console.log('[inventory-email-notifications] Handling GET request');
 
-    // Fetch all inventory email notifications
-    const notifications = await prisma.inventoryEmailNotification.findMany({
-      include: {
-        shop: {
-          select: {
-            id: true,
-            name: true
+    // Fetch all inventory email notifications with safe handling for optional relationships
+    let notifications = [];
+    try {
+      notifications = await prisma.inventoryEmailNotification.findMany({
+        include: {
+          shop: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          createdBy: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
           }
         },
-        createdBy: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true
+        orderBy: [
+          { alertType: 'asc' },
+          { createdAt: 'desc' }
+        ]
+      });
+    } catch (queryError) {
+      console.warn('[inventory-email-notifications] Query error, using fallback:', queryError.message);
+      // Fallback query without complex ordering
+      notifications = await prisma.inventoryEmailNotification.findMany({
+        include: {
+          shop: true,
+          createdBy: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
           }
         }
-      },
-      orderBy: [
-        { shop: { name: 'asc' } },
-        { alertType: 'asc' }
-      ]
-    });
+      });
+    }
 
     // Get all shops for the dropdown
     const shops = await prisma.shop.findMany({
