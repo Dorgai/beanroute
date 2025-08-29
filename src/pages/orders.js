@@ -792,7 +792,20 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       <DialogActions sx={{ borderTop: '1px solid #eee', pt: 2, pb: 2 }}>
         <Button onClick={() => onClose(false)}>Cancel</Button>
         <Button 
-          onClick={handleSubmit} 
+          onClick={() => {
+            console.log('Submit button clicked - checking conditions:', {
+              loading,
+              hasOrder: !!order,
+              hasOrderId: !!(order && order.id),
+              hasStatus: !!status,
+              isRoaster,
+              isRetailer, 
+              isBarista,
+              validNextStatusesLength: validNextStatuses.length,
+              isDisabled: loading || !order || !order.id || !status || ((isRoaster || isRetailer || isBarista) && validNextStatuses.length === 0)
+            });
+            handleSubmit();
+          }} 
           variant="contained" 
           disabled={
             loading || 
