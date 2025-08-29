@@ -239,6 +239,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
 
       const responseData = await response.json().catch(() => ({}));
       
+      console.log('Order creation API response:', { status: response.status, ok: response.ok, data: responseData });
+      
       if (!response.ok) {
         // Extract specific error information from the response
         let errorMessage = responseData.error || 'Failed to create order';
@@ -267,6 +269,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         throw new Error(errorMessage);
       }
 
+      console.log('Order created successfully, calling onClose(true)');
       onClose(true); // Pass true to indicate successful order
     } catch (error) {
       console.error('Error creating order:', error);
@@ -693,6 +696,7 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       }
       
       // Pass the updated status back to the parent component
+      console.log('Status update successful, calling onClose(true, status)');
       onClose(true, status); // Pass true to indicate successful update along with the new status
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -1420,6 +1424,7 @@ export default function RetailOrders() {
   };
 
   const handleCloseOrderDialog = (success) => {
+    console.log('handleCloseOrderDialog called with success:', success);
     setOrderDialogOpen(false);
     if (success) {
       // Refresh data after successful order
@@ -1433,6 +1438,7 @@ export default function RetailOrders() {
   };
   
   const handleCloseStatusDialog = (success, newStatus) => {
+    console.log('handleCloseStatusDialog called with success:', success, 'newStatus:', newStatus);
     const wasChangedToDelivered = newStatus === 'DELIVERED' && success;
     setSelectedOrder(null);
     setStatusDialogOpen(false);
