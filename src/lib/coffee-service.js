@@ -155,9 +155,25 @@ export async function getAllCoffee({ page = 1, pageSize = null, search = '', gro
 export async function getCoffeeById(id) {
   if (!id) throw new Error('Coffee ID is required');
   
+  // Temporarily exclude labelQuantity to handle missing column in production
   const coffee = await prisma.greenCoffee.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      quantity: true,
+      grade: true,
+      country: true,
+      producer: true,
+      process: true,
+      notes: true,
+      isEspresso: true,
+      isFilter: true,
+      isSignature: true,
+      createdAt: true,
+      updatedAt: true,
+      createdById: true,
+      price: true,
       createdBy: {
         select: {
           id: true,
@@ -184,7 +200,11 @@ export async function getCoffeeById(id) {
     throw new Error('Coffee not found');
   }
   
-  return coffee;
+  // Add default labelQuantity for compatibility with frontend (temporary fix)
+  return {
+    ...coffee,
+    labelQuantity: coffee.labelQuantity || 0
+  };
 }
 
 /**
@@ -258,9 +278,26 @@ export async function createCoffee(data) {
 export async function updateCoffee(id, data) {
   console.log(`Updating coffee with ID: ${id}`, data);
   
-  // Check if coffee exists
+  // Check if coffee exists (temporarily exclude labelQuantity)
   const coffee = await prisma.greenCoffee.findUnique({
-    where: { id }
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      quantity: true,
+      grade: true,
+      country: true,
+      producer: true,
+      process: true,
+      notes: true,
+      isEspresso: true,
+      isFilter: true,
+      isSignature: true,
+      createdAt: true,
+      updatedAt: true,
+      createdById: true,
+      price: true
+    }
   });
   
   if (!coffee) {
@@ -346,9 +383,28 @@ export async function updateCoffee(id, data) {
  * Delete a coffee entry
  */
 export async function deleteCoffee(id) {
-  // Check if coffee exists
+  // Check if coffee exists (temporarily exclude labelQuantity)
   const coffee = await prisma.greenCoffee.findUnique({
     where: { id },
+    select: {
+      id: true,
+      name: true,
+      quantity: true,
+      grade: true,
+      country: true,
+      producer: true,
+      process: true,
+      notes: true,
+      isEspresso: true,
+      isFilter: true,
+      isSignature: true,
+      createdAt: true,
+      updatedAt: true,
+      createdById: true,
+      price: true,
+      retailInventory: true,
+      retailOrders: true
+    },
     include: {
       inventoryLogs: { select: { id: true }, take: 1 },
       retailInventory: { select: { id: true }, take: 1 },
@@ -387,8 +443,26 @@ export async function deleteCoffee(id) {
  * Add inventory to a coffee entry
  */
 export async function addCoffeeInventory(coffeeId, amount, userId, notes = '') {
+  // Temporarily exclude labelQuantity to handle missing column in production
   const coffee = await prisma.greenCoffee.findUnique({
-    where: { id: coffeeId }
+    where: { id: coffeeId },
+    select: {
+      id: true,
+      name: true,
+      quantity: true,
+      grade: true,
+      country: true,
+      producer: true,
+      process: true,
+      notes: true,
+      isEspresso: true,
+      isFilter: true,
+      isSignature: true,
+      createdAt: true,
+      updatedAt: true,
+      createdById: true,
+      price: true
+    }
   });
   
   if (!coffee) {
