@@ -17,6 +17,7 @@ export default function EditCoffeePage() {
     process: '',
     notes: '',
     price: '',
+    labelQuantity: 0,
     isEspresso: false,
     isFilter: false,
     isSignature: false,
@@ -62,6 +63,7 @@ export default function EditCoffeePage() {
           process: data.process || '',
           notes: data.notes || '',
           price: data.price || '',
+          labelQuantity: data.labelQuantity || 0,
           isEspresso: data.isEspresso || false,
           isFilter: data.isFilter || false,
           isSignature: data.isSignature || false,
@@ -124,6 +126,7 @@ export default function EditCoffeePage() {
         producer: formData.producer,
         process: formData.process,
         notes: formData.notes,
+        labelQuantity: parseInt(formData.labelQuantity) || 0,
         isEspresso: formData.isEspresso,
         isFilter: formData.isFilter,
         isSignature: formData.isSignature
@@ -291,6 +294,26 @@ export default function EditCoffeePage() {
                 className="w-full p-2 border border-gray-300 rounded"
                 placeholder="e.g., Washed, Natural, Honey"
               />
+            </div>
+
+            {/* Label Quantity */}
+            <div>
+              <label htmlFor="labelQuantity" className="block text-sm font-medium text-gray-700 mb-1">
+                Label Quantity
+              </label>
+              <input
+                type="number"
+                id="labelQuantity"
+                name="labelQuantity"
+                value={formData.labelQuantity}
+                onChange={handleChange}
+                min="0"
+                className="w-full p-2 border border-gray-300 rounded"
+                placeholder="Number of labels for this coffee"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                1 label is needed per bag (regardless of bag size or type)
+              </p>
             </div>
             
             {/* Price - Only visible to admin and owner */}

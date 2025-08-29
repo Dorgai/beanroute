@@ -341,6 +341,11 @@ export async function updateCoffee(id, data) {
     updatedAt: new Date()
   };
   
+  // Add labelQuantity if provided
+  if ('labelQuantity' in data) {
+    updateData.labelQuantity = parseInt(data.labelQuantity) || 0;
+  }
+  
   // Add brewing method fields if provided
   if ('isEspresso' in data) {
     updateData.isEspresso = data.isEspresso;
