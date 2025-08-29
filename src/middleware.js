@@ -23,6 +23,7 @@ export const publicPaths = [
   '/api/public/coffee-inventory-total', // Public coffee inventory endpoint
   '/api/public/create-table', // TEMPORARY: Public migration endpoint
   '/api/public/add-label-quantity', // TEMPORARY: Public migration endpoint for labelQuantity column
+  '/api/migrate-label-quantity', // EMERGENCY: Public migration endpoint for labelQuantity column
   '/api/debug/check-inventory-table', // TEMPORARY: Debug endpoint
 ];
 
