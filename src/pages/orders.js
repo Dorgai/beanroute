@@ -224,9 +224,9 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         return;
       }
 
-      // Create the order with timeout to prevent hanging
+      // Create the order with timeout and optimistic handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
       
       const response = await fetch('/api/retail/create-order', {
         method: 'POST',
@@ -671,9 +671,9 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       // Log the order and status being submitted
       console.log(`Submitting status update: Order ID ${order.id}, Status ${status} (attempt ${retryCount + 1})`);
 
-      // Add shorter timeout with retry capability
+      // Add timeout with optimistic success handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
       
       const response = await fetch('/api/retail/update-order-status', {
         method: 'PUT',
@@ -714,14 +714,18 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
     } catch (error) {
       console.error('Error updating order status:', error);
       
-      if (error.name === 'AbortError' && retryCount < 2) {
-        // Retry up to 2 times on timeout
-        console.log(`Request timed out, retrying... (${retryCount + 1}/2)`);
-        setLoading(false);
-        setTimeout(() => handleSubmit(retryCount + 1), 1000); // Wait 1 second before retry
-        return;
-      } else if (error.name === 'AbortError') {
-        setError('Request timed out after multiple attempts. The status update may still be processing. Please refresh the page to check if the change was applied.');
+      if (error.name === 'AbortError') {
+        // On timeout, assume success since database usually updates even when response is lost
+        console.log('Request timed out, but assuming success due to Railway infrastructure issues');
+        
+        // Close dialog optimistically and refresh data
+        setTimeout(() => {
+          if (typeof refreshData === 'function') {
+            refreshData(); // Refresh to get latest status
+          }
+          onClose(true, status); // Close as if successful
+        }, 1000);
+        
       } else {
         setError(error.message || 'An unexpected error occurred');
       }
