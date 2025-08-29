@@ -1,5 +1,6 @@
 // PUBLIC migration endpoint for labelQuantity column
 // TEMPORARY - will be deleted after migration
+// NO AUTHENTICATION REQUIRED for this emergency fix
 
 import prisma from '@/lib/prisma';
 
