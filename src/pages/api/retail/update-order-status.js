@@ -170,6 +170,7 @@ export default async function handler(req, res) {
     // Check if order exists with minimal fields selection to avoid schema issues
     let existingOrder;
     try {
+      const orderFetchStart = Date.now();
       console.log(`[update-order-status] Fetching order from database: ${orderId}`);
       existingOrder = await prisma.retailOrder.findUnique({
         where: { id: orderId },
@@ -195,7 +196,8 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      console.log(`[update-order-status] Found order ${orderId}, current status: ${existingOrder.status}`);
+      const orderFetchTime = Date.now() - orderFetchStart;
+      console.log(`[update-order-status] Found order ${orderId}, current status: ${existingOrder.status} (fetch took ${orderFetchTime}ms)`);
     } catch (dbError) {
       console.error(`[update-order-status] Database error when fetching order:`, dbError);
       await prisma.$disconnect();
@@ -313,10 +315,14 @@ export default async function handler(req, res) {
         console.log(`[update-order-status] Updated order ${orderId} status from ${existingOrder.status} to ${status}`);
 
         // Handle label quantity updates based on status changes
+        const labelUpdateStart = Date.now();
         await handleLabelQuantityUpdates(tx, existingOrder, status);
+        const labelUpdateTime = Date.now() - labelUpdateStart;
+        console.log(`[update-order-status] Label quantity updates completed in ${labelUpdateTime}ms`);
 
         // If the status is being changed to DELIVERED, update the inventory
         if (status === 'DELIVERED') {
+          const deliveredUpdateStart = Date.now();
           console.log(`[update-order-status] Order ${orderId} marked as DELIVERED - updating inventory quantities for ${existingOrder.items.length} items`);
           
           // Batch process all items in parallel for better performance
@@ -364,7 +370,8 @@ export default async function handler(req, res) {
           
           // Execute all inventory updates in parallel within the transaction
           const inventoryResults = await Promise.allSettled(inventoryUpdatePromises);
-          console.log(`[update-order-status] DELIVERED inventory updates completed:`, inventoryResults.filter(r => r.status === 'fulfilled').length, 'successful,', inventoryResults.filter(r => r.status === 'rejected').length, 'failed');
+          const deliveredUpdateTime = Date.now() - deliveredUpdateStart;
+          console.log(`[update-order-status] DELIVERED inventory updates completed in ${deliveredUpdateTime}ms:`, inventoryResults.filter(r => r.status === 'fulfilled').length, 'successful,', inventoryResults.filter(r => r.status === 'rejected').length, 'failed');
         }
         
         return updated;
