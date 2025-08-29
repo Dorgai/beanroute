@@ -224,7 +224,10 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         return;
       }
 
-      // Create the order
+      // Create the order with timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch('/api/retail/create-order', {
         method: 'POST',
         headers: {
@@ -235,7 +238,10 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
           items,
           comment: comment.trim()
         }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       const responseData = await response.json().catch(() => ({}));
       
@@ -665,6 +671,10 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       // Log the order and status being submitted
       console.log(`Submitting status update: Order ID ${order.id}, Status ${status}`);
 
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch('/api/retail/update-order-status', {
         method: 'PUT',
         headers: {
@@ -674,7 +684,10 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
           orderId: order.id,
           status
         }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       const responseData = await response.json();
       console.log('Status update response:', responseData);
@@ -700,7 +713,12 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       onClose(true, status); // Pass true to indicate successful update along with the new status
     } catch (error) {
       console.error('Error updating order status:', error);
-      setError(error.message || 'An unexpected error occurred');
+      
+      if (error.name === 'AbortError') {
+        setError('Request timed out. The status update may still be processing. Please refresh the page to check if the change was applied.');
+      } else {
+        setError(error.message || 'An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }
