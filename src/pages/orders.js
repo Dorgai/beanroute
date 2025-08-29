@@ -650,7 +650,7 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
     return [];
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (retryCount = 0) => {
     // Validate order exists and has an ID
     if (!order || !order.id) {
       setError('Invalid order data');
@@ -669,11 +669,11 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       setApiResponse(null);
 
       // Log the order and status being submitted
-      console.log(`Submitting status update: Order ID ${order.id}, Status ${status}`);
+      console.log(`Submitting status update: Order ID ${order.id}, Status ${status} (attempt ${retryCount + 1})`);
 
-      // Add timeout to prevent hanging requests
+      // Add shorter timeout with retry capability
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
       const response = await fetch('/api/retail/update-order-status', {
         method: 'PUT',
@@ -714,8 +714,14 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
     } catch (error) {
       console.error('Error updating order status:', error);
       
-      if (error.name === 'AbortError') {
-        setError('Request timed out. The status update may still be processing. Please refresh the page to check if the change was applied.');
+      if (error.name === 'AbortError' && retryCount < 2) {
+        // Retry up to 2 times on timeout
+        console.log(`Request timed out, retrying... (${retryCount + 1}/2)`);
+        setLoading(false);
+        setTimeout(() => handleSubmit(retryCount + 1), 1000); // Wait 1 second before retry
+        return;
+      } else if (error.name === 'AbortError') {
+        setError('Request timed out after multiple attempts. The status update may still be processing. Please refresh the page to check if the change was applied.');
       } else {
         setError(error.message || 'An unexpected error occurred');
       }
