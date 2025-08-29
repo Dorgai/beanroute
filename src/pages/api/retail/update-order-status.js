@@ -48,8 +48,8 @@ async function handleLabelQuantityUpdates(tx, order, newStatus) {
   }
   
   if (labelChange !== 0) {
-    // Update label quantities for each coffee type
-    for (const [coffeeId, labelsNeeded] of Object.entries(coffeeLabelsNeeded)) {
+    // Batch update label quantities for better performance
+    const updatePromises = Object.entries(coffeeLabelsNeeded).map(async ([coffeeId, labelsNeeded]) => {
       const actualChange = labelChange * labelsNeeded;
       
       try {
@@ -63,11 +63,16 @@ async function handleLabelQuantityUpdates(tx, order, newStatus) {
         });
         
         console.log(`[label-tracking] Updated coffee ${coffeeId} label quantity by ${actualChange} (${labelsNeeded} labels needed)`);
+        return { success: true, coffeeId, actualChange };
       } catch (error) {
         console.error(`[label-tracking] Error updating label quantity for coffee ${coffeeId}:`, error);
-        // Continue with other coffees
+        return { success: false, coffeeId, error: error.message };
       }
-    }
+    });
+
+    // Execute all updates in parallel within the transaction
+    const results = await Promise.allSettled(updatePromises);
+    console.log(`[label-tracking] Batch label update completed:`, results.filter(r => r.status === 'fulfilled').length, 'successful,', results.filter(r => r.status === 'rejected').length, 'failed');
   } else {
     console.log(`[label-tracking] No label quantity changes needed for status transition ${oldStatus} -> ${newStatus}`);
   }
@@ -284,6 +289,7 @@ export default async function handler(req, res) {
     let updatedOrder;
     try {
       // Use a transaction to ensure all database operations are atomic
+      const transactionStart = Date.now();
       console.log(`[update-order-status] Starting database transaction to update order ${orderId} to ${status}`);
       updatedOrder = await prisma.$transaction(async (tx) => {
         console.log(`[update-order-status] Updating order status to ${status}`);
@@ -358,6 +364,9 @@ export default async function handler(req, res) {
         
         return updated;
       });
+      
+      const transactionTime = Date.now() - transactionStart;
+      console.log(`[update-order-status] Transaction completed in ${transactionTime}ms`);
       
     } catch (dbError) {
       console.error('[update-order-status] Database error during update:', dbError);

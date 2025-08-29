@@ -112,13 +112,16 @@ export default async function handler(req, res) {
       });
     }
     
-    // Create each order item individually
-    const orderItems = [];
-    for (const item of processedItems) {
-      try {
+    // Batch create order items and update inventory for better performance
+    try {
+      const batchStart = Date.now();
+      console.log(`Creating ${processedItems.length} order items in batch`);
+      
+      // Create all order items in parallel
+      const orderItemPromises = processedItems.map(item => {
         console.log(`Adding item for order ${newOrder.id}, coffee ${item.coffeeId}, small: ${item.smallBags}, large: ${item.largeBags}, total: ${item.totalQuantity}kg`);
         
-        const orderItem = await prisma.retailOrderItem.create({
+        return prisma.retailOrderItem.create({
           data: {
             orderId: newOrder.id,
             coffeeId: item.coffeeId,
@@ -129,11 +132,13 @@ export default async function handler(req, res) {
             totalQuantity: item.totalQuantity
           }
         });
-        
-        orderItems.push(orderItem);
-        console.log(`Added order item: ${orderItem.id}`);
-        
-        // Update coffee quantity (reduce available)
+      });
+      
+      const orderItems = await Promise.all(orderItemPromises);
+      console.log(`Created ${orderItems.length} order items successfully`);
+      
+      // Update coffee quantities in parallel
+      const coffeeUpdatePromises = processedItems.map(async (item) => {
         try {
           await prisma.greenCoffee.update({
             where: { id: item.coffeeId },
@@ -144,52 +149,71 @@ export default async function handler(req, res) {
             }
           });
           console.log(`Updated coffee ${item.coffeeId} quantity by -${item.totalQuantity}kg`);
+          return { success: true, coffeeId: item.coffeeId };
         } catch (coffeeError) {
           console.error(`Error updating coffee quantity for ${item.coffeeId}:`, coffeeError);
-          // Continue with other items
+          return { success: false, coffeeId: item.coffeeId, error: coffeeError.message };
         }
-        
-        // Update retail inventory record
+      });
+      
+      const coffeeUpdateResults = await Promise.allSettled(coffeeUpdatePromises);
+      console.log(`Coffee quantity updates completed:`, coffeeUpdateResults.filter(r => r.status === 'fulfilled').length, 'successful');
+      
+      // Update retail inventory records in parallel
+      const inventoryUpdatePromises = processedItems.map(async (item) => {
         try {
-          const existingInventory = await prisma.retailInventory.findUnique({
+          await prisma.retailInventory.upsert({
             where: {
               shopId_coffeeId: {
                 shopId,
                 coffeeId: item.coffeeId
               }
+            },
+            create: {
+              shopId,
+              coffeeId: item.coffeeId,
+              smallBags: 0,
+              largeBags: 0,
+              totalQuantity: 0,
+              lastOrderDate: new Date()
+            },
+            update: {
+              lastOrderDate: new Date()
             }
           });
           
-          if (existingInventory) {
-            await prisma.retailInventory.update({
-              where: {
-                id: existingInventory.id
-              },
-              data: {
-                lastOrderDate: new Date()
-              }
-            });
-          } else {
-            await prisma.retailInventory.create({
-              data: {
-                shopId,
-                coffeeId: item.coffeeId,
-                smallBags: 0,
-                largeBags: 0,
-                totalQuantity: 0,
-                lastOrderDate: new Date()
-              }
-            });
-          }
-          console.log(`Updated retail inventory for coffee ${item.coffeeId}`);
+          console.log(`Updated retail inventory for coffee ${item.coffeeId} in shop ${shopId}`);
+          return { success: true, coffeeId: item.coffeeId };
         } catch (inventoryError) {
-          console.error(`Error updating retail inventory for ${item.coffeeId}:`, inventoryError);
-          // Continue with other items
+          console.error(`Error updating retail inventory for coffee ${item.coffeeId}:`, inventoryError);
+          return { success: false, coffeeId: item.coffeeId, error: inventoryError.message };
         }
-      } catch (itemError) {
-        console.error(`Error creating order item for coffee ${item.coffeeId}:`, itemError);
-        // Continue with other items
+      });
+      
+      const inventoryResults = await Promise.allSettled(inventoryUpdatePromises);
+      console.log(`Retail inventory updates completed:`, inventoryResults.filter(r => r.status === 'fulfilled').length, 'successful');
+      
+      const batchTime = Date.now() - batchStart;
+      console.log(`[create-order] Batch operations completed in ${batchTime}ms`);
+      
+    } catch (batchError) {
+      console.error('Error in batch operations:', batchError);
+      
+      // Clean up: Delete the base order if batch operations fail
+      try {
+        await prisma.retailOrder.delete({
+          where: { id: newOrder.id }
+        });
+        console.log('Deleted incomplete order due to batch operation failure');
+      } catch (cleanupError) {
+        console.error('Error cleaning up incomplete order:', cleanupError);
       }
+      
+      await prisma.$disconnect();
+      return res.status(500).json({
+        error: 'Failed to create order',
+        details: `Batch operation failed: ${batchError.message}`
+      });
     }
     
     if (orderItems.length === 0) {
