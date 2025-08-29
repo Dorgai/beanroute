@@ -317,10 +317,10 @@ export default async function handler(req, res) {
 
         // If the status is being changed to DELIVERED, update the inventory
         if (status === 'DELIVERED') {
-          console.log(`[update-order-status] Order ${orderId} marked as DELIVERED - updating inventory quantities`);
+          console.log(`[update-order-status] Order ${orderId} marked as DELIVERED - updating inventory quantities for ${existingOrder.items.length} items`);
           
-          // Process each item in the order
-          for (const item of existingOrder.items) {
+          // Batch process all items in parallel for better performance
+          const inventoryUpdatePromises = existingOrder.items.map(async (item) => {
             console.log(`[update-order-status] Processing inventory update for item: Coffee ${item.coffeeId} - ${item.smallBags} small bags, ${item.largeBags} large bags`);
             
             try {
@@ -355,11 +355,16 @@ export default async function handler(req, res) {
               });
               
               console.log(`[update-order-status] Inventory updated for coffee ${item.coffeeId} in shop ${existingOrder.shopId}`);
+              return { success: true, coffeeId: item.coffeeId };
             } catch (inventoryError) {
               console.error(`[update-order-status] Error updating inventory for coffee ${item.coffeeId}:`, inventoryError);
-              // Continue with other items despite error
+              return { success: false, coffeeId: item.coffeeId, error: inventoryError.message };
             }
-          }
+          });
+          
+          // Execute all inventory updates in parallel within the transaction
+          const inventoryResults = await Promise.allSettled(inventoryUpdatePromises);
+          console.log(`[update-order-status] DELIVERED inventory updates completed:`, inventoryResults.filter(r => r.status === 'fulfilled').length, 'successful,', inventoryResults.filter(r => r.status === 'rejected').length, 'failed');
         }
         
         return updated;
