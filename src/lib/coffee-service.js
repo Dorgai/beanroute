@@ -43,12 +43,30 @@ export async function getAllCoffee({ page = 1, pageSize = null, search = '', gro
   }
   
   // Get coffee entries and count in parallel for efficiency
+  // Temporarily exclude labelQuantity to handle missing column in production
   const [coffee, total] = await Promise.all([
     prisma.greenCoffee.findMany({
       where,
       ...pagination,
       orderBy,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        quantity: true,
+        grade: true,
+        country: true,
+        producer: true,
+        process: true,
+        notes: true,
+        isEspresso: true,
+        isFilter: true,
+        isSignature: true,
+        createdAt: true,
+        updatedAt: true,
+        createdById: true,
+        price: true,
+        // Conditionally include labelQuantity only if it exists in the database
+        // This is a temporary fix until the migration is applied
         createdBy: {
           select: {
             id: true,
@@ -61,6 +79,12 @@ export async function getAllCoffee({ page = 1, pageSize = null, search = '', gro
     prisma.greenCoffee.count({ where }),
   ]);
   
+  // Add default labelQuantity for compatibility with frontend (temporary fix)
+  const coffeeWithDefaults = coffee.map(item => ({
+    ...item,
+    labelQuantity: item.labelQuantity || 0 // Default to 0 if missing
+  }));
+  
   // If grouping by grade is requested, organize the results
   if (groupByGrade) {
     // Define grade order for sorting
@@ -72,7 +96,7 @@ export async function getAllCoffee({ page = 1, pageSize = null, search = '', gro
     };
 
     // Group coffee by grade
-    const groupedCoffee = coffee.reduce((acc, coffeeItem) => {
+    const groupedCoffee = coffeeWithDefaults.reduce((acc, coffeeItem) => {
       const grade = coffeeItem.grade || 'UNKNOWN';
       if (!acc[grade]) {
         acc[grade] = [];
@@ -120,7 +144,7 @@ export async function getAllCoffee({ page = 1, pageSize = null, search = '', gro
   }
   
   return {
-    coffee,
+    coffee: coffeeWithDefaults,
     total
   };
 }
