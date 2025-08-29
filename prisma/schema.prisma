@@ -141,6 +141,7 @@ model GreenCoffee {
   id              String                    @id @default(uuid())
   name            String
   quantity        Float                     @default(0)
+  labelQuantity   Int                       @default(0)  // Number of labels available for this coffee
   grade           CoffeeGrade
   country         String?
   producer        String?

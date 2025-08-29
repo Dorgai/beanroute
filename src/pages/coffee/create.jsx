@@ -16,6 +16,7 @@ export default function CreateCoffeePage() {
     notes: '',
     grade: 'SPECIALTY',
     quantity: '0',
+    labelQuantity: '0',
     price: '',
     isEspresso: false,
     isFilter: false,
@@ -259,6 +260,26 @@ export default function CreateCoffeePage() {
                 min="0"
                 className="w-full p-2 border border-gray-300 rounded"
               />
+            </div>
+
+            {/* Initial Label Quantity */}
+            <div>
+              <label htmlFor="labelQuantity" className="block text-sm font-medium text-gray-700 mb-1">
+                Initial Label Quantity
+              </label>
+              <input
+                type="number"
+                id="labelQuantity"
+                name="labelQuantity"
+                value={formData.labelQuantity}
+                onChange={handleChange}
+                min="0"
+                className="w-full p-2 border border-gray-300 rounded"
+                placeholder="Number of labels for this coffee"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                1 label is needed per bag (regardless of bag size or type)
+              </p>
             </div>
             
             {/* Price - Only visible to admin and owner */}

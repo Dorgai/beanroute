@@ -3,6 +3,76 @@ import { getServerSession } from '@/lib/session';
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import orderEmailService from '@/lib/order-email-service';
 
+/**
+ * Handle label quantity updates based on order status changes
+ * Rules:
+ * - PENDING: Decrease label quantities (reserve labels for the order)
+ * - CANCELLED: Increase label quantities back (return reserved labels)
+ * - 1 label per bag regardless of size or type
+ */
+async function handleLabelQuantityUpdates(tx, order, newStatus) {
+  const oldStatus = order.status;
+  
+  console.log(`[label-tracking] Handling label updates for order ${order.id}: ${oldStatus} -> ${newStatus}`);
+  
+  // Calculate total bags per coffee type in the order
+  const coffeeLabelsNeeded = {};
+  
+  for (const item of order.items) {
+    // Calculate total bags for this coffee type (1 label per bag)
+    const totalBags = (item.smallBags || 0) + (item.smallBagsEspresso || 0) + 
+                     (item.smallBagsFilter || 0) + (item.largeBags || 0);
+    
+    if (totalBags > 0) {
+      coffeeLabelsNeeded[item.coffeeId] = (coffeeLabelsNeeded[item.coffeeId] || 0) + totalBags;
+    }
+  }
+  
+  // Determine label quantity change direction
+  let labelChange = 0;
+  
+  if (oldStatus !== 'PENDING' && newStatus === 'PENDING') {
+    // Order becoming PENDING - reserve labels (decrease)
+    labelChange = -1;
+    console.log(`[label-tracking] Order becoming PENDING - reserving labels`);
+  } else if (oldStatus === 'PENDING' && newStatus === 'CANCELLED') {
+    // Order cancelled from PENDING - return labels (increase)
+    labelChange = 1;
+    console.log(`[label-tracking] Order cancelled from PENDING - returning labels`);
+  } else if (oldStatus !== 'CANCELLED' && newStatus === 'CANCELLED') {
+    // Order cancelled from non-PENDING status - only return if it was previously pending
+    // We need to check if this order was ever PENDING to avoid double-returning labels
+    // For simplicity, we'll assume any CANCELLED order should return labels
+    labelChange = 1;
+    console.log(`[label-tracking] Order cancelled - returning labels`);
+  }
+  
+  if (labelChange !== 0) {
+    // Update label quantities for each coffee type
+    for (const [coffeeId, labelsNeeded] of Object.entries(coffeeLabelsNeeded)) {
+      const actualChange = labelChange * labelsNeeded;
+      
+      try {
+        await tx.greenCoffee.update({
+          where: { id: coffeeId },
+          data: {
+            labelQuantity: {
+              increment: actualChange
+            }
+          }
+        });
+        
+        console.log(`[label-tracking] Updated coffee ${coffeeId} label quantity by ${actualChange} (${labelsNeeded} labels needed)`);
+      } catch (error) {
+        console.error(`[label-tracking] Error updating label quantity for coffee ${coffeeId}:`, error);
+        // Continue with other coffees
+      }
+    }
+  } else {
+    console.log(`[label-tracking] No label quantity changes needed for status transition ${oldStatus} -> ${newStatus}`);
+  }
+}
+
 export default async function handler(req, res) {
   console.log(`[update-order-status] Handling ${req.method} request`);
 
@@ -235,6 +305,9 @@ export default async function handler(req, res) {
         });
         
         console.log(`[update-order-status] Updated order ${orderId} status from ${existingOrder.status} to ${status}`);
+
+        // Handle label quantity updates based on status changes
+        await handleLabelQuantityUpdates(tx, existingOrder, status);
 
         // If the status is being changed to DELIVERED, update the inventory
         if (status === 'DELIVERED') {

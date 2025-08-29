@@ -191,6 +191,7 @@ export async function createCoffee(data) {
     name: data.name,
     grade: data.grade || 'SPECIALTY',
     quantity: data.quantity || 0,
+    labelQuantity: parseInt(data.labelQuantity) || 0,
     country: data.origin || data.country || '',
     producer: data.roaster || data.producer || '',
     process: data.process || '',

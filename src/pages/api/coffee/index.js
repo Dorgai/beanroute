@@ -63,7 +63,7 @@ async function handlePost(req, res, user) {
       return res.status(403).json({ error: 'You do not have permission to create coffee entries' });
     }
     
-    const { name, roaster, origin, process, notes, price, isEspresso, isFilter, isSignature } = req.body;
+    const { name, roaster, origin, process, notes, price, labelQuantity, isEspresso, isFilter, isSignature } = req.body;
     
     // Validate required fields
     if (!name || name.trim() === '') {
@@ -78,6 +78,7 @@ async function handlePost(req, res, user) {
       process,
       notes,
       price: price ? parseFloat(price) : null,
+      labelQuantity,
       isEspresso,
       isFilter,
       isSignature,

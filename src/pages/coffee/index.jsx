@@ -216,6 +216,15 @@ export default function CoffeeListPage() {
         </span>
       </td>
       <td className="px-4 py-2 whitespace-nowrap">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          (coffee.labelQuantity || 0) < 15 
+            ? 'bg-red-100 text-red-800' 
+            : 'bg-green-100 text-green-800'
+        }`}>
+          {coffee.labelQuantity || 0} labels
+        </span>
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeHeaderColor(coffee.grade)}`}>
           {formatGrade(coffee.grade)}
         </span>
@@ -270,7 +279,7 @@ export default function CoffeeListPage() {
           {/* Grade header row */}
           <tr key={`header-${grade}`} className={`${getGradeHeaderColor(grade)}`}>
             <td 
-              colSpan={canSeePrice ? 9 : 8} 
+              colSpan={canSeePrice ? 10 : 9} 
               className="px-4 py-2 text-left font-semibold"
             >
               <div className="flex justify-between items-center">
@@ -360,6 +369,7 @@ export default function CoffeeListPage() {
                     )}
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Labels</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brewing Method</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
@@ -386,6 +396,7 @@ export default function CoffeeListPage() {
                     )}
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Labels</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brewing Method</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producer</th>
