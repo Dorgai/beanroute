@@ -13,7 +13,8 @@ import {
 import IconlessAlert from '../ui/IconlessAlert';
 
 export default function InventoryUpdateDialog({ open, onClose, inventoryItem, refreshData }) {
-  const [smallBags, setSmallBags] = useState('');
+  const [smallBagsEspresso, setSmallBagsEspresso] = useState('');
+  const [smallBagsFilter, setSmallBagsFilter] = useState('');
   const [largeBags, setLargeBags] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,12 +23,19 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
   // Initialize form values when dialog opens
   useEffect(() => {
     if (open && inventoryItem) {
-      setSmallBags(inventoryItem.smallBags || 0);
+      // Handle the case where we have either smallBags or smallBagsEspresso/smallBagsFilter
+      setSmallBagsEspresso(inventoryItem.smallBagsEspresso || 0);
+      setSmallBagsFilter(inventoryItem.smallBagsFilter || 0);
       setLargeBags(inventoryItem.largeBags || 0);
-      updateTotalQuantity(inventoryItem.smallBags || 0, inventoryItem.largeBags || 0);
+      updateTotalQuantity(
+        inventoryItem.smallBagsEspresso || 0, 
+        inventoryItem.smallBagsFilter || 0, 
+        inventoryItem.largeBags || 0
+      );
     } else {
       // Reset form when dialog closes
-      setSmallBags('');
+      setSmallBagsEspresso('');
+      setSmallBagsFilter('');
       setLargeBags('');
       setTotalQuantity(0);
       setError(null);
@@ -35,39 +43,49 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
   }, [open, inventoryItem]);
 
   // Calculate and set the total quantity
-  const updateTotalQuantity = (small, large) => {
-    const smallValue = parseInt(small) || 0;
+  const updateTotalQuantity = (espresso, filter, large) => {
+    const espressoValue = parseInt(espresso) || 0;
+    const filterValue = parseInt(filter) || 0;
     const largeValue = parseInt(large) || 0;
-    const total = (smallValue * 0.2) + (largeValue * 1.0);
+    const total = ((espressoValue + filterValue) * 0.2) + (largeValue * 1.0);
     setTotalQuantity(total);
   };
 
-  // Handle changes to small bags quantity
-  const handleSmallBagsChange = (e) => {
+  // Handle changes to espresso bags quantity
+  const handleEspressoBagsChange = (e) => {
     const value = e.target.value;
-    setSmallBags(value);
-    updateTotalQuantity(value, largeBags);
+    setSmallBagsEspresso(value);
+    updateTotalQuantity(value, smallBagsFilter, largeBags);
+  };
+
+  // Handle changes to filter bags quantity
+  const handleFilterBagsChange = (e) => {
+    const value = e.target.value;
+    setSmallBagsFilter(value);
+    updateTotalQuantity(smallBagsEspresso, value, largeBags);
   };
 
   // Handle changes to large bags quantity
   const handleLargeBagsChange = (e) => {
     const value = e.target.value;
     setLargeBags(value);
-    updateTotalQuantity(smallBags, value);
+    updateTotalQuantity(smallBagsEspresso, smallBagsFilter, value);
   };
 
   // Submit the inventory update
   const handleSubmit = async () => {
     // Input validation
-    if (smallBags === '' && largeBags === '') {
+    if (smallBagsEspresso === '' && smallBagsFilter === '' && largeBags === '') {
       setError('Please enter at least one quantity.');
       return;
     }
 
-    const smallBagsValue = parseInt(smallBags);
-    const largeBagsValue = parseInt(largeBags);
+    const espressoValue = parseInt(smallBagsEspresso) || 0;
+    const filterValue = parseInt(smallBagsFilter) || 0;
+    const largeBagsValue = parseInt(largeBags) || 0;
 
-    if ((smallBags !== '' && (isNaN(smallBagsValue) || smallBagsValue < 0)) || 
+    if ((smallBagsEspresso !== '' && (isNaN(espressoValue) || espressoValue < 0)) || 
+        (smallBagsFilter !== '' && (isNaN(filterValue) || filterValue < 0)) ||
         (largeBags !== '' && (isNaN(largeBagsValue) || largeBagsValue < 0))) {
       setError('Quantities must be non-negative numbers.');
       return;
@@ -77,6 +95,9 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
     setError(null);
 
     try {
+      // Calculate total small bags for backward compatibility with the API
+      const totalSmallBags = espressoValue + filterValue;
+      
       const response = await fetch('/api/retail/update-inventory', {
         method: 'PUT',
         headers: {
@@ -84,7 +105,7 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
         },
         body: JSON.stringify({
           inventoryId: inventoryItem.id,
-          smallBags: smallBagsValue,
+          smallBags: totalSmallBags,
           largeBags: largeBagsValue
         }),
       });
@@ -140,7 +161,16 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
             Current Inventory:
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            • Small Bags (200g): {inventoryItem.smallBags || 0}
+            • Small Bags (200g): {inventoryItem.smallBags || 
+              ((inventoryItem.smallBagsEspresso || 0) + (inventoryItem.smallBagsFilter || 0)) || 0}
+            {inventoryItem.smallBagsEspresso !== undefined && inventoryItem.smallBagsFilter !== undefined && (
+              <>
+                <br />
+                &nbsp;&nbsp;- Espresso: {inventoryItem.smallBagsEspresso || 0}
+                <br />
+                &nbsp;&nbsp;- Filter: {inventoryItem.smallBagsFilter || 0}
+              </>
+            )}
             <br />
             • Large Bags (1kg): {inventoryItem.largeBags || 0}
             <br />
@@ -151,15 +181,29 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <TextField
             fullWidth
-            label="Small Bags (200g)"
+            label="Espresso Bags (200g)"
             type="number"
-            value={smallBags}
-            onChange={(e) => setSmallBags(e.target.value)}
+            value={smallBagsEspresso}
+            onChange={handleEspressoBagsChange}
             margin="normal"
             size="small"
             InputProps={{
               inputProps: { min: 0, step: 1 }
             }}
+            helperText="For espresso coffee preparation"
+          />
+          <TextField
+            fullWidth
+            label="Filter Bags (200g)"
+            type="number"
+            value={smallBagsFilter}
+            onChange={handleFilterBagsChange}
+            margin="normal"
+            size="small"
+            InputProps={{
+              inputProps: { min: 0, step: 1 }
+            }}
+            helperText="For filter/drip coffee preparation"
           />
           <TextField
             label="Large Bags (1kg)"

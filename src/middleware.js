@@ -43,7 +43,10 @@ const isDirectAccessAPI = (request) => {
   // List of API paths that can be accessed directly with direct=true parameter
   const directAccessPaths = [
     '/api/coffee/inventory/total',
-    '/api/dashboard/stats'
+    '/api/dashboard/stats',
+    '/api/retail/inventory',
+    '/api/retail/shops',
+    '/api/shops/shop-details'
     // Add other APIs that should support direct mode here
   ];
   

@@ -98,6 +98,7 @@ export default async function handler(req, res) {
             smallBags: true,
             largeBags: true,
             totalQuantity: true,
+            lastOrderDate: true,
             coffeeId: true,
             coffee: {
               select: {
@@ -132,6 +133,8 @@ export default async function handler(req, res) {
             id: true,
             smallBags: true,
             largeBags: true,
+            totalQuantity: true,
+            lastOrderDate: true,
             coffeeId: true
           }
         });
@@ -160,6 +163,24 @@ export default async function handler(req, res) {
       
       // Make sure all inventory items have a valid coffee reference
       inventory = inventory.filter(item => item && item.coffee);
+      
+      // Transform inventory data to match frontend expectations
+      // The frontend expects smallBagsEspresso and smallBagsFilter, but DB only has smallBags
+      // For now, we'll split the general smallBags evenly between espresso and filter
+      // This is a temporary fix until the database schema is updated
+      inventory = inventory.map(item => {
+        const halfSmallBags = Math.floor((item.smallBags || 0) / 2);
+        const remainderBag = (item.smallBags || 0) % 2;
+        
+        return {
+          ...item,
+          // Map the general smallBags to specific types for frontend compatibility
+          smallBagsEspresso: halfSmallBags + remainderBag, // Give remainder to espresso
+          smallBagsFilter: halfSmallBags,
+          // Keep original smallBags for backward compatibility
+          smallBags: item.smallBags || 0
+        };
+      });
       
     } catch (dbError) {
       console.error('[api/retail/inventory] Database error fetching inventory:', dbError);
@@ -192,7 +213,7 @@ export default async function handler(req, res) {
         return acc;
       }, {});
 
-      console.log('[api/retail/inventory] Successfully returning inventory data');
+      console.log('[api/retail/inventory] Successfully returning inventory data with frontend mapping');
       return res.status(200).json(groupedInventory);
     } catch (processError) {
       console.error('[api/retail/inventory] Error processing inventory data:', processError);

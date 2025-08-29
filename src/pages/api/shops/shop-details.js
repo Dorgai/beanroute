@@ -58,8 +58,16 @@ export default async function handler(req, res) {
           id: true,
           name: true,
           address: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          country: true,
+          phoneNumber: true,
+          email: true,
           minCoffeeQuantitySmall: true,
           minCoffeeQuantityLarge: true,
+          createdAt: true,
+          updatedAt: true,
         },
       });
 
@@ -69,9 +77,22 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Shop not found' });
       }
 
+      // Transform the shop data to match frontend expectations
+      // The frontend expects minCoffeeQuantityEspresso and minCoffeeQuantityFilter
+      // but the database only has minCoffeeQuantitySmall and minCoffeeQuantityLarge
+      // For now, we'll split the minCoffeeQuantitySmall evenly between espresso and filter
+      const transformedShop = {
+        ...shop,
+        // Map the general small quantity to specific types for frontend compatibility
+        minCoffeeQuantityEspresso: Math.ceil((shop.minCoffeeQuantitySmall || 0) / 2),
+        minCoffeeQuantityFilter: Math.floor((shop.minCoffeeQuantitySmall || 0) / 2),
+        // Keep original field for backward compatibility
+        minCoffeeQuantitySmall: shop.minCoffeeQuantitySmall || 0
+      };
+
       console.log('[api/shops/shop-details] Successfully retrieved shop:', shop.name);
       await prisma.$disconnect();
-      return res.status(200).json(shop);
+      return res.status(200).json(transformedShop);
     } 
     // PUT method - Update shop
     else if (req.method === 'PUT') {
