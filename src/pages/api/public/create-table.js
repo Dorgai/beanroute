@@ -1,10 +1,40 @@
 // PUBLIC migration endpoint - completely bypass authentication
 // TEMPORARY - will be deleted after migration
+// UPDATED: Now also handles labelQuantity column migration
 
 import prisma from '@/lib/prisma';
 
 export default async function handler(req, res) {
   try {
+    console.log('[public-migration] Starting migrations...');
+    
+    // First check and add labelQuantity column if needed
+    console.log('[public-migration] Checking labelQuantity column...');
+    const labelColumnExists = await prisma.$queryRaw`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'GreenCoffee' 
+      AND column_name = 'labelQuantity'
+    `;
+    
+    if (labelColumnExists.length === 0) {
+      console.log('[public-migration] Adding labelQuantity column...');
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "GreenCoffee" 
+        ADD COLUMN "labelQuantity" INTEGER NOT NULL DEFAULT 0
+      `);
+      
+      await prisma.$executeRawUnsafe(`
+        UPDATE "GreenCoffee" 
+        SET "labelQuantity" = 100 
+        WHERE "labelQuantity" = 0
+      `);
+      
+      console.log('[public-migration] ✅ labelQuantity column added successfully!');
+    } else {
+      console.log('[public-migration] labelQuantity column already exists');
+    }
+
     console.log('[public-migration] Starting InventoryEmailNotification table creation...');
 
     // Check if table already exists
@@ -88,9 +118,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: 'InventoryEmailNotification table created successfully! The shop selector should now work.',
+      message: '✅ Migrations completed successfully! Both labelQuantity column and InventoryEmailNotification table are ready. Label quantity editing should now work!',
+      labelQuantityAdded: labelColumnExists.length === 0 ? 'Added' : 'Already existed',
       tableExists: verifyResult.length > 0,
       details: {
+        labelQuantityMigration: labelColumnExists.length === 0 ? 'completed' : 'already existed',
         tableCreated: true,
         indexesCreated: true,
         constraintsAdded: true,
