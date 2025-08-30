@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 const AuthContext = createContext();
 
 // Public routes that don't require authentication
-const publicRoutes = ['/login', '/dashboard', '/api/health', '/orders'];
+const publicRoutes = ['/login', '/api/health', '/orders'];
 
 // API routes are handled separately
 const apiRoutes = ['/api', '/_next'];
