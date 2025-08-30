@@ -52,6 +52,8 @@ model Shop {
   email                  String?
   minCoffeeQuantityLarge Int                 @default(0)
   minCoffeeQuantitySmall Int                 @default(0)
+  minCoffeeQuantityEspresso Int              @default(0)
+  minCoffeeQuantityFilter Int                @default(0)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   createdById            String
