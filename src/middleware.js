@@ -27,6 +27,14 @@ export const publicPaths = [
   '/api/debug/check-inventory-table', // TEMPORARY: Debug endpoint
   '/api/push/config', // Allow push notification configuration check
   '/api/push/user-status', // Allow user to check their subscription status
+  // Static files and assets
+  '/images',
+  '/icons',
+  '/favicon.ico',
+  '/manifest.json',
+  '/sw.js',
+  '/offline.html',
+  '/robots.txt',
 ];
 
 // Check if a path is public
