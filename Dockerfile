@@ -85,4 +85,4 @@ ENV PORT=3000
 ENV NODE_ENV=production
 
 # Run the application with database setup
-CMD ["./fix-and-run.sh"] 
+CMD ["./fix-and-run.sh"] # FORCE RAILWAY REBUILD - Sat Aug 30 15:42:40 CEST 2025 - Removing custom server completely
