@@ -39,7 +39,21 @@ export const publicPaths = [
 
 // Check if a path is public
 const isPublicPath = (path) => {
-  return publicPaths.some(publicPath => path === publicPath || path.startsWith(publicPath + '?'));
+  // First check exact matches
+  if (publicPaths.includes(path)) {
+    return true;
+  }
+  
+  // Then check if path starts with any public path
+  return publicPaths.some(publicPath => {
+    // For static file paths like /images, /icons, etc.
+    if (publicPath === '/images' || publicPath === '/icons') {
+      return path.startsWith(publicPath + '/');
+    }
+    
+    // For other paths, check exact match or starts with
+    return path === publicPath || path.startsWith(publicPath + '/');
+  });
 };
 
 // Check if a path is an API path
