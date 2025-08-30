@@ -97,13 +97,16 @@ export function AuthProvider({ children }) {
     // If user is not authenticated and route is not public, redirect to login
     if (!user && !isPublicRoute) {
       console.log(`Unauthenticated access to protected route: ${path}. Redirecting to login...`);
-      router.push('/login');
+      // Use replace instead of push to avoid back button issues
+      router.replace('/login');
+      return; // Exit early to prevent further processing
     }
     
     // If user is authenticated and trying to access login page, redirect to orders
     if (user && path === '/login') {
       console.log('Authenticated user accessing login page. Redirecting to orders...');
-      router.push('/orders');
+      router.replace('/orders');
+      return; // Exit early to prevent further processing
     }
   }, [user, router.pathname, loading, router]);
 
