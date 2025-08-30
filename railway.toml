@@ -1,11 +1,12 @@
-# Railway configuration - FORCE REBUILD
-# This file forces Railway to use Next.js instead of custom server
-# IMPORTANT: Use NIXPACKS builder, not Dockerfile
+# Railway configuration - RESTORED WORKING VERSION
+# This configuration was working before we broke it
 
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
+startCommand = "npm start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

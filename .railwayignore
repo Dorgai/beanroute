@@ -1,8 +1,4 @@
 .dockerignore
-docker-entrypoint.sh
-fix-and-run.sh
-fix-and-deploy.sh
-Dockerfile*
 node_modules
 .next
 .git 
