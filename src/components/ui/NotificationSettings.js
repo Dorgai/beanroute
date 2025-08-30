@@ -29,9 +29,13 @@ const NotificationSettings = () => {
 
   const loadSubscriptions = async () => {
     try {
-      const response = await fetch('/api/push/status');
+      const response = await fetch('/api/push/user-status');
       const data = await response.json();
-      setSubscriptions(data.subscriptions || []);
+      if (data.subscription) {
+        setSubscriptions([data.subscription]);
+      } else {
+        setSubscriptions([]);
+      }
     } catch (err) {
       console.error('Error loading subscriptions:', err);
     }

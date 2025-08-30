@@ -64,7 +64,7 @@ export const usePushNotifications = () => {
     if (!user || !isSupported) return;
 
     try {
-      const statusResponse = await fetch('/api/push/status');
+      const statusResponse = await fetch('/api/push/user-status');
       const status = await statusResponse.json();
       
       setIsSubscribed(status.subscribed);

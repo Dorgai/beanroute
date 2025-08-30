@@ -52,15 +52,40 @@ class PushNotificationService {
     const prisma = new PrismaClient();
     
     try {
-      // Create or update subscription using basic schema
-      const pushSubscription = await prisma.pushSubscription.upsert({
-        where: { endpoint: subscription.endpoint },
-        update: {
-          p256dh: subscription.keys.p256dh,
-          auth: subscription.keys.auth,
-          updatedAt: new Date()
-        },
-        create: {
+      // Check if user already has a subscription for this endpoint
+      const existingSubscription = await prisma.pushSubscription.findFirst({
+        where: { 
+          OR: [
+            { endpoint: subscription.endpoint },
+            { userId: userId }
+          ]
+        }
+      });
+
+      if (existingSubscription) {
+        if (existingSubscription.endpoint === subscription.endpoint) {
+          // Update existing subscription
+          const updatedSubscription = await prisma.pushSubscription.update({
+            where: { id: existingSubscription.id },
+            data: {
+              p256dh: subscription.keys.p256dh,
+              auth: subscription.keys.auth,
+              updatedAt: new Date()
+            }
+          });
+          console.log(`[Push] User ${userId} subscription updated successfully`);
+          return updatedSubscription;
+        } else {
+          // User has subscription on different device, replace it
+          await prisma.pushSubscription.deleteMany({
+            where: { userId: userId }
+          });
+        }
+      }
+
+      // Create new subscription
+      const pushSubscription = await prisma.pushSubscription.create({
+        data: {
           id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9),
           userId,
           endpoint: subscription.endpoint,
@@ -73,6 +98,25 @@ class PushNotificationService {
       return pushSubscription;
     } catch (error) {
       console.error('[Push] Error subscribing user:', error);
+      throw error;
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
+  /**
+   * Get user's current subscription
+   */
+  async getUserSubscription(userId) {
+    const prisma = new PrismaClient();
+    
+    try {
+      const subscription = await prisma.pushSubscription.findFirst({
+        where: { userId }
+      });
+      return subscription;
+    } catch (error) {
+      console.error('[Push] Error getting user subscription:', error);
       throw error;
     } finally {
       await prisma.$disconnect();
