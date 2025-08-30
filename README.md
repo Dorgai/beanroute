@@ -82,4 +82,4 @@ The application provides a health check endpoint at `/api/health` which Railway 
 
 ## License
 
-[MIT](LICENSE) 
+[MIT](LICENSE) # Force rebuild Sat Aug 30 15:32:07 CEST 2025
