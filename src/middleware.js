@@ -9,7 +9,6 @@ import { getTokenFromRequestCookie } from './lib/auth';
 
 // Define public paths that don't require authentication
 export const publicPaths = [
-  '/', // Root page - public landing page
   '/login',
   '/dashboard',
   '/api/auth/login',
