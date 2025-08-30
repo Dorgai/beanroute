@@ -1,6 +1,11 @@
-# Minimal Dockerfile for Railway deployment
+# FORCE RAILWAY REBUILD - Push notification fixes deployed
 # LAST UPDATE: 2025-01-28 15:30 - FORCE RAILWAY TO USE NEW DEPLOYMENT
+# UNIQUE ID: $(date +%s) - This should force Railway to rebuild
 FROM node:18-alpine
+
+# Force rebuild by adding unique identifier
+LABEL build_id="$(date +%s)"
+LABEL version="mobile-fixes-v2"
 
 WORKDIR /app
 
