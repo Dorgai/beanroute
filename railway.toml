@@ -14,8 +14,6 @@ dockerfilePath = "Dockerfile"
 startCommand = "npm start"
 healthcheckPath = "/api/health-basic"
 healthcheckTimeout = 300
-restartPolicyType = "ON_FAILURE"
-# Force restart by changing restart policy
 restartPolicyType = "ALWAYS"
 
 [database]
