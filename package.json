@@ -16,7 +16,7 @@
     "db:setup": "prisma migrate deploy && prisma db seed",
     "local": "npm run db:setup && npm run dev",
     "local:clean": "rm -rf .next && npm run db:setup && npm run dev",
-    "deploy": "rm -rf .next && next build && ./docker-entrypoint.sh",
+    "deploy": "rm -rf .next && next build && ./start-app.sh",
     "setup:local": "./setup-local-db.sh",
     "start:dev": "./start-dev.sh",
     "start:prod": "./start-prod.sh",
