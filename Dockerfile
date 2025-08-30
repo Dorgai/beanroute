@@ -1,11 +1,13 @@
 # FORCE RAILWAY REBUILD - Push notification fixes deployed
 # LAST UPDATE: 2025-01-28 15:30 - FORCE RAILWAY TO USE NEW DEPLOYMENT
-# UNIQUE ID: $(date +%s) - This should force Railway to rebuild
+# UNIQUE ID: $(date +%s) - Force Railway rebuild
+# FORCE RESTART: Adding completely new configuration
 FROM node:18-alpine
 
 # Force rebuild by adding unique identifier
 LABEL build_id="$(date +%s)"
-LABEL version="mobile-fixes-v2"
+LABEL version="mobile-fixes-v3"
+LABEL force_restart="true"
 
 WORKDIR /app
 
