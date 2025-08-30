@@ -9,4 +9,8 @@ fix-and-deploy.sh
 start-prod.sh
 start-dev.sh
 start-local.sh
-scripts/Dockerfile* 
+scripts/Dockerfile*
+*.sh
+fix-*.js
+deploy-*.sh
+admin-fix.js 
