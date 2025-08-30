@@ -1,4 +1,5 @@
-# Railway configuration
+# Railway configuration - FORCE REBUILD
+# This file forces Railway to use Next.js instead of custom server
 
 [build]
 builder = "NIXPACKS"
