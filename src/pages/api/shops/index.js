@@ -2,6 +2,10 @@ import { verifyRequestAndGetUser } from '../../../lib/auth';
 import { getShops, createShop } from '../../../lib/shop-service';
 import { Role } from '@prisma/client';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 export default async function handler(req, res) {
 
   // Authenticate all requests first

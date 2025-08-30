@@ -1,6 +1,10 @@
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 // This endpoint can be called by a CRON job to schedule regular inventory checks
 export default async function handler(req, res) {
   try {

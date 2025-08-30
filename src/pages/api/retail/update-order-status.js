@@ -4,6 +4,10 @@ import { verifyRequestAndGetUser } from '@/lib/auth';
 import orderEmailService from '@/lib/order-email-service';
 import pushNotificationService from '@/lib/push-notification-service';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 /**
  * Handle label quantity updates based on order status changes
  * Rules:
