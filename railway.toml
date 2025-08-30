@@ -1,5 +1,6 @@
 # Railway configuration - FORCE REBUILD
 # This file forces Railway to use Next.js instead of custom server
+# IMPORTANT: Use NIXPACKS builder, not Dockerfile
 
 [build]
 builder = "NIXPACKS"
