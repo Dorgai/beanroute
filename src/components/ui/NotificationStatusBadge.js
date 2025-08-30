@@ -16,8 +16,20 @@ const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
 
   const [showDialog, setShowDialog] = useState(false);
 
+  // Debug logging for mobile troubleshooting
+  console.log('[NotificationBadge] Debug info:', {
+    isSupported,
+    isConfigured,
+    isSubscribed,
+    needsPermission,
+    permissionDenied,
+    loading,
+    userAgent: navigator.userAgent
+  });
+
   // Don't show badge if not supported or not configured
   if (!isSupported || !isConfigured) {
+    console.log('[NotificationBadge] Hidden because:', { isSupported, isConfigured });
     return null;
   }
 
