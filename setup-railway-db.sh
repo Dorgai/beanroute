@@ -1,0 +1,43 @@
+#!/bin/bash
+
+echo "🚀 Railway Database Fix Setup"
+echo "=============================="
+echo ""
+
+echo "📋 To fix your database, you need to:"
+echo ""
+echo "1. Go to railway.app and select your beanroute project"
+echo "2. Click on the PostgreSQL service (not the web app)"
+echo "3. Look for connection details or 'Connect' button"
+echo "4. Copy the connection information"
+echo ""
+
+echo "🔧 Once you have the connection details, run:"
+echo ""
+echo "   cp railway-db-config.js .env.local"
+echo "   # Edit .env.local with your actual Railway PostgreSQL details"
+echo "   node fix-railway-db.js"
+echo ""
+
+echo "📝 Or you can run the SQL commands directly in your connected PostgreSQL session:"
+echo ""
+echo "   ALTER TABLE \"public\".\"Shop\" ADD COLUMN IF NOT EXISTS \"minCoffeeQuantityEspresso\" INTEGER NOT NULL DEFAULT 0;"
+echo "   ALTER TABLE \"public\".\"Shop\" ADD COLUMN IF NOT EXISTS \"minCoffeeQuantityFilter\" INTEGER NOT NULL DEFAULT 0;"
+echo "   CREATE TABLE IF NOT EXISTS \"public\".\"PushSubscription\" ("
+echo "       \"id\" TEXT NOT NULL,"
+echo "       \"endpoint\" TEXT NOT NULL,"
+echo "       \"p256dh\" TEXT NOT NULL,"
+echo "       \"auth\" TEXT NOT NULL,"
+echo "       \"userId\" TEXT NOT NULL,"
+echo "       \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+echo "       \"updatedAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+echo "       CONSTRAINT \"PushSubscription_pkey\" PRIMARY KEY (\"id\")"
+echo "   );"
+echo ""
+
+echo "🎯 This will fix:"
+echo "   ✅ Shop selector issues"
+echo "   ✅ Push notification subscription errors"
+echo ""
+
+echo "Need help? Let me know what you see in your Railway PostgreSQL service!"

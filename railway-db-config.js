@@ -1,64 +1,21 @@
 // Railway Database Configuration
-require('dotenv').config();
-const fs = require('fs');
+// Copy this file to .env.local and fill in your Railway PostgreSQL details
 
-console.log('Configuring Railway database connection...');
-
-// Get environment variables
-const databaseUrl = process.env.DATABASE_URL;
-const databasePublicUrl = process.env.DATABASE_PUBLIC_URL;
-const isRailway = process.env.RAILWAY || process.env.RAILWAY_ENVIRONMENT;
-
-// Main configuration function
-function configureDatabase() {
-  // Check if running on Railway
-  if (isRailway) {
-    console.log('Running on Railway environment');
-    
-    // If DATABASE_PUBLIC_URL is available, use it
-    if (databasePublicUrl) {
-      console.log('Found DATABASE_PUBLIC_URL, using for external connections');
-      process.env.DATABASE_URL = databasePublicUrl;
-      
-      try {
-        // Update .env file if it exists
-        if (fs.existsSync('.env')) {
-          console.log('Updating .env file with DATABASE_PUBLIC_URL');
-          let envContent = fs.readFileSync('.env', 'utf8');
-          
-          if (envContent.includes('DATABASE_URL=')) {
-            envContent = envContent.replace(/DATABASE_URL=.*$/m, `DATABASE_URL="${databasePublicUrl}"`);
-          } else {
-            envContent += `\nDATABASE_URL="${databasePublicUrl}"\n`;
-          }
-          
-          fs.writeFileSync('.env', envContent);
-        }
-      } catch (error) {
-        console.error('Error updating .env file:', error);
-      }
-      
-      return {
-        success: true,
-        message: 'Using DATABASE_PUBLIC_URL for database connection'
-      };
-    } else {
-      console.log('No DATABASE_PUBLIC_URL found, keeping existing configuration');
-      return {
-        success: false,
-        message: 'No DATABASE_PUBLIC_URL available'
-      };
-    }
-  } else {
-    console.log('Not running on Railway, skipping configuration');
-    return {
-      success: false,
-      message: 'Not running on Railway environment'
-    };
-  }
-}
-
-// Export functions
 module.exports = {
-  configureDatabase
-}; 
+  // Get these values from your Railway PostgreSQL service
+  RAILWAY_PG_HOST: 'your-railway-postgres-host.railway.app',
+  RAILWAY_PG_PORT: 5432,
+  RAILWAY_PG_DATABASE: 'railway',
+  RAILWAY_PG_USER: 'postgres',
+  RAILWAY_PG_PASSWORD: 'your-railway-postgres-password',
+  RAILWAY_PG_SSL: 'true'
+};
+
+// To get these values:
+// 1. Go to railway.app
+// 2. Select your beanroute project
+// 3. Click on the PostgreSQL service
+// 4. Look for "Connect" or connection details
+// 5. Copy the host, port, database, user, and password
+// 6. Update the values above
+// 7. Run: node fix-railway-db.js 

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Push Notification Test</title>
+</head>
+<body>
+    <h1>Push Notification Test</h1>
+    <button id="testSubscription">Test Push Subscription</button>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('testSubscription').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // Step 1: Check if service worker is supported
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    resultDiv.innerHTML = '❌ Push notifications not supported in this browser';
+                    return;
+                }
+                
+                resultDiv.innerHTML = '✅ Browser supports push notifications<br>';
+                
+                // Step 2: Get VAPID public key
+                const configResponse = await fetch('https://beanroute-production-3421.up.railway.app/api/push/config');
+                const config = await configResponse.json();
+                
+                if (!config.publicKey) {
+                    resultDiv.innerHTML += '❌ No VAPID public key received<br>';
+                    return;
+                }
+                
+                resultDiv.innerHTML += '✅ VAPID public key received<br>';
+                
+                // Step 3: Register service worker
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                resultDiv.innerHTML += '✅ Service worker registered<br>';
+                
+                // Step 4: Request notification permission
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    resultDiv.innerHTML += '❌ Notification permission denied<br>';
+                    return;
+                }
+                
+                resultDiv.innerHTML += '✅ Notification permission granted<br>';
+                
+                // Step 5: Subscribe to push notifications
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: config.publicKey
+                });
+                
+                resultDiv.innerHTML += '✅ Push subscription created<br>';
+                
+                // Step 6: Send subscription to server
+                const subscribeResponse = await fetch('https://beanroute-production-3421.up.railway.app/api/push/subscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        subscription: subscription,
+                        userId: 'test-user'
+                    })
+                });
+                
+                if (subscribeResponse.ok) {
+                    resultDiv.innerHTML += '✅ Subscription saved to server successfully!<br>';
+                } else {
+                    const error = await subscribeResponse.text();
+                    resultDiv.innerHTML += `❌ Failed to save subscription: ${error}<br>`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML += `❌ Error: ${error.message}<br>`;
+                console.error('Push notification test error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
