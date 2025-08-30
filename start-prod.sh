@@ -18,5 +18,5 @@ echo "Applying database migrations..."
 npx prisma migrate deploy
 
 # Start the production server
-echo "Starting Node.js production server..."
-node server.js 
+echo "Starting Next.js production server..."
+npm start 
