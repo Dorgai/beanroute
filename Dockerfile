@@ -1,4 +1,5 @@
 # Minimal Dockerfile for Railway deployment
+# LAST UPDATE: 2025-01-28 15:30 - FORCE RAILWAY TO USE NEW DEPLOYMENT
 FROM node:18-alpine
 
 WORKDIR /app
