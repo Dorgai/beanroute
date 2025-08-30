@@ -17,4 +17,4 @@ node init-railway-db.js
 
 # Start the server
 echo "Starting server..."
-exec node server.js
+exec npm start
