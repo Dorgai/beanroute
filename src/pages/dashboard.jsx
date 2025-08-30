@@ -2,38 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
-// Try to use AuthContext, but fallback to direct localStorage approach if not available
-let useAuth, withAuth;
-try {
-  const authModule = require('../context/AuthContext');
-  useAuth = authModule.useAuth;
-  withAuth = authModule.withAuth;
-} catch (err) {
-  console.warn('Auth context not available, using localStorage fallback');
-  useAuth = () => {
-    const [user, setUser] = useState(null);
-    
-    useEffect(() => {
-      try {
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          setUser(JSON.parse(userData));
-        } else {
-          window.location.href = '/login';
-        }
-      } catch (err) {
-        console.error('Error loading user data:', err);
-      }
-    }, []);
-    
-    return { user };
-  };
-  
-  withAuth = (Component) => Component;
-}
+import { useAuth } from '../context/AuthContext';
 
 function Dashboard() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeams: 0,
@@ -77,8 +49,8 @@ function Dashboard() {
     }
   }, [user]);
 
-  // If not loaded yet or no user, show loading
-  if (loading || !user) {
+  // If authentication is still loading or no user, show loading
+  if (authLoading || !user) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
