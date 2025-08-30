@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeanRoute - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .offline-container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+        
+        .offline-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #2563eb;
+            margin-bottom: 16px;
+        }
+        
+        .offline-message {
+            font-size: 1.1rem;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .offline-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+            transform: translateY(-1px);
+        }
+        
+        .connection-status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .status-offline {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .status-online {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .cached-pages {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .cached-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        
+        .cached-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .cached-item {
+            background: #f3f4f6;
+            color: #2563eb;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .cached-item:hover {
+            background: #e5e7eb;
+        }
+        
+        @media (max-width: 480px) {
+            .offline-container {
+                padding: 30px 20px;
+            }
+            
+            .offline-title {
+                font-size: 1.5rem;
+            }
+            
+            .offline-message {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">☕</div>
+        <h1 class="offline-title">You're Offline</h1>
+        <p class="offline-message">
+            No internet connection detected. Don't worry - you can still access some BeanRoute features that have been cached for offline use.
+        </p>
+        
+        <div class="offline-actions">
+            <button class="btn btn-primary" onclick="tryReconnect()">
+                Try Again
+            </button>
+            <button class="btn btn-secondary" onclick="window.history.back()">
+                Go Back
+            </button>
+        </div>
+        
+        <div id="connectionStatus" class="connection-status status-offline">
+            🔴 Currently offline
+        </div>
+        
+        <div class="cached-pages">
+            <div class="cached-title">Available Offline:</div>
+            <div class="cached-list">
+                <a href="/" class="cached-item">Dashboard</a>
+                <a href="/login" class="cached-item">Login</a>
+                <a href="/orders" class="cached-item">Orders</a>
+                <a href="/coffee" class="cached-item">Coffee</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Monitor connection status
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connectionStatus');
+            
+            if (navigator.onLine) {
+                statusElement.textContent = '🟢 Back online!';
+                statusElement.className = 'connection-status status-online';
+                
+                // Auto-redirect after a short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                statusElement.textContent = '🔴 Currently offline';
+                statusElement.className = 'connection-status status-offline';
+            }
+        }
+        
+        // Try to reconnect
+        function tryReconnect() {
+            if (navigator.onLine) {
+                // If we're online, try to go back or reload
+                if (document.referrer) {
+                    window.location.href = document.referrer;
+                } else {
+                    window.location.href = '/';
+                }
+            } else {
+                // Show feedback that we're still offline
+                const statusElement = document.getElementById('connectionStatus');
+                statusElement.textContent = '🔴 Still offline - check your connection';
+                statusElement.className = 'connection-status status-offline';
+            }
+        }
+        
+        // Listen for connection changes
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Initial status check
+        updateConnectionStatus();
+        
+        // Periodic connection check
+        setInterval(() => {
+            // Attempt to fetch a small resource to verify real connectivity
+            fetch('/favicon.ico', { 
+                method: 'HEAD', 
+                mode: 'no-cors',
+                cache: 'no-store'
+            })
+            .then(() => {
+                if (!navigator.onLine) {
+                    // Browser thinks we're offline but we can actually fetch
+                    navigator.onLine = true;
+                    updateConnectionStatus();
+                }
+            })
+            .catch(() => {
+                // Confirm we're actually offline
+                if (navigator.onLine) {
+                    navigator.onLine = false;
+                    updateConnectionStatus();
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
+

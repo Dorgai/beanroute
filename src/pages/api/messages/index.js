@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
+import pushNotificationService from '@/lib/push-notification-service';
 
 // Message board API - Production deployment fix
 export default async function handler(req, res) {
@@ -64,6 +65,68 @@ export default async function handler(req, res) {
           },
         },
       });
+
+      // Send push notifications for new message
+      console.log(`[messages] Sending push notifications for new message by ${session.user.username}`);
+      try {
+        // Check for mentions in the message
+        const mentionMatches = content.match(/@(\w+)/g);
+        const messagePreview = content.length > 50 ? content.substring(0, 50) + '...' : content;
+
+        if (mentionMatches && mentionMatches.length > 0) {
+          // Send mention notifications to specific users
+          console.log(`[messages] Found mentions: ${mentionMatches.join(', ')}`);
+          
+          for (const mention of mentionMatches) {
+            const username = mention.replace('@', '');
+            
+            // Find mentioned user
+            const mentionedUser = await prisma.user.findUnique({
+              where: { username },
+              select: { id: true }
+            });
+            
+            if (mentionedUser && mentionedUser.id !== session.user.id) {
+              // Don't notify yourself
+              const pushResult = await pushNotificationService.sendMessageNotification('MENTION', {
+                messageId: message.id,
+                senderName: session.user.username,
+                messagePreview,
+                mentionedUsername: username
+              }, [mentionedUser.id]);
+              
+              if (pushResult.success) {
+                console.log(`[messages] Mention notification sent to ${username}`);
+              }
+            }
+          }
+        } else {
+          // Send general new message notification (exclude sender)
+          const allUsers = await prisma.user.findMany({
+            where: { 
+              status: 'ACTIVE',
+              id: { not: session.user.id } // Exclude sender
+            },
+            select: { id: true }
+          });
+          
+          if (allUsers.length > 0) {
+            const userIds = allUsers.map(u => u.id);
+            const pushResult = await pushNotificationService.sendMessageNotification('NEW_MESSAGE', {
+              messageId: message.id,
+              senderName: session.user.username,
+              messagePreview
+            }, userIds);
+            
+            if (pushResult.success) {
+              console.log(`[messages] New message notifications sent to ${pushResult.successful}/${pushResult.total} users`);
+            }
+          }
+        }
+      } catch (pushError) {
+        // Don't fail message creation if push notifications fail
+        console.error('[messages] Error sending push notifications:', pushError);
+      }
 
       return res.status(201).json({ message });
     }

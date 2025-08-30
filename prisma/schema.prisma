@@ -36,6 +36,8 @@ model User {
   messagesRead               MessageRead[]             @relation("MessageReader")
   createdEmailNotifications     OrderEmailNotification[]     @relation("OrderEmailNotificationCreator")
   createdInventoryNotifications InventoryEmailNotification[] @relation("InventoryEmailNotificationCreator")
+  pushSubscriptions              PushSubscription[]           @relation("UserPushSubscriptions")
+  pushNotificationLogs           PushNotificationLog[]        @relation("UserNotificationLogs")
 }
 
 model Shop {
@@ -304,6 +306,43 @@ model InventoryEmailNotification {
   @@unique([shopId, alertType])
   @@index([shopId])
   @@index([alertType])
+}
+
+model PushSubscription {
+  id         String   @id @default(uuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String   // Public key for encryption
+  auth       String   // Auth secret for encryption
+  userAgent  String?  // Browser/device info
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastUsed   DateTime @default(now())
+  user       User     @relation("UserPushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([endpoint])
+}
+
+model PushNotificationLog {
+  id            String   @id @default(uuid())
+  userId        String
+  title         String
+  body          String
+  data          Json?    // Additional notification data
+  notificationType String // "ORDER", "INVENTORY", "MESSAGE", etc.
+  success       Boolean  @default(false)
+  error         String?  // Error message if failed
+  sentAt        DateTime @default(now())
+  clickedAt     DateTime?
+  user          User     @relation("UserNotificationLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([notificationType])
+  @@index([sentAt])
+  @@index([success])
 }
 
 enum Role {

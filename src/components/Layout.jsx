@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
+import NotificationStatusBadge, { NotificationBanner } from './ui/NotificationStatusBadge';
 
 // Component to fetch and display coffee inventory
 function CoffeeInventory() {
@@ -280,6 +281,7 @@ export default function Layout({ children }) {
               
               {user ? (
                 <>
+                  <NotificationStatusBadge size="md" />
                   <span className="text-sm text-gray-500 hidden sm:inline">
                     {user?.username}
                   </span>
@@ -376,6 +378,9 @@ export default function Layout({ children }) {
           )}
         </div>
       </header>
+      
+      {/* Notification Banner */}
+      {user && <NotificationBanner />}
       
       {/* Main content area */}
       <main>

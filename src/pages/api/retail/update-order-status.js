@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import orderEmailService from '@/lib/order-email-service';
+import pushNotificationService from '@/lib/push-notification-service';
 
 /**
  * Handle label quantity updates based on order status changes
@@ -407,6 +408,31 @@ export default async function handler(req, res) {
     } catch (emailError) {
       // Don't fail the entire operation if email sending fails
       console.error('[update-order-status] Error sending email notifications:', emailError);
+    }
+
+    // Send push notifications for status change
+    console.log(`[update-order-status] Sending push notifications for status change from ${existingOrder.status} to ${status}`);
+    try {
+      const notificationType = status === 'DELIVERED' ? 'DELIVERED' : 'STATUS_CHANGE';
+      
+      const pushResult = await pushNotificationService.sendOrderNotification(notificationType, {
+        orderId: updatedOrder.id,
+        orderNumber: updatedOrder.id.slice(-8), // Use last 8 chars as order number
+        shopId: updatedOrder.shopId,
+        shopName: updatedOrder.shop?.name || 'Unknown Shop',
+        oldStatus: existingOrder.status,
+        newStatus: status,
+        updatedBy: user.username
+      });
+      
+      if (pushResult.success) {
+        console.log(`[update-order-status] Push notifications sent to ${pushResult.successful}/${pushResult.total} recipients`);
+      } else {
+        console.log(`[update-order-status] Push notifications not sent: ${pushResult.error}`);
+      }
+    } catch (pushError) {
+      // Don't fail the entire operation if push notification fails
+      console.error('[update-order-status] Error sending push notifications:', pushError);
     }
 
     // Success! Return the updated order with minimal data

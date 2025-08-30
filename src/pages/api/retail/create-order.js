@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { createActivityLog } from '@/lib/activity-service';
 import orderEmailService from '@/lib/order-email-service';
+import pushNotificationService from '@/lib/push-notification-service';
 
 export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
@@ -300,6 +301,28 @@ export default async function handler(req, res) {
     } catch (emailError) {
       // Don't fail the entire operation if email sending fails
       console.error('[create-order] Error sending email notifications:', emailError);
+    }
+
+    // Send push notification for new order
+    console.log(`[create-order] Sending push notifications for new order ${newOrder.id}`);
+    try {
+      const pushResult = await pushNotificationService.sendOrderNotification('NEW_ORDER', {
+        orderId: newOrder.id,
+        orderNumber: newOrder.id.slice(-8), // Use last 8 chars as order number
+        shopId: newOrder.shopId,
+        shopName: completeOrder.shop?.name || 'Unknown Shop',
+        itemCount: newOrder.items?.length || 0,
+        createdBy: session.user.username
+      });
+      
+      if (pushResult.success) {
+        console.log(`[create-order] Push notifications sent to ${pushResult.successful}/${pushResult.total} recipients`);
+      } else {
+        console.log(`[create-order] Push notifications not sent: ${pushResult.error}`);
+      }
+    } catch (pushError) {
+      // Don't fail the entire operation if push notification fails
+      console.error('[create-order] Error sending push notifications:', pushError);
     }
 
     // Make sure to disconnect the Prisma client

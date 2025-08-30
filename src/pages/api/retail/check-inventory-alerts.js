@@ -1,6 +1,7 @@
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import nodemailer from 'nodemailer';
+import pushNotificationService from '@/lib/push-notification-service';
 
 export default async function handler(req, res) {
   console.log('[check-inventory-alerts] Starting inventory check handler');
@@ -315,6 +316,33 @@ export default async function handler(req, res) {
               note: 'Email not sent - SMTP not configured'
             });
           }
+        }
+
+        // Send push notifications for inventory alerts
+        console.log(`[check-inventory-alerts] Sending push notifications for ${shop.name} inventory alert`);
+        try {
+          const notificationType = hasCritical ? 'CRITICAL_STOCK' : 'LOW_STOCK';
+          const percentage = Math.min(smallBagsPercentage, largeBagsPercentage).toFixed(1);
+          
+          const pushResult = await pushNotificationService.sendInventoryNotification(notificationType, {
+            shopId: shop.id,
+            shopName: shop.name,
+            percentage: percentage,
+            totalSmallBags,
+            totalLargeBags,
+            minSmallBags,
+            minLargeBags,
+            smallBagsPercentage: smallBagsPercentage.toFixed(1),
+            largeBagsPercentage: largeBagsPercentage.toFixed(1)
+          });
+          
+          if (pushResult.success) {
+            console.log(`[check-inventory-alerts] Push notifications sent to ${pushResult.successful}/${pushResult.total} recipients for ${shop.name}`);
+          } else {
+            console.log(`[check-inventory-alerts] Push notifications failed for ${shop.name}: ${pushResult.error}`);
+          }
+        } catch (pushError) {
+          console.error(`[check-inventory-alerts] Error sending push notifications for ${shop.name}:`, pushError);
         }
         
         // Update the alert log to indicate emails were sent
