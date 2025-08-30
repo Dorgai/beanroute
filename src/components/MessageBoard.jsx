@@ -217,12 +217,13 @@ export default function MessageBoard() {
                   return (
                     <div
                       key={message.id}
-                      className={`p-3 rounded-lg border ${
+                      className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                         isUnread 
-                          ? 'bg-blue-50 border-blue-200 font-semibold' 
-                          : 'bg-gray-50 border-gray-200'
+                          ? 'bg-blue-50 border-blue-200 font-semibold hover:bg-blue-100' 
+                          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                       }`}
                       onClick={() => isUnread && markAsRead(message.id)}
+                      title={isUnread ? "Click to mark as read" : "Already read"}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-sm font-medium text-gray-700">
