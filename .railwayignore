@@ -1,4 +1,10 @@
-.dockerignore
 node_modules
 .next
-.git 
+.env
+.env.local
+.env.production
+.env.development
+Dockerfile*
+docker-entrypoint.sh
+fix-and-run.sh
+fix-and-deploy.sh 
