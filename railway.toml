@@ -1,10 +1,11 @@
-# Railway configuration - FORCE NIXPACKS REBUILD
+# Railway configuration - USE DOCKERFILE (Nixpacks failing)
 # This configuration was working before we broke it
 # FORCE REBUILD: $(date) - Push notification fixes deployed
-# IMPORTANT: Use NIXPACKS builder, not Dockerfile
+# IMPORTANT: Use Dockerfile builder since Nixpacks is failing
 
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "npm start"
