@@ -264,16 +264,35 @@ export default function Layout({ children }) {
               </nav>
             </div>
             
-            {/* Mobile Menu Button */}
-            <button 
-              className="md:hidden flex items-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
-              onClick={toggleMobileMenu}
-              aria-label="Menu"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-              </svg>
-            </button>
+            {/* Mobile Logo and Menu Button */}
+            <div className="md:hidden flex items-center space-x-4">
+              {/* Mobile Logo */}
+              <Link href="/dashboard" className="flex items-center">
+                <img 
+                  src="/images/sonic-beans-logo.jpg"
+                  alt="Sonic Beans"
+                  className="h-6"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "/images/sonic-beans-logo.svg";
+                  }}
+                />
+              </Link>
+              
+              {/* Mobile Notification Badge */}
+              {user && <NotificationStatusBadge size="sm" />}
+              
+              {/* Mobile Menu Button */}
+              <button 
+                className="flex items-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
+                onClick={toggleMobileMenu}
+                aria-label="Menu"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+                </svg>
+              </button>
+            </div>
             
             {/* User Info / Logout */}
             <div className="hidden md:flex items-center space-x-4">
