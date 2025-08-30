@@ -25,6 +25,7 @@ export const publicPaths = [
   '/api/public/add-label-quantity', // TEMPORARY: Public migration endpoint for labelQuantity column
   '/api/migrate-label-quantity', // EMERGENCY: Public migration endpoint for labelQuantity column
   '/api/debug/check-inventory-table', // TEMPORARY: Debug endpoint
+  '/api/push/config', // Allow push notification configuration check
 ];
 
 // Check if a path is public
