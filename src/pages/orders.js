@@ -224,9 +224,9 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
         return;
       }
 
-      // Create the order with timeout and optimistic handling
+      // Create the order with fast timeout and optimistic handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
       const response = await fetch('/api/retail/create-order', {
         method: 'POST',
@@ -671,9 +671,9 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       // Log the order and status being submitted
       console.log(`Submitting status update: Order ID ${order.id}, Status ${status} (attempt ${retryCount + 1})`);
 
-      // Add timeout with optimistic success handling
+      // Add short timeout with fast optimistic success handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
       const response = await fetch('/api/retail/update-order-status', {
         method: 'PUT',
@@ -718,13 +718,11 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
         // On timeout, assume success since database usually updates even when response is lost
         console.log('Request timed out, but assuming success due to Railway infrastructure issues');
         
-        // Close dialog optimistically and refresh data
-        setTimeout(() => {
-          if (typeof refreshData === 'function') {
-            refreshData(); // Refresh to get latest status
-          }
-          onClose(true, status); // Close as if successful
-        }, 1000);
+        // Close dialog immediately and refresh data
+        if (typeof refreshData === 'function') {
+          refreshData(); // Refresh to get latest status
+        }
+        onClose(true, status); // Close as if successful
         
       } else {
         setError(error.message || 'An unexpected error occurred');
