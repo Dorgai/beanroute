@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
 import NotificationStatusBadge, { NotificationBanner } from './ui/NotificationStatusBadge';
+import InstallPWA from './ui/InstallPWA';
 
 // Component to fetch and display coffee inventory
 function CoffeeInventory() {
@@ -410,6 +411,9 @@ export default function Layout({ children }) {
 
       {/* Message Board - only show for authenticated users */}
       {user && <MessageBoard />}
+      
+      {/* PWA Install Prompt */}
+      <InstallPWA />
     </div>
   );
 } 
