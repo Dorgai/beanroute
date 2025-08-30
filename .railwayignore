@@ -1,10 +1,12 @@
+# Force Railway to use Nixpacks by ignoring ALL Docker-related files
 node_modules
 .next
-.env
-.env.local
-.env.production
-.env.development
+.env*
 Dockerfile*
-docker-entrypoint.sh
+docker*
 fix-and-run.sh
-fix-and-deploy.sh 
+fix-and-deploy.sh
+start-prod.sh
+start-dev.sh
+start-local.sh
+scripts/Dockerfile* 
