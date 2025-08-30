@@ -17,61 +17,75 @@ export function AuthProvider({ children }) {
 
   // Load user from server session on mount
   useEffect(() => {
+    console.log('[AuthContext] Starting session fetch...');
+    
     const fetchSessionData = async () => {
       try {
+        console.log('[AuthContext] Fetching session from /api/auth/session...');
         // Try to get the session from the server
         const response = await fetch('/api/auth/session');
+        console.log('[AuthContext] Session API response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('[AuthContext] Session API response data:', data);
+          
           if (data && data.user) {
-            console.log('Session loaded from server', data.user.role);
+            console.log('[AuthContext] Session loaded from server:', data.user.role);
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
           } else {
-            console.log('No user in server session, falling back to localStorage');
+            console.log('[AuthContext] No user in server session, falling back to localStorage');
             // Fallback to localStorage if server session not available
             const userData = localStorage.getItem('user');
             if (userData) {
               try {
                 const parsedUser = JSON.parse(userData);
-                console.log('Session loaded from localStorage');
+                console.log('[AuthContext] Session loaded from localStorage');
                 setUser(parsedUser);
               } catch (parseError) {
-                console.error('Error parsing user data from localStorage:', parseError);
+                console.error('[AuthContext] Error parsing user data from localStorage:', parseError);
                 localStorage.removeItem('user'); // Clear invalid data
               }
+            } else {
+              console.log('[AuthContext] No user data in localStorage either');
             }
           }
         } else {
-          console.warn('Session API returned error:', response.status);
+          console.warn('[AuthContext] Session API returned error:', response.status);
           // Fallback to localStorage if API fails
           const userData = localStorage.getItem('user');
           if (userData) {
             try {
               const parsedUser = JSON.parse(userData);
-              console.log('Session loaded from localStorage (API error)');
+              console.log('[AuthContext] Session loaded from localStorage (API error)');
               setUser(parsedUser);
             } catch (parseError) {
-              console.error('Error parsing user data from localStorage:', parseError);
+              console.error('[AuthContext] Error parsing user data from localStorage:', parseError);
               localStorage.removeItem('user'); // Clear invalid data
             }
+          } else {
+            console.log('[AuthContext] No user data in localStorage (API error)');
           }
         }
       } catch (error) {
-        console.error('Error fetching session:', error);
+        console.error('[AuthContext] Error fetching session:', error);
         // Fallback to localStorage
         const userData = localStorage.getItem('user');
         if (userData) {
           try {
             const parsedUser = JSON.parse(userData);
-            console.log('Session loaded from localStorage (error fallback)');
+            console.log('[AuthContext] Session loaded from localStorage (error fallback)');
             setUser(parsedUser);
           } catch (parseError) {
-            console.error('Error parsing user data from localStorage:', parseError);
+            console.error('[AuthContext] Error parsing user data from localStorage:', parseError);
             localStorage.removeItem('user'); // Clear invalid data
           }
+        } else {
+          console.log('[AuthContext] No user data in localStorage (error fallback)');
         }
       } finally {
+        console.log('[AuthContext] Setting loading to false, user state:', user ? 'present' : 'null');
         setLoading(false);
       }
     };
@@ -81,22 +95,38 @@ export function AuthProvider({ children }) {
 
   // Handle route changes
   useEffect(() => {
+    console.log('[AuthContext] Route change effect triggered:', {
+      loading,
+      user: user ? 'present' : 'null',
+      path: router.pathname,
+      isReady: router.isReady
+    });
+
     // Skip if still loading
-    if (loading) return;
+    if (loading) {
+      console.log('[AuthContext] Still loading, skipping redirect logic');
+      return;
+    }
 
     const path = router.pathname;
     
     // Skip redirection for API routes and Next.js internal routes
     if (apiRoutes.some(prefix => path.startsWith(prefix))) {
+      console.log('[AuthContext] API route, skipping redirect');
       return;
     }
     
     // Determine if this is a protected route
     const isPublicRoute = publicRoutes.includes(path);
+    console.log('[AuthContext] Route analysis:', {
+      path,
+      isPublicRoute,
+      publicRoutes
+    });
     
     // If user is not authenticated and route is not public, redirect to login
     if (!user && !isPublicRoute) {
-      console.log(`Unauthenticated access to protected route: ${path}. Redirecting to login...`);
+      console.log(`[AuthContext] Unauthenticated access to protected route: ${path}. Redirecting to login...`);
       // Use replace instead of push to avoid back button issues
       router.replace('/login');
       return; // Exit early to prevent further processing
@@ -104,10 +134,12 @@ export function AuthProvider({ children }) {
     
     // If user is authenticated and trying to access login page, redirect to orders
     if (user && path === '/login') {
-      console.log('Authenticated user accessing login page. Redirecting to orders...');
+      console.log('[AuthContext] Authenticated user accessing login page. Redirecting to orders...');
       router.replace('/orders');
       return; // Exit early to prevent further processing
     }
+
+    console.log('[AuthContext] No redirect needed for this route');
   }, [user, router.pathname, loading, router]);
 
   // Login function

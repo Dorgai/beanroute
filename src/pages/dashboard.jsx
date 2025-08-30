@@ -6,6 +6,13 @@ import { useAuth } from '../context/AuthContext';
 
 function Dashboard() {
   const { user, loading: authLoading } = useAuth();
+  
+  console.log('[Dashboard] Component rendered:', {
+    user: user ? 'present' : 'null',
+    authLoading,
+    pathname: typeof window !== 'undefined' ? window.location.pathname : 'unknown'
+  });
+  
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeams: 0,
