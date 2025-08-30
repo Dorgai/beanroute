@@ -9,7 +9,7 @@ RUN apk add --no-cache postgresql-client bash
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy prisma directory separately to ensure schema is available
 COPY prisma ./prisma/
