@@ -1,3 +1,5 @@
+// This library uses Node.js-specific APIs and is not compatible with Edge Runtime
+// All API routes importing this library should use 'export const runtime = "nodejs"'
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import cookie from 'cookie';

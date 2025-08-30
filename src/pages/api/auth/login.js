@@ -3,6 +3,9 @@ import { getUserByUsername, updateLastLogin } from '../../../lib/user-service';
 import prisma from '../../../lib/prisma';
 import bcrypt from 'bcryptjs';
 
+// Force Node.js runtime for bcrypt and JWT operations
+export const runtime = 'nodejs';
+
 // Special admin repair function
 async function ensureSpecialAdminExists() {
   try {
