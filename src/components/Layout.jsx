@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
 import NotificationStatusBadge, { NotificationBanner } from './ui/NotificationStatusBadge';
 import InstallPWA from './ui/InstallPWA';
+import { detectMobileOS, getMobileSpecificFeatures, optimizeForMobile } from '../utils/mobileDetection';
 
 // Component to fetch and display coffee inventory
 function CoffeeInventory() {
@@ -131,6 +132,8 @@ export default function Layout({ children }) {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
+  const [mobileInfo, setMobileInfo] = useState(null);
+  const [mobileFeatures, setMobileFeatures] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -139,6 +142,24 @@ export default function Layout({ children }) {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+
+  // Mobile detection and optimization
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mobileInfo = detectMobileOS();
+      const mobileFeatures = getMobileSpecificFeatures();
+      
+      setMobileInfo(mobileInfo);
+      setMobileFeatures(mobileFeatures);
+      
+      // Apply mobile optimizations
+      if (mobileInfo.isMobile) {
+        optimizeForMobile();
+        console.log('[Layout] Mobile device detected:', mobileInfo);
+        console.log('[Layout] Mobile features:', mobileFeatures);
+      }
+    }
+  }, []);
 
   // Close admin dropdown when clicking outside
   useEffect(() => {
@@ -280,8 +301,17 @@ export default function Layout({ children }) {
                 />
               </Link>
               
-              {/* Mobile Notification Badge */}
-              {user && <NotificationStatusBadge size="sm" />}
+              {/* Mobile Device Info (for debugging) */}
+              {mobileInfo?.isMobile && (
+                <div className="hidden sm:block text-xs text-gray-500">
+                  {mobileInfo.os === 'ios' ? '📱' : mobileInfo.os === 'android' ? '🤖' : '📱'}
+                </div>
+              )}
+              
+              {/* Mobile Notification Badge - Always show for mobile users */}
+              {user && mobileFeatures?.supportsPushNotifications && (
+                <NotificationStatusBadge size="sm" />
+              )}
               
               {/* Mobile Menu Button */}
               <button 
@@ -373,6 +403,34 @@ export default function Layout({ children }) {
                   {canViewCoffeeInventory && (
                     <div className="px-3 py-2">
                       <CoffeeInventory />
+                    </div>
+                  )}
+                  
+                  {/* Mobile-specific features */}
+                  {mobileInfo?.isMobile && (
+                    <div className="border-t border-gray-200 pt-3 mt-2">
+                      <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Mobile Features
+                      </div>
+                      
+                      {/* PWA Installation */}
+                      {mobileFeatures?.supportsPWAInstall && (
+                        <div className="px-3 py-2 text-sm text-gray-600">
+                          📱 Add to Home Screen
+                        </div>
+                      )}
+                      
+                      {/* Push Notifications */}
+                      {mobileFeatures?.supportsPushNotifications && (
+                        <div className="px-3 py-2 text-sm text-gray-600">
+                          🔔 Push Notifications
+                        </div>
+                      )}
+                      
+                      {/* Device Info */}
+                      <div className="px-3 py-2 text-xs text-gray-500">
+                        {mobileInfo.os === 'ios' ? 'iOS Device' : mobileInfo.os === 'android' ? 'Android Device' : 'Mobile Device'}
+                      </div>
                     </div>
                   )}
                   

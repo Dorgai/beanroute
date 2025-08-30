@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FiBell, FiBellOff, FiInfo } from 'react-icons/fi';
 import usePushNotifications from '../../hooks/usePushNotifications';
 import PushNotificationDialog from './PushNotificationDialog';
+import { detectMobileOS, getMobileSpecificFeatures } from '../../utils/mobileDetection';
 
 const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
   // Don't render during server-side rendering
@@ -21,6 +22,10 @@ const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
 
   const [showDialog, setShowDialog] = useState(false);
 
+  // Mobile detection for enhanced mobile experience
+  const mobileInfo = typeof window !== 'undefined' ? detectMobileOS() : null;
+  const mobileFeatures = typeof window !== 'undefined' ? getMobileSpecificFeatures() : null;
+
   // Debug logging for mobile troubleshooting
   console.log('[NotificationBadge] Debug info:', {
     isSupported,
@@ -29,7 +34,9 @@ const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
     needsPermission,
     permissionDenied,
     loading,
-    userAgent: typeof window !== 'undefined' ? navigator?.userAgent : 'server-side'
+    userAgent: typeof window !== 'undefined' ? navigator?.userAgent : 'server-side',
+    mobileInfo,
+    mobileFeatures
   });
 
   // Don't show badge if not supported or not configured
@@ -37,6 +44,10 @@ const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
     console.log('[NotificationBadge] Hidden because:', { isSupported, isConfigured });
     return null;
   }
+
+  // Enhanced mobile notification handling
+  const isMobileDevice = mobileInfo?.isMobile;
+  const supportsMobileNotifications = mobileFeatures?.supportsPushNotifications;
 
   const handleClick = () => {
     if (needsPermission || !isSubscribed) {
@@ -59,12 +70,34 @@ const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
   const getStatusText = () => {
     if (permissionDenied) return 'Notifications blocked';
     if (isSubscribed) return 'Notifications enabled';
+    
+    // Mobile-specific text
+    if (isMobileDevice) {
+      if (mobileInfo?.os === 'ios') {
+        return 'Enable iOS notifications';
+      } else if (mobileInfo?.os === 'android') {
+        return 'Enable Android notifications';
+      }
+      return 'Enable mobile notifications';
+    }
+    
     return 'Enable notifications';
   };
 
   const getTooltip = () => {
     if (permissionDenied) return 'Notifications are blocked in your browser';
     if (isSubscribed) return 'You\'re receiving push notifications';
+    
+    // Mobile-specific tooltips
+    if (isMobileDevice) {
+      if (mobileInfo?.os === 'ios') {
+        return 'Tap to enable iOS push notifications';
+      } else if (mobileInfo?.os === 'android') {
+        return 'Tap to enable Android push notifications';
+      }
+      return 'Tap to enable mobile push notifications';
+    }
+    
     return 'Click to enable push notifications';
   };
 
