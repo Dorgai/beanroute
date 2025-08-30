@@ -1,8 +1,7 @@
-# Force Railway to use Nixpacks by ignoring ALL Docker-related files
+# Railway ignore list - Allow Dockerfile for deployment
 node_modules
 .next
 .env*
-Dockerfile*
 docker*
 fix-and-run.sh
 fix-and-deploy.sh
