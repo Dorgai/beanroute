@@ -1,5 +1,6 @@
 # Railway configuration - RESTORED WORKING VERSION
 # This configuration was working before we broke it
+# FORCE REBUILD: $(date) - Push notification fixes deployed
 
 [build]
 builder = "DOCKERFILE"

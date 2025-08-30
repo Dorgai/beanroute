@@ -1,3 +1,4 @@
+# FORCE RAILWAY REBUILD - Push notification fixes deployed
 FROM node:18-alpine
 
 WORKDIR /app
