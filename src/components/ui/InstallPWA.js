@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 
 const InstallPWA = () => {
+  // Don't render during server-side rendering
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);

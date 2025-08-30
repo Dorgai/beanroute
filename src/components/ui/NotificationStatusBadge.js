@@ -5,6 +5,11 @@ import usePushNotifications from '../../hooks/usePushNotifications';
 import PushNotificationDialog from './PushNotificationDialog';
 
 const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
+  // Don't render during server-side rendering
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   const {
     isSupported,
     isConfigured,
@@ -24,7 +29,7 @@ const NotificationStatusBadge = ({ showText = false, size = 'md' }) => {
     needsPermission,
     permissionDenied,
     loading,
-    userAgent: navigator.userAgent
+    userAgent: typeof window !== 'undefined' ? navigator?.userAgent : 'server-side'
   });
 
   // Don't show badge if not supported or not configured
