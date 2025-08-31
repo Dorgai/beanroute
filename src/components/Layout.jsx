@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
-import NotificationStatusBadge, { NotificationBanner } from './ui/NotificationStatusBadge';
+
 
 // Component to fetch and display coffee inventory
 function CoffeeInventory() {
@@ -179,6 +179,7 @@ export default function Layout({ children }) {
     { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER'] },
     { href: '/orders', label: 'Retail', roles: [] }, // Available to all
     { href: '/analytics', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+    { href: '/settings/notifications', label: 'Notifications', roles: [] }, // Available to all authenticated users
   ];
 
   // Admin submenu items
@@ -281,7 +282,6 @@ export default function Layout({ children }) {
               
               {user ? (
                 <>
-                  <NotificationStatusBadge size="md" />
                   <span className="text-sm text-gray-500 hidden sm:inline">
                     {user?.username}
                   </span>
