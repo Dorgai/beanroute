@@ -9,61 +9,61 @@ datasource db {
 }
 
 model User {
-  id                         String                    @id @default(uuid())
-  username                   String                    @unique
-  email                      String?                   @unique
-  password                   String
-  firstName                  String?
-  lastName                   String?
-  role                       Role                      @default(BARISTA)
-  status                     UserStatus                @default(ACTIVE)
-  createdAt                  DateTime                  @default(now())
-  updatedAt                  DateTime                  @updatedAt
-  lastLogin                  DateTime?
-  createdCoffees             GreenCoffee[]
-  inventoryLogs              GreenCoffeeInventoryLog[]
-  loggedAlerts               InventoryAlertLog[]       @relation("AlertLogger")
-  createdPermissions         Permission[]              @relation("PermissionCreator")
-  permissions                Permission[]
-  retailOrders               RetailOrder[]             @relation("OrderedBy")
-  sessions                   Session[]
-  createdShops               Shop[]
-  activities                 UserActivity[]
-  shops                      UserShop[]
-  teams                      UserTeam[]
-  receivedAlertNotifications InventoryAlertLog[]       @relation("AlertNotifications")
-  messagesSent               Message[]                 @relation("MessageSender")
-  messagesRead               MessageRead[]             @relation("MessageReader")
-  createdEmailNotifications     OrderEmailNotification[]     @relation("OrderEmailNotificationCreator")
+  id                            String                       @id @default(uuid())
+  username                      String                       @unique
+  email                         String?                      @unique
+  password                      String
+  firstName                     String?
+  lastName                      String?
+  role                          Role                         @default(BARISTA)
+  status                        UserStatus                   @default(ACTIVE)
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+  lastLogin                     DateTime?
+  createdCoffees                GreenCoffee[]
+  inventoryLogs                 GreenCoffeeInventoryLog[]
+  loggedAlerts                  InventoryAlertLog[]          @relation("AlertLogger")
   createdInventoryNotifications InventoryEmailNotification[] @relation("InventoryEmailNotificationCreator")
-  pushSubscriptions              PushSubscription[]           @relation("UserPushSubscriptions")
-  pushNotificationLogs           PushNotificationLog[]        @relation("UserNotificationLogs")
+  messagesSent                  Message[]                    @relation("MessageSender")
+  messagesRead                  MessageRead[]                @relation("MessageReader")
+  createdEmailNotifications     OrderEmailNotification[]     @relation("OrderEmailNotificationCreator")
+  createdPermissions            Permission[]                 @relation("PermissionCreator")
+  permissions                   Permission[]
+  pushNotificationLogs          PushNotificationLog[]        @relation("UserNotificationLogs")
+  pushSubscriptions             PushSubscription[]           @relation("UserPushSubscriptions")
+  retailOrders                  RetailOrder[]                @relation("OrderedBy")
+  sessions                      Session[]
+  createdShops                  Shop[]
+  activities                    UserActivity[]
+  shops                         UserShop[]
+  teams                         UserTeam[]
+  receivedAlertNotifications    InventoryAlertLog[]          @relation("AlertNotifications")
 }
 
 model Shop {
-  id                     String              @id @default(uuid())
-  name                   String              @unique
-  address                String?
-  city                   String?
-  state                  String?
-  zipCode                String?
-  country                String?
-  phoneNumber            String?
-  email                  String?
-  minCoffeeQuantityLarge Int                 @default(0)
-  minCoffeeQuantitySmall Int                 @default(0)
-  minCoffeeQuantityEspresso Int              @default(0)
-  minCoffeeQuantityFilter Int                @default(0)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-  createdById            String
-  inventoryAlertLogs     InventoryAlertLog[]
-  retailInventory        RetailInventory[]
-  retailOrders           RetailOrder[]
-  emailNotifications          OrderEmailNotification[]
+  id                          String                       @id @default(uuid())
+  name                        String                       @unique
+  address                     String?
+  city                        String?
+  state                       String?
+  zipCode                     String?
+  country                     String?
+  phoneNumber                 String?
+  email                       String?
+  minCoffeeQuantityLarge      Int                          @default(0)
+  minCoffeeQuantitySmall      Int                          @default(0)
+  minCoffeeQuantityEspresso   Int                          @default(0)
+  minCoffeeQuantityFilter     Int                          @default(0)
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  createdById                 String
+  inventoryAlertLogs          InventoryAlertLog[]
   inventoryEmailNotifications InventoryEmailNotification[]
-  createdBy              User                @relation(fields: [createdById], references: [id])
-  users                  UserShop[]
+  emailNotifications          OrderEmailNotification[]
+  retailInventory             RetailInventory[]
+  retailOrders                RetailOrder[]
+  createdBy                   User                         @relation(fields: [createdById], references: [id])
+  users                       UserShop[]
 }
 
 model UserShop {
@@ -145,11 +145,11 @@ model GreenCoffee {
   id              String                    @id @default(uuid())
   name            String
   quantity        Float                     @default(0)
-  labelQuantity   Int                       @default(0)  // Number of labels available for this coffee
+  labelQuantity   Int                       @default(0)
   grade           CoffeeGrade
   country         String?
   producer        String?
-  process         String?                   // Optional process information
+  process         String?
   notes           String?
   isEspresso      Boolean                   @default(false)
   isFilter        Boolean                   @default(false)
@@ -197,18 +197,18 @@ model RetailOrder {
 }
 
 model RetailOrderItem {
-  id                  String      @id @default(uuid())
-  orderId             String
-  coffeeId            String
-  smallBags           Int         @default(0)
-  smallBagsEspresso   Int         @default(0)
-  smallBagsFilter     Int         @default(0)
-  largeBags           Int         @default(0)
-  totalQuantity       Float
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  coffee              GreenCoffee @relation(fields: [coffeeId], references: [id])
-  order               RetailOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id                String      @id @default(uuid())
+  orderId           String
+  coffeeId          String
+  smallBags         Int         @default(0)
+  smallBagsEspresso Int         @default(0)
+  smallBagsFilter   Int         @default(0)
+  largeBags         Int         @default(0)
+  totalQuantity     Float
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  coffee            GreenCoffee @relation(fields: [coffeeId], references: [id])
+  order             RetailOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([coffeeId])
@@ -251,11 +251,11 @@ model InventoryAlertLog {
 }
 
 model Message {
-  id        String       @id @default(uuid())
+  id        String        @id @default(uuid())
   content   String
   senderId  String
-  createdAt DateTime     @default(now())
-  sender    User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  sender    User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   reads     MessageRead[]
 }
 
@@ -280,13 +280,13 @@ model OrderEmailNotification {
   id          String      @id @default(uuid())
   shopId      String
   orderStatus OrderStatus
-  emails      String[]    // Array of email addresses to notify
+  emails      String[]
   isEnabled   Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   createdById String
-  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
   createdBy   User        @relation("OrderEmailNotificationCreator", fields: [createdById], references: [id])
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, orderStatus])
   @@index([shopId])
@@ -295,15 +295,15 @@ model OrderEmailNotification {
 
 model InventoryEmailNotification {
   id          String   @id @default(uuid())
-  shopId      String?  // Optional - if null, applies to all shops
-  emails      String[] // Array of email addresses to notify
+  shopId      String?
+  emails      String[]
   isEnabled   Boolean  @default(true)
-  alertType   String   @default("ALL") // "WARNING", "CRITICAL", or "ALL"
+  alertType   String   @default("ALL")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdById String
-  shop        Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)
   createdBy   User     @relation("InventoryEmailNotificationCreator", fields: [createdById], references: [id])
+  shop        Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, alertType])
   @@index([shopId])
@@ -311,35 +311,38 @@ model InventoryEmailNotification {
 }
 
 model PushSubscription {
-  id         String   @id @default(uuid())
-  userId     String
-  endpoint   String   @unique
-  p256dh     String   // Public key for encryption
-  auth       String   // Auth secret for encryption
-  userAgent  String?  // Browser/device info
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  lastUsed   DateTime @default(now())
-  user       User     @relation("UserPushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  isActive  Boolean  @default(true)
+  mobile    Boolean  @default(false)
+  limited   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastUsed  DateTime @default(now())
+  user      User     @relation("UserPushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isActive])
   @@index([endpoint])
+  @@index([mobile])
 }
 
 model PushNotificationLog {
-  id            String   @id @default(uuid())
-  userId        String
-  title         String
-  body          String
-  data          Json?    // Additional notification data
-  notificationType String // "ORDER", "INVENTORY", "MESSAGE", etc.
-  success       Boolean  @default(false)
-  error         String?  // Error message if failed
-  sentAt        DateTime @default(now())
-  clickedAt     DateTime?
-  user          User     @relation("UserNotificationLogs", fields: [userId], references: [id], onDelete: Cascade)
+  id               String    @id @default(uuid())
+  userId           String
+  title            String
+  body             String
+  data             Json?
+  notificationType String
+  success          Boolean   @default(false)
+  error            String?
+  sentAt           DateTime  @default(now())
+  clickedAt        DateTime?
+  user             User      @relation("UserNotificationLogs", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([notificationType])

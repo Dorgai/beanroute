@@ -10,6 +10,11 @@
   "scope": "/",
   "lang": "en",
   "categories": ["business", "productivity", "food"],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
   "icons": [
     {
       "src": "/icons/icon-72x72.png",

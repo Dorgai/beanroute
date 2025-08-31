@@ -1586,7 +1586,11 @@ export default function RetailOrders() {
       // Refresh available coffee with error handling
       try {
         console.log('Refreshing available coffee');
-        const coffeeResponse = await fetch('/api/retail/available-coffee');
+        if (selectedShop) {
+          const coffeeResponse = await fetch(`/api/retail/available-coffee?shopId=${selectedShop}`);
+        } else {
+          return; // Skip if no shop selected
+        }
         
         if (!coffeeResponse.ok) {
           console.error('Error response from available coffee API:', coffeeResponse.status);

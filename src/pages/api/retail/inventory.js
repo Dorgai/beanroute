@@ -91,7 +91,12 @@ export default async function handler(req, res) {
       try {
         inventory = await prisma.retailInventory.findMany({
           where: {
-            shopId
+            shopId,
+            // Only include coffees that have actual stock
+            OR: [
+              { smallBags: { gt: 0 } },
+              { largeBags: { gt: 0 } }
+            ]
           },
           select: {
             id: true,
@@ -124,10 +129,15 @@ export default async function handler(req, res) {
       } catch (inventoryError) {
         console.error('[api/retail/inventory] Error with full inventory query:', inventoryError);
         
-        // Fallback to simpler query
+        // Fallback to simpler query - still filter for stock > 0
         inventory = await prisma.retailInventory.findMany({
           where: {
-            shopId
+            shopId,
+            // Only include coffees that have actual stock
+            OR: [
+              { smallBags: { gt: 0 } },
+              { largeBags: { gt: 0 } }
+            ]
           },
           select: {
             id: true,
@@ -159,7 +169,18 @@ export default async function handler(req, res) {
         );
       }
       
-      console.log(`[api/retail/inventory] Found ${inventory.length} inventory items for shop ${shopId}`);
+      console.log(`[api/retail/inventory] Found ${inventory.length} inventory items with stock > 0 for shop ${shopId}`);
+      
+      // Additional safety check: filter out any items that somehow have zero stock
+      inventory = inventory.filter(item => {
+        const hasStock = (item.smallBags > 0 || item.largeBags > 0);
+        if (!hasStock) {
+          console.log(`[api/retail/inventory] Filtering out item with zero stock: ${item.coffee?.name || 'Unknown'}`);
+        }
+        return hasStock;
+      });
+      
+      console.log(`[api/retail/inventory] After filtering, ${inventory.length} items have actual stock`);
       
       // Make sure all inventory items have a valid coffee reference
       inventory = inventory.filter(item => item && item.coffee);

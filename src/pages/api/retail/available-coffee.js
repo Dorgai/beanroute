@@ -37,29 +37,11 @@ export default async function handler(req, res) {
     }
 
     // Get coffees that are either:
-    // 1. Available in green stock (quantity > 0), OR
-    // 2. Available in the shop's inventory (even if no green stock)
+    // 1. Available in the shop's inventory (with actual stock > 0), OR
+    // 2. Available in green stock (quantity > 0) AND the shop has access to order them
     let coffee;
     try {
-      // First, get all coffees with green stock
-      const greenStockCoffee = await prisma.greenCoffee.findMany({
-        where: {
-          quantity: {
-            gt: 0
-          }
-        },
-        select: {
-          id: true,
-          name: true,
-          grade: true,
-          quantity: true,
-          isEspresso: true,
-          isFilter: true,
-          isSignature: true
-        }
-      });
-
-      // Then, get all coffees that are in the shop's inventory
+      // First, get all coffees that are in the shop's inventory WITH ACTUAL STOCK
       const shopInventoryCoffee = await prisma.retailInventory.findMany({
         where: {
           shopId: shopId,
@@ -82,33 +64,139 @@ export default async function handler(req, res) {
         }
       });
 
-      // Combine both lists, removing duplicates
+      console.log(`Shop inventory query returned ${shopInventoryCoffee.length} items with stock > 0`);
+      shopInventoryCoffee.forEach(item => {
+        console.log(`  - ${item.coffee.name}: Small=${item.smallBags}, Large=${item.largeBags}`);
+      });
+
+      // Then, get coffees with green stock that the shop can order
+      // Only include coffees that are NOT already in the shop's inventory
+      const shopInventoryCoffeeIds = shopInventoryCoffee.map(item => item.coffee.id);
+      
+      const greenStockCoffee = await prisma.greenCoffee.findMany({
+        where: {
+          quantity: {
+            gt: 0
+          },
+          // Only include coffees that are NOT already in the shop's inventory
+          id: {
+            notIn: shopInventoryCoffeeIds
+          }
+        },
+        select: {
+          id: true,
+          name: true,
+          grade: true,
+          quantity: true,
+          isEspresso: true,
+          isFilter: true,
+          isSignature: true
+        }
+      });
+
+      console.log(`Green stock query returned ${greenStockCoffee.length} items with quantity > 0`);
+      greenStockCoffee.forEach(coffee => {
+        console.log(`  - ${coffee.name}: Quantity=${coffee.quantity}`);
+      });
+
+      // Debug: Check if there are any coffees in RetailInventory with zero stock for this shop
+      const allShopCoffees = await prisma.retailInventory.findMany({
+        where: {
+          shopId: shopId
+        },
+        include: {
+          coffee: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      });
+      
+      console.log(`Total coffees in shop ${shopId} inventory: ${allShopCoffees.length}`);
+      allShopCoffees.forEach(item => {
+        const totalStock = item.smallBags + item.largeBags;
+        console.log(`  - ${item.coffee.name}: Small=${item.smallBags}, Large=${item.largeBags}, Total=${totalStock}`);
+      });
+
+      // Combine both lists
       const coffeeMap = new Map();
 
-      // Add green stock coffees
-      greenStockCoffee.forEach(coffee => {
-        coffeeMap.set(coffee.id, {
-          ...coffee,
-          source: 'green_stock',
-          originalQuantity: coffee.quantity
+      // Add shop inventory coffees first (these are definitely available)
+      shopInventoryCoffee.forEach(item => {
+        console.log(`Adding shop inventory coffee: ${item.coffee.name} - Small: ${item.smallBags}, Large: ${item.largeBags}`);
+        coffeeMap.set(item.coffee.id, {
+          ...item.coffee,
+          quantity: 0, // No green stock available for ordering
+          source: 'shop_inventory',
+          originalQuantity: 0,
+          // Include shop inventory details
+          shopSmallBags: item.smallBags,
+          shopLargeBags: item.largeBags,
+          shopTotalQuantity: item.totalQuantity
         });
       });
 
-      // Add shop inventory coffees (if not already added)
-      shopInventoryCoffee.forEach(item => {
-        if (!coffeeMap.has(item.coffee.id)) {
-          coffeeMap.set(item.coffee.id, {
-            ...item.coffee,
-            quantity: 0, // No green stock
-            source: 'shop_inventory',
-            originalQuantity: 0
-          });
-        }
+      // Add green stock coffees (if not already added)
+      greenStockCoffee.forEach(coffee => {
+        console.log(`Adding green stock coffee: ${coffee.name} - Quantity: ${coffee.quantity}`);
+        coffeeMap.set(coffee.id, {
+          ...coffee,
+          source: 'green_stock',
+          originalQuantity: coffee.quantity,
+          // No shop inventory
+          shopSmallBags: 0,
+          shopLargeBags: 0,
+          shopTotalQuantity: 0
+        });
       });
 
       coffee = Array.from(coffeeMap.values());
 
-      console.log(`Found ${coffee.length} available coffee items (${greenStockCoffee.length} with green stock, ${shopInventoryCoffee.length} in shop inventory)`);
+      // Additional validation: filter out any coffees that somehow have zero stock in both places
+      const filteredCoffee = coffee.filter(item => {
+        if (item.source === 'shop_inventory') {
+          const hasStock = (item.shopSmallBags > 0 || item.shopLargeBags > 0);
+          if (!hasStock) {
+            console.log(`Filtering out shop inventory coffee with zero stock: ${item.name}`);
+          }
+          return hasStock;
+        } else if (item.source === 'green_stock') {
+          const hasStock = item.originalQuantity > 0;
+          if (!hasStock) {
+            console.log(`Filtering out green stock coffee with zero stock: ${item.name}`);
+          }
+          return hasStock;
+        }
+        return false;
+      });
+
+      console.log(`Found ${coffee.length} total coffee items, filtered to ${filteredCoffee.length} with actual stock`);
+      console.log(`Final coffee list:`, filteredCoffee.map(c => `${c.name} (${c.source})`));
+
+      // Final safety check: ensure no coffees with zero stock slip through
+      const finalFilteredCoffee = filteredCoffee.filter(item => {
+        let hasStock = false;
+        if (item.source === 'shop_inventory') {
+          hasStock = (item.shopSmallBags > 0 || item.shopLargeBags > 0);
+        } else if (item.source === 'green_stock') {
+          hasStock = item.originalQuantity > 0;
+        }
+        
+        if (!hasStock) {
+          console.log(`FINAL FILTER: Removing coffee with zero stock: ${item.name} (${item.source})`);
+          console.log(`  Shop stock: Small=${item.shopSmallBags}, Large=${item.shopLargeBags}`);
+          console.log(`  Green stock: ${item.originalQuantity}`);
+        }
+        
+        return hasStock;
+      });
+
+      console.log(`Final safety check: ${filteredCoffee.length} -> ${finalFilteredCoffee.length} coffees`);
+      console.log(`Final coffee list after safety check:`, finalFilteredCoffee.map(c => `${c.name} (${c.source})`));
+
+      coffee = finalFilteredCoffee;
     } catch (dbError) {
       console.error('Database error fetching available coffee:', dbError);
       return res.status(500).json({ 

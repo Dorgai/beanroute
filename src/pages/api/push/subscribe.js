@@ -14,36 +14,51 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { subscription, userAgent } = req.body;
+    const { subscription, userAgent, mobile, limited } = req.body;
 
-    // Validate subscription object
-    if (!subscription || !subscription.endpoint || !subscription.keys) {
-      return res.status(400).json({ 
-        error: 'Invalid subscription object',
-        required: 'subscription.endpoint and subscription.keys are required'
-      });
-    }
+    // Handle mobile basic subscriptions (limited push support)
+    const isMobileBasic = mobile && limited;
+    
+    if (isMobileBasic) {
+      console.log('[Push API] Mobile basic subscription detected');
+      // For mobile basic subscriptions, we're more lenient with validation
+      if (!subscription || !subscription.endpoint) {
+        return res.status(400).json({ 
+          error: 'Invalid mobile subscription object',
+          required: 'subscription.endpoint is required for mobile basic subscriptions'
+        });
+      }
+    } else {
+      // Standard validation for full push subscriptions
+      if (!subscription || !subscription.endpoint || !subscription.keys) {
+        return res.status(400).json({ 
+          error: 'Invalid subscription object',
+          required: 'subscription.endpoint and subscription.keys are required'
+        });
+      }
 
-    if (!subscription.keys.p256dh || !subscription.keys.auth) {
-      return res.status(400).json({ 
-        error: 'Invalid subscription keys',
-        required: 'subscription.keys.p256dh and subscription.keys.auth are required'
-      });
-    }
+      if (!subscription.keys.p256dh || !subscription.keys.auth) {
+        return res.status(400).json({ 
+          error: 'Invalid subscription keys',
+          required: 'subscription.keys.p256dh and subscription.keys.auth are required'
+        });
+      }
 
-    // Check if push notifications are configured
-    if (!pushNotificationService.isConfigured()) {
-      return res.status(503).json({ 
-        error: 'Push notifications not configured',
-        message: 'VAPID keys are not set up on the server'
-      });
+      // Check if push notifications are configured (only for full push subscriptions)
+      if (!pushNotificationService.isConfigured()) {
+        return res.status(503).json({ 
+          error: 'Push notifications not configured',
+          message: 'VAPID keys are not set up on the server'
+        });
+      }
     }
 
     // Subscribe the user
     const result = await pushNotificationService.subscribeUser(
       session.user.id,
       subscription,
-      userAgent
+      userAgent,
+      { mobile, limited }
     );
 
     console.log(`[Push API] User ${session.user.username} subscribed to push notifications`);

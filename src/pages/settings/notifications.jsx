@@ -1,5 +1,5 @@
 // Notification Settings Page
-import { useAuth } from '../../context/AuthContext';
+import { useSession } from '../../lib/session';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import NotificationSettings from '../../components/ui/NotificationSettings';
@@ -7,14 +7,14 @@ import { FiArrowLeft } from 'react-icons/fi';
 import Link from 'next/link';
 
 export default function NotificationSettingsPage() {
-  const { user, loading } = useAuth();
+  const { session, loading } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !session) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [session, loading, router]);
 
   if (loading) {
     return (
@@ -24,7 +24,7 @@ export default function NotificationSettingsPage() {
     );
   }
 
-  if (!user) {
+  if (!session) {
     return null;
   }
 
@@ -34,11 +34,11 @@ export default function NotificationSettingsPage() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            href="/dashboard"
+            href="/orders"
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
           >
             <FiArrowLeft className="w-4 h-4 mr-1" />
-            Back to Dashboard
+            Back to Orders
           </Link>
           
           <div>
@@ -68,6 +68,13 @@ export default function NotificationSettingsPage() {
                   <p>
                     They work across all your devices and browsers where you've enabled them.
                   </p>
+                  {typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-xs text-blue-700">
+                        📱 <strong>Mobile Optimized:</strong> Notifications are optimized for mobile devices and will appear in your device's notification center, even when the app is closed.
+                      </p>
+                    </div>
+                  )}
                 </div>
               }
             />
@@ -96,6 +103,14 @@ export default function NotificationSettingsPage() {
                     <li>Make sure notifications aren't blocked for this site</li>
                     <li>Try the "Send Test Notification" button</li>
                     <li>Refresh the page and try again</li>
+                    {typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                      <>
+                        <li><strong>Mobile users:</strong> Check your device's notification center</li>
+                        <li><strong>iOS users:</strong> Ensure notifications are enabled in Safari settings</li>
+                        <li><strong>Android users:</strong> Check Chrome notification permissions</li>
+                        <li><strong>PWA:</strong> Try adding the app to your home screen</li>
+                      </>
+                    )}
                   </ul>
                 </div>
               }

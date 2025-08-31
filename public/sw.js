@@ -1,7 +1,7 @@
-// BeanRoute Service Worker v1.0
-// Provides offline functionality and caching for better performance
+// BeanRoute Service Worker v2.0
+// Enhanced for better mobile support and push notification handling
 
-const CACHE_NAME = 'beanroute-v1';
+const CACHE_NAME = 'beanroute-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Critical pages to cache for offline access
@@ -22,7 +22,7 @@ const STATIC_ASSETS = [
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+  console.log('[SW] Installing service worker v2.0...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -46,7 +46,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
+  console.log('[SW] Activating service worker v2.0...');
   
   event.waitUntil(
     caches.keys()
@@ -64,6 +64,20 @@ self.addEventListener('activate', (event) => {
         console.log('[SW] Service worker activated');
         // Take control of all pages immediately
         return self.clients.claim();
+      })
+      .then(() => {
+        console.log('[SW] Service worker is now controlling all clients');
+        // Notify all clients that service worker is ready
+        return self.clients.matchAll();
+      })
+      .then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ 
+            type: 'SW_READY', 
+            version: CACHE_NAME,
+            timestamp: Date.now()
+          });
+        });
       })
   );
 });
@@ -185,21 +199,71 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     console.log('[SW] Push notification data:', data);
     
+    // Enhanced notification options for better mobile support
     const notificationOptions = {
-      body: data.body,
+      body: data.body || 'You have a new notification',
       icon: data.icon || '/icons/icon-192x192.png',
       badge: data.badge || '/icons/icon-72x72.png',
       data: data.data || {},
       tag: data.tag || 'default',
       requireInteraction: data.requireInteraction || false,
       silent: data.silent || false,
-      actions: data.actions || [],
+      actions: data.actions || [
+        {
+          action: 'view',
+          title: 'View',
+          icon: '/icons/icon-72x72.png'
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss'
+        }
+      ],
       vibrate: data.vibrate || [200, 100, 200],
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      // Enhanced mobile-specific options
+      dir: 'auto',
+      lang: 'en',
+      renotify: true,
+      sticky: false,
+      // Mobile notification center optimization
+      image: data.image || null,
+      // Ensure notifications appear in mobile notification center
+      requireInteraction: data.requireInteraction || false,
+      // Mobile-specific vibration patterns
+      vibrate: data.vibrate || (navigator.userAgent.includes('Mobile') ? [200, 100, 200, 100, 200] : [200, 100, 200])
     };
     
+    // Show the notification
     event.waitUntil(
-      self.registration.showNotification(data.title, notificationOptions)
+      self.registration.showNotification(data.title || 'BeanRoute', notificationOptions)
+        .then(() => {
+          console.log('[SW] Notification displayed successfully');
+          
+          // Log notification display for analytics
+          if (data.notificationId) {
+            return fetch('/api/push/display', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                notificationId: data.notificationId,
+                timestamp: Date.now()
+              })
+            }).catch(error => {
+              console.error('[SW] Error logging notification display:', error);
+            });
+          }
+        })
+        .catch((error) => {
+          console.error('[SW] Error showing notification:', error);
+          
+          // Fallback notification
+          return self.registration.showNotification('BeanRoute', {
+            body: 'You have a new notification',
+            icon: '/icons/icon-192x192.png',
+            tag: 'fallback'
+          });
+        })
     );
   } catch (error) {
     console.error('[SW] Error processing push notification:', error);

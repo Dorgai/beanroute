@@ -14,6 +14,7 @@ const NotificationSettings = () => {
     subscribe,
     unsubscribe,
     testNotification,
+    testBasicNotification,
     checkSubscriptionStatus
   } = usePushNotifications();
 
@@ -87,18 +88,32 @@ const NotificationSettings = () => {
 
   return (
     <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-sm border">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center">
-          <FiBell className="w-6 h-6 text-blue-500 mr-3" />
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Push Notifications</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Manage your notification preferences and devices
-            </p>
+              {/* Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center">
+            <FiBell className="w-6 h-6 text-blue-500 mr-3" />
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Push Notifications</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Manage your notification preferences and devices
+              </p>
+              {/* Mobile-specific info */}
+              {typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    📱 Mobile device detected - Enhanced mobile notification support enabled
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {/iPad|iPhone|iPod/.test(navigator.userAgent) 
+                      ? 'iOS: Basic notifications supported (Safari limitations)'
+                      : 'Android: Full push notification support available'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Status Section */}
       <div className="p-6 border-b border-gray-200">
@@ -112,6 +127,20 @@ const NotificationSettings = () => {
             <div>
               <h3 className="font-medium text-gray-900">Notification Status</h3>
               <p className="text-sm text-gray-600">{getStatusText()}</p>
+              {/* Mobile-specific status info */}
+              {typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                <div className="mt-1 space-y-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    📱 Mobile Optimized
+                  </span>
+                  <div className="text-xs text-gray-500">
+                    {/iPad|iPhone|iPod/.test(navigator.userAgent) 
+                      ? 'Basic notifications (Safari)'
+                      : 'Full push support (Chrome)'
+                    }
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
@@ -279,23 +308,36 @@ const NotificationControls = ({ isSubscribed, loading, onToggle, onTest, testLoa
     </div>
 
     {isSubscribed && (
-      <button
-        onClick={onTest}
-        disabled={testLoading}
-        className="w-full sm:w-auto px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-      >
-        {testLoading ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Sending Test...
-          </>
-        ) : (
-          <>
-            <FiBell className="w-4 h-4 mr-2" />
-            Send Test Notification
-          </>
+      <div className="space-y-2">
+        <button
+          onClick={onTest}
+          disabled={testLoading}
+          className="w-full sm:w-auto px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          {testLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Sending Test...
+            </>
+          ) : (
+            <>
+              <FiBell className="w-4 h-4 mr-2" />
+              Send Test Notification
+            </>
+          )}
+        </button>
+        
+        {/* Mobile-specific basic notification test */}
+        {typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+          <button
+            onClick={testBasicNotification}
+            disabled={testLoading}
+            className="w-full sm:w-auto px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm"
+          >
+            📱 Test Basic Mobile Notification
+          </button>
         )}
-      </button>
+      </div>
     )}
   </div>
 );

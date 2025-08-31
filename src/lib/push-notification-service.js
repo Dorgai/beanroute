@@ -44,14 +44,22 @@ class PushNotificationService {
   /**
    * Subscribe a user to push notifications
    */
-  async subscribeUser(userId, subscription, userAgent = null) {
-    if (!this.isConfigured()) {
-      throw new Error('Push notifications not configured');
-    }
-
+  async subscribeUser(userId, subscription, userAgent = null, options = {}) {
     const prisma = new PrismaClient();
     
     try {
+      // Handle mobile basic subscriptions (limited push support)
+      const isMobileBasic = options.mobile && options.limited;
+      
+      if (isMobileBasic) {
+        console.log(`[Push] Mobile basic subscription for user ${userId} - limited push support`);
+        
+        // For mobile basic subscriptions, we don't need VAPID keys
+        // Just store the subscription for status tracking
+      } else if (!this.isConfigured()) {
+        throw new Error('Push notifications not configured');
+      }
+
       // Check if user already has a subscription for this endpoint
       const existingSubscription = await prisma.pushSubscription.findFirst({
         where: { 
@@ -70,7 +78,12 @@ class PushNotificationService {
             data: {
               p256dh: subscription.keys.p256dh,
               auth: subscription.keys.auth,
-              updatedAt: new Date()
+              updatedAt: new Date(),
+              // Add mobile flags if this is a mobile subscription
+              ...(isMobileBasic && { 
+                mobile: true, 
+                limited: true 
+              })
             }
           });
           console.log(`[Push] User ${userId} subscription updated successfully`);
@@ -90,11 +103,16 @@ class PushNotificationService {
           userId,
           endpoint: subscription.endpoint,
           p256dh: subscription.keys.p256dh,
-          auth: subscription.keys.auth
+          auth: subscription.keys.auth,
+          // Add mobile flags if this is a mobile subscription
+          ...(isMobileBasic && { 
+            mobile: true, 
+            limited: true 
+          })
         }
       });
 
-      console.log(`[Push] User ${userId} subscribed successfully`);
+      console.log(`[Push] User ${userId} subscribed successfully (${isMobileBasic ? 'mobile basic' : 'full push'})`);
       return pushSubscription;
     } catch (error) {
       console.error('[Push] Error subscribing user:', error);
@@ -175,7 +193,27 @@ class PushNotificationService {
       // Send to all user's devices
       for (const subscription of subscriptions) {
         try {
-          const payload = JSON.stringify(notification);
+          // Enhanced notification payload with mobile-specific options
+          const enhancedNotification = {
+            ...notification,
+            // Mobile-specific enhancements
+            badge: notification.badge || '/icons/icon-72x72.png',
+            icon: notification.icon || '/icons/icon-192x192.png',
+            // Ensure notifications work well in mobile notification centers
+            requireInteraction: false,
+            silent: false,
+            // Mobile vibration patterns
+            vibrate: [200, 100, 200, 100, 200],
+            // Mobile-specific options
+            dir: 'auto',
+            lang: 'en',
+            renotify: true,
+            sticky: false,
+            // Add timestamp for mobile notification centers
+            timestamp: Date.now()
+          };
+          
+          const payload = JSON.stringify(enhancedNotification);
           
           await webpush.sendNotification(
             {
@@ -211,6 +249,67 @@ class PushNotificationService {
       };
     } catch (error) {
       console.error('[Push] Error sending notification to user:', error);
+      throw error;
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
+  /**
+   * Send a push notification to specific users
+   */
+  async sendToUsers(userIds, notification) {
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      throw new Error('userIds must be a non-empty array');
+    }
+
+    const results = [];
+    let totalSuccessful = 0;
+    let totalAttempted = 0;
+
+    for (const userId of userIds) {
+      try {
+        const result = await this.sendNotificationToUser(userId, notification);
+        results.push({ userId, success: true, result });
+        totalSuccessful += result.sent;
+        totalAttempted += result.total;
+      } catch (error) {
+        console.error(`[Push] Failed to send to user ${userId}:`, error);
+        results.push({ userId, success: false, error: error.message });
+        totalAttempted++;
+      }
+    }
+
+    return {
+      success: totalSuccessful > 0,
+      successful: totalSuccessful,
+      total: totalAttempted,
+      results
+    };
+  }
+
+  /**
+   * Send a push notification to users with a specific role
+   */
+  async sendToRole(role, notification) {
+    const prisma = new PrismaClient();
+    
+    try {
+      // Get all users with the specified role
+      const users = await prisma.user.findMany({
+        where: { role, status: 'ACTIVE' },
+        select: { id: true }
+      });
+
+      if (users.length === 0) {
+        console.log(`[Push] No users found with role ${role}`);
+        return { success: false, successful: 0, total: 0 };
+      }
+
+      const userIds = users.map(user => user.id);
+      return await this.sendToUsers(userIds, notification);
+    } catch (error) {
+      console.error('[Push] Error sending notification to role:', error);
       throw error;
     } finally {
       await prisma.$disconnect();
