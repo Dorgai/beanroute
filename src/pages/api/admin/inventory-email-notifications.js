@@ -3,6 +3,10 @@ import { getServerSession } from '@/lib/session';
 import prisma from '@/lib/prisma';
 import { wrapApiHandler } from '@/lib/safe-api-wrapper';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 async function inventoryEmailNotificationsHandler(req, res) {
   try {
     // Handle authentication - hybrid approach for API tokens and browser sessions

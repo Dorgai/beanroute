@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react';
+import { detectMobileOS, getMobileSpecificFeatures } from '../../utils/mobileDetection';
 
 const InstallPWA = () => {
+  // Don't render during server-side rendering
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [mobileInfo, setMobileInfo] = useState(null);
+  const [mobileFeatures, setMobileFeatures] = useState(null);
 
   useEffect(() => {
+    // Detect mobile device and features
+    const mobileInfo = detectMobileOS();
+    const mobileFeatures = getMobileSpecificFeatures();
+    setMobileInfo(mobileInfo);
+    setMobileFeatures(mobileFeatures);
+
     // Check if app is already installed
     const checkIfInstalled = () => {
       if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
@@ -22,7 +36,7 @@ const InstallPWA = () => {
       return false;
     };
 
-    // Listen for beforeinstallprompt event
+    // Listen for beforeinstallprompt event (Android)
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -78,6 +92,37 @@ const InstallPWA = () => {
     return null;
   }
 
+  // Show mobile-specific installation instructions
+  if (mobileInfo?.isMobile && !deferredPrompt) {
+    return (
+      <div className="fixed bottom-4 left-4 right-4 bg-green-600 text-white p-4 rounded-lg shadow-lg z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+              <span className="text-green-600 font-bold text-lg">📱</span>
+            </div>
+            <div>
+              <h3 className="font-semibold">Add to Home Screen</h3>
+              <p className="text-sm text-green-100">
+                {mobileInfo.os === 'ios' 
+                  ? 'Tap Share → Add to Home Screen'
+                  : 'Tap Menu → Add to Home Screen'
+                }
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleDismiss}
+            className="px-3 py-1 text-sm text-green-200 hover:text-white transition-colors"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show Android install prompt
   return (
     <div className="fixed bottom-4 left-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50">
       <div className="flex items-center justify-between">

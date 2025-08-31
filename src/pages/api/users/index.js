@@ -2,6 +2,10 @@ import { verifyRequestAndGetUser } from '../../../lib/auth';
 import { getUsers, createUser, canManageUsers } from '../../../lib/user-service';
 import { logActivity } from '../../../lib/activity-service';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 export default async function handler(req, res) {
   try {
     // Authenticate and get user

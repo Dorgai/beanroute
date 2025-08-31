@@ -1,6 +1,9 @@
 import { removeAuthCookie, verifyRequestAndGetUser, logUserActivity } from '../../../lib/auth';
 import prisma from '../../../lib/prisma';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {

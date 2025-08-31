@@ -2,6 +2,10 @@ import { PrismaClient } from '@prisma/client';
 import { verifyRequestAndGetUser } from '../../../lib/auth';
 import { getShop } from '../../../lib/shop-service';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 const prisma = new PrismaClient();
 
 export default async function handler(req, res) {

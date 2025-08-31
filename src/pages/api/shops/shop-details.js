@@ -4,6 +4,10 @@ import { verifyRequestAndGetUser } from '../../../lib/auth';
 import { updateShop, deleteShop } from '../../../lib/shop-service';
 import { Role } from '@prisma/client';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 // Helper function for authorization check
 function canModifyShop(user) {
   return [Role.ADMIN, Role.OWNER, Role.RETAILER].includes(user.role);

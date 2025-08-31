@@ -2,6 +2,10 @@ import { verifyRequestAndGetUser } from '@/lib/auth';
 import { getServerSession } from '@/lib/session';
 import prisma from '@/lib/prisma';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 export default async function handler(req, res) {
   try {
     // Handle authentication

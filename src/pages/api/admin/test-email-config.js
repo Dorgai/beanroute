@@ -2,6 +2,10 @@ import { verifyRequestAndGetUser } from '@/lib/auth';
 import { getServerSession } from '@/lib/session';
 import orderEmailService from '@/lib/order-email-service';
 
+// Force Node.js runtime for auth operations
+export const runtime = 'nodejs';
+
+
 export default async function handler(req, res) {
   console.log(`[test-email-config] Handling ${req.method} request`);
 

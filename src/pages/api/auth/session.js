@@ -1,5 +1,8 @@
 import { verifyRequestAndGetUser } from '../../../lib/auth';
 
+// Force Node.js runtime for auth verification
+export const runtime = 'nodejs';
+
 export default async function handler(req, res) {
   // Only allow GET requests
   if (req.method !== 'GET') {
