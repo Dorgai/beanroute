@@ -1,7 +1,7 @@
 // Notification Settings Management Component
-import { useState, useEffect } from 'react';
-import { FiBell, FiBellOff, FiCheck, FiX, FiInfo, FiRefreshCw, FiSmartphone } from 'react-icons/fi';
-import usePushNotifications from '../../hooks/usePushNotifications';
+import React, { useState, useEffect } from 'react';
+import { FiBell, FiBellOff, FiSettings, FiRefreshCw } from 'react-icons/fi';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 const NotificationSettings = () => {
   const {
@@ -157,7 +157,7 @@ const NotificationSettings = () => {
         {error && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-start">
-              <FiX className="w-4 h-4 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+              <FiBellOff className="w-4 h-4 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
               <p className="text-sm text-red-700">{error}</p>
             </div>
           </div>
@@ -209,7 +209,7 @@ const NotificationSettings = () => {
       {/* Information Section */}
       <div className="p-6 border-t border-gray-200 bg-gray-50">
         <div className="flex items-start">
-          <FiInfo className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+          <FiSettings className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
           <div className="text-sm text-gray-600">
             <p className="mb-2">
               <strong>What you'll receive notifications for:</strong>
@@ -246,7 +246,7 @@ const UnsupportedMessage = () => (
 // Component for unconfigured server
 const NotConfiguredMessage = () => (
   <div className="text-center py-8">
-    <FiInfo className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+    <FiSettings className="w-12 h-12 text-blue-400 mx-auto mb-4" />
     <h3 className="text-lg font-medium text-gray-900 mb-2">
       Notifications Not Available
     </h3>
@@ -259,7 +259,7 @@ const NotConfiguredMessage = () => (
 // Component for blocked notifications
 const BlockedMessage = () => (
   <div className="text-center py-8">
-    <FiX className="w-12 h-12 text-red-400 mx-auto mb-4" />
+    <FiBellOff className="w-12 h-12 text-red-400 mx-auto mb-4" />
     <h3 className="text-lg font-medium text-gray-900 mb-2">
       Notifications Blocked
     </h3>
@@ -369,7 +369,7 @@ const DeviceCard = ({ subscription, index }) => {
   return (
     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
       <div className="flex items-center">
-        <FiSmartphone className="w-4 h-4 text-gray-500 mr-3" />
+        <FiSettings className="w-4 h-4 text-gray-500 mr-3" />
         <div>
           <p className="text-sm font-medium text-gray-900">
             {getDeviceInfo(subscription.userAgent)}

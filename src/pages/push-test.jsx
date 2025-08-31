@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import usePushNotifications from '../hooks/usePushNotifications';
+import React, { useState, useEffect } from 'react';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const PushTestPage = () => {
   const {
