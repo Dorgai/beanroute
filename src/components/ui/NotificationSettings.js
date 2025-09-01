@@ -21,7 +21,21 @@ const NotificationSettings = () => {
             console.log('iOS Safari detected - limited notification support');
             setIsEnabled(false); // iOS Safari doesn't support background notifications
           } else if ('Notification' in window) {
-            setIsEnabled(Notification.permission === 'granted');
+            // Check user's stored preference first
+            const storedPreference = localStorage.getItem('notifications-enabled');
+            if (storedPreference !== null) {
+              // User has a stored preference, use that
+              const preferenceEnabled = storedPreference === 'true';
+              const browserGranted = Notification.permission === 'granted';
+              // Only enable if both user preference AND browser permission are true
+              setIsEnabled(preferenceEnabled && browserGranted);
+            } else {
+              // No stored preference, use browser permission
+              const browserEnabled = Notification.permission === 'granted';
+              setIsEnabled(browserEnabled);
+              // Store initial preference
+              localStorage.setItem('notifications-enabled', browserEnabled.toString());
+            }
           } else {
             console.log('Notifications not supported in this browser');
           }
@@ -57,15 +71,34 @@ const NotificationSettings = () => {
         return;
       }
 
-      if (Notification.permission === 'default') {
-        const permission = await Notification.requestPermission();
-        setIsEnabled(permission === 'granted');
-        setTestMessage(permission === 'granted' ? 'Notifications enabled!' : 'Notifications blocked');
-      } else if (Notification.permission === 'granted') {
+      if (isEnabled) {
+        // User wants to disable notifications
         setIsEnabled(false);
+        localStorage.setItem('notifications-enabled', 'false');
         setTestMessage('Notifications disabled');
       } else {
-        setTestMessage('Notifications are blocked. Please enable them in your browser settings.');
+        // User wants to enable notifications
+        if (Notification.permission === 'default') {
+          // Need to request permission first
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            setIsEnabled(true);
+            localStorage.setItem('notifications-enabled', 'true');
+            setTestMessage('Notifications enabled!');
+          } else {
+            setIsEnabled(false);
+            localStorage.setItem('notifications-enabled', 'false');
+            setTestMessage('Notifications blocked');
+          }
+        } else if (Notification.permission === 'granted') {
+          // Permission already granted, just enable
+          setIsEnabled(true);
+          localStorage.setItem('notifications-enabled', 'true');
+          setTestMessage('Notifications enabled!');
+        } else {
+          // Permission denied
+          setTestMessage('Notifications are blocked. Please enable them in your browser settings.');
+        }
       }
     } catch (error) {
       console.error('Error toggling notifications:', error);
