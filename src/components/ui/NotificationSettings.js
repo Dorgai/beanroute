@@ -11,8 +11,20 @@ const NotificationSettings = () => {
     // Simple initialization without any complex logic
     const timer = setTimeout(() => {
       try {
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-          setIsEnabled(Notification.permission === 'granted');
+        if (typeof window !== 'undefined') {
+          // Check for iOS device
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+          
+          if (isIOS && isSafari) {
+            // iOS Safari has limited notification support
+            console.log('iOS Safari detected - limited notification support');
+            setIsEnabled(false); // iOS Safari doesn't support background notifications
+          } else if ('Notification' in window) {
+            setIsEnabled(Notification.permission === 'granted');
+          } else {
+            console.log('Notifications not supported in this browser');
+          }
         }
       } catch (error) {
         console.error('Error initializing notification settings:', error);
@@ -31,6 +43,15 @@ const NotificationSettings = () => {
         return;
       }
 
+      // Check for iOS device
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      
+      if (isIOS && isSafari) {
+        setTestMessage('iOS Safari has limited notification support. Notifications only work when the app is open.');
+        return;
+      }
+      
       if (!('Notification' in window)) {
         setTestMessage('Notifications not supported in this browser');
         return;
@@ -62,6 +83,15 @@ const NotificationSettings = () => {
         return;
       }
 
+      // Check for iOS device
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      
+      if (isIOS && isSafari) {
+        setTestMessage('iOS Safari has limited notification support. Notifications only work when the app is open.');
+        return;
+      }
+      
       if (!('Notification' in window)) {
         setTestMessage('Notifications not supported');
         return;
@@ -120,6 +150,25 @@ const NotificationSettings = () => {
             {isEnabled ? 'Enabled' : 'Disabled'}
           </div>
         </div>
+        
+        {/* iOS-specific message */}
+        {(() => {
+          if (typeof window !== 'undefined') {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+            
+            if (isIOS && isSafari) {
+              return (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-800">
+                    📱 <strong>iOS Safari detected:</strong> Notifications have limited support and only work when the app is open.
+                  </p>
+                </div>
+              );
+            }
+          }
+          return null;
+        })()}
       </div>
 
       {/* Actions Section */}
