@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useSession } from '../lib/session';
+import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
-import InstallPWA from './ui/InstallPWA';
+
 
 // Component to fetch and display coffee inventory
 function CoffeeInventory() {
@@ -97,54 +97,86 @@ function CoffeeInventory() {
   
   if (error && !totalInventory) {
     // If in error state but we still don't have a fallback value
-    return <span className="text-sm text-red-600">Error loading inventory</span>;
+    return <span className="text-sm text-yellow-600">Inventory unavailable</span>;
   }
+
+  // Use the fetched value or the fallback
+  const inventoryValue = totalInventory || FALLBACK_INVENTORY;
+
+  // Determine color based on inventory level
+  let bgColor = "bg-green-50";
+  let textColor = "text-green-600";
   
-  // Always show the inventory amount, even if it's the fallback value
+  if (inventoryValue < 150) {
+    bgColor = "bg-red-50";
+    textColor = "text-red-600";
+  } else if (inventoryValue < 300) {
+    bgColor = "bg-orange-50";
+    textColor = "text-orange-600";
+  }
+
   return (
-    <span className="text-sm text-green-600">
-      {totalInventory !== null ? `${totalInventory}kg` : 'Loading...'}
-    </span>
+    <div className={`text-sm px-3 py-1 ${bgColor} ${textColor} rounded-md`}>
+      <Link href="/coffee" className="flex items-center">
+        <span className="font-medium">{Number(inventoryValue).toFixed(1)} kg</span>
+        <span className="ml-1">Green Stock</span>
+      </Link>
+    </div>
   );
 }
 
-export default function Layout({ children, showHeader = true, showFooter = true }) {
+export default function Layout({ children }) {
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const { session } = useSession();
-  const user = session?.user;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [canViewCoffeeInventory, setCanViewCoffeeInventory] = useState(false);
+  const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
 
-  // Check if user can view coffee inventory (ADMIN, OWNER, or RETAILER)
-  useEffect(() => {
-    if (user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role)) {
-      setCanViewCoffeeInventory(true);
-    }
-  }, [user]);
+  const handleLogout = () => {
+    logout();
+  };
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        // Redirect to login page
-        router.push('/login');
-      } else {
-        console.error('Logout failed');
+  // Close admin dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (adminDropdownOpen && !event.target.closest('.admin-dropdown')) {
+        setAdminDropdownOpen(false);
       }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
+    };
 
-  // Navigation links
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [adminDropdownOpen]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Check if user can access the activities page (Admin, Owner, Retailer)
+  const canViewActivities = user && ['ADMIN', 'OWNER'].includes(user.role);
+  
+  // Check if user can view coffee inventory in header
+  const canViewCoffeeInventory = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
+  
+  // Check if user can access analytics
+  const canViewAnalytics = user && ['ADMIN', 'OWNER', 'RETAILER'].includes(user.role);
+
+  // Navigation links array for reuse in both desktop and mobile menus
   const navLinks = [
+    { href: '/dashboard', label: 'Dashboard', roles: ['ADMIN', 'OWNER'] },
+    { href: '/users', label: 'Users', roles: ['ADMIN', 'OWNER'] },
+    { href: '/shops', label: 'Shops', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
+    { href: '/coffee', label: 'Green Coffee', roles: [] }, // Empty array means available to all authenticated users
+    { href: '/activities', label: 'Activities', roles: ['ADMIN', 'OWNER'] },
     { href: '/orders', label: 'Retail', roles: [] }, // Available to all
     { href: '/analytics', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'RETAILER'] },
     { href: '/settings/notifications', label: 'Notifications', roles: [] }, // Available to all authenticated users
@@ -152,66 +184,97 @@ export default function Layout({ children, showHeader = true, showFooter = true 
 
   // Admin submenu items
   const adminLinks = [
-    { href: '/admin', label: 'Admin Dashboard' },
-    { href: '/admin/users', label: 'Manage Users' },
-    { href: '/admin/shops', label: 'Manage Shops' },
-    { href: '/admin/coffee', label: 'Manage Coffee' },
-    { href: '/admin/orders', label: 'Manage Orders' },
-    { href: '/admin/inventory', label: 'Inventory Management' },
-    { href: '/admin/activities', label: 'Activity Log' },
+    { href: '/admin/inventory-alerts', label: 'Inventory Alerts', roles: ['ADMIN', 'OWNER'] },
+    { href: '/admin/order-email-notifications', label: 'Order Email Notifications', roles: ['ADMIN', 'OWNER'] },
   ];
 
-  if (!showHeader) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <main className="flex-1">
-          {children}
-        </main>
-        {showFooter && (
-          <footer className="bg-white border-t border-gray-200 py-4">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <p className="text-center text-sm text-gray-500">
-                © 2024 BeanRoute. All rights reserved.
-              </p>
-            </div>
-          </footer>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo and Navigation */}
+    <div className="min-h-screen bg-white text-gray-900">
+      {/* Minimal Header */}
+      <header className="border-b border-gray-200">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="flex h-16 items-center justify-between">
+            {/* Logo and Nav */}
             <div className="flex items-center space-x-8">
-              {/* Logo */}
-              <Link href="/orders" className="flex items-center">
-                <img
-                  src="/logo.png"
-                  alt="BeanRoute Logo"
-                  className="h-8 w-auto"
-                  style={{
-                    maxWidth: '100%',
-                    height: 'auto'
+              <Link href="/dashboard" className="flex items-center">
+                <img 
+                  src="/images/sonic-beans-logo.jpg"
+                  alt="Sonic Beans"
+                  className="h-8"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "/images/sonic-beans-logo.svg";
                   }}
                 />
               </Link>
               
-              {/* Mobile Menu Button */}
-              <button 
-                className="flex items-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
-                onClick={toggleMobileMenu}
-                aria-label="Menu"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-                </svg>
-              </button>
+              {/* Desktop Navigation */}
+              <nav className="hidden md:flex space-x-8">
+                {navLinks.map((link) => {
+                  // Only show links if user has permission
+                  if (user && (link.roles.length === 0 || link.roles.includes(user.role))) {
+                    return (
+                      <Link 
+                        key={link.href}
+                        href={link.href}
+                        className={`text-sm ${router.pathname === link.href || router.pathname.startsWith(link.href + '/') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  }
+                  return null;
+                })}
+                
+                {/* Admin Dropdown */}
+                {user && ['ADMIN', 'OWNER'].includes(user.role) && (
+                  <div className="relative admin-dropdown">
+                    <button
+                      onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
+                      className={`text-sm font-normal text-gray-500 hover:text-gray-900 flex items-center ${router.pathname.startsWith('/admin') ? 'font-medium text-gray-900' : ''}`}
+                    >
+                      Admin
+                      <svg 
+                        className={`ml-1 h-4 w-4 transform transition-transform ${adminDropdownOpen ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {adminDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                        <div className="py-1">
+                          {adminLinks.map((adminLink) => (
+                            <Link 
+                              key={adminLink.href}
+                              href={adminLink.href}
+                              className={`block px-4 py-2 text-sm hover:bg-gray-100 ${router.pathname === adminLink.href ? 'font-medium text-gray-900 bg-gray-50' : 'text-gray-700'}`}
+                              onClick={() => setAdminDropdownOpen(false)}
+                            >
+                              {adminLink.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </nav>
             </div>
+            
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden flex items-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
+              onClick={toggleMobileMenu}
+              aria-label="Menu"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+              </svg>
+            </button>
             
             {/* User Info / Logout */}
             <div className="hidden md:flex items-center space-x-4">
@@ -303,7 +366,7 @@ export default function Layout({ children, showHeader = true, showFooter = true 
                           handleLogout();
                           setMobileMenuOpen(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                        className="w-full text-left px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                       >
                         Logout
                       </button>
@@ -316,21 +379,18 @@ export default function Layout({ children, showHeader = true, showFooter = true 
         </div>
       </header>
       
-      {/* Main content area */}
-      <main className="flex-1">
-        {children}
-      </main>
+      {/* Notification Banner */}
+      {user && <NotificationBanner />}
       
-      {/* Footer */}
-      {showFooter && (
-        <footer className="bg-white border-t border-gray-200 py-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="text-center text-sm text-gray-500">
-              © 2024 BeanRoute. All rights reserved.
-            </p>
-          </div>
-        </footer>
-      )}
+      {/* Main content area */}
+      <main>
+        <div className="mx-auto max-w-6xl py-8 px-4">
+          {children}
+        </div>
+      </main>
+
+      {/* Message Board - only show for authenticated users */}
+      {user && <MessageBoard />}
     </div>
   );
 } 

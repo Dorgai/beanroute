@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from '@/lib/session';
 import Link from 'next/link';
@@ -7,18 +7,22 @@ import Head from 'next/head';
 export default function Home() {
   const router = useRouter();
   const { session, loading } = useSession();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    if (!loading) {
+    // Only redirect once when loading is complete and we haven't redirected yet
+    if (!loading && !hasRedirected) {
+      setHasRedirected(true);
+      
       if (session) {
         console.log('Index - User session found, redirecting to orders');
-        router.push('/orders');
+        router.replace('/orders');
       } else {
         console.log('Index - No user session, redirecting to login');
-        router.push('/login');
+        router.replace('/login');
       }
     }
-  }, [router, session, loading]);
+  }, [loading, session, hasRedirected]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
