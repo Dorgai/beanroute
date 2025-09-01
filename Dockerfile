@@ -1,12 +1,12 @@
-# FORCE RAILWAY REBUILD - Push notification fixes deployed
-# LAST UPDATE: 2025-01-28 15:30 - FORCE RAILWAY TO USE NEW DEPLOYMENT
+# FORCE RAILWAY REBUILD - Database migration fixes deployed
+# LAST UPDATE: 2025-01-28 16:00 - Added database migration step
 # UNIQUE ID: $(date +%s) - Force Railway rebuild
-# FORCE RESTART: Adding completely new configuration
+# FORCE RESTART: Adding database migration step
 FROM node:18-alpine
 
 # Force rebuild by adding unique identifier
 LABEL build_id="$(date +%s)"
-LABEL version="mobile-fixes-v3"
+LABEL version="database-migration-fixes-v1"
 LABEL force_restart="true"
 
 WORKDIR /app
@@ -32,5 +32,5 @@ RUN npm prune --production
 # Expose port
 EXPOSE 3000
 
-# Start the app
-CMD ["npm", "start"]
+# Start the app with database migration
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
