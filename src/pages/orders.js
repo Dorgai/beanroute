@@ -1588,21 +1588,19 @@ export default function RetailOrders() {
         console.log('Refreshing available coffee');
         if (selectedShop) {
           const coffeeResponse = await fetch(`/api/retail/available-coffee?shopId=${selectedShop}`);
-        } else {
-          return; // Skip if no shop selected
-        }
-        
-        if (!coffeeResponse.ok) {
-          console.error('Error response from available coffee API:', coffeeResponse.status);
-        } else {
-          try {
-            const coffeeData = await coffeeResponse.json();
-            const flatCoffee = coffeeData && typeof coffeeData === 'object'
-              ? Object.values(coffeeData).flat().filter(Boolean)
-              : [];
-            setAvailableCoffee(flatCoffee);
-          } catch (jsonError) {
-            console.error('Error parsing coffee JSON:', jsonError);
+          
+          if (!coffeeResponse.ok) {
+            console.error('Error response from available coffee API:', coffeeResponse.status);
+          } else {
+            try {
+              const coffeeData = await coffeeResponse.json();
+              const flatCoffee = coffeeData && typeof coffeeData === 'object'
+                ? Object.values(coffeeData).flat().filter(Boolean)
+                : [];
+              setAvailableCoffee(flatCoffee);
+            } catch (jsonError) {
+              console.error('Error parsing coffee JSON:', jsonError);
+            }
           }
         }
       } catch (error) {
