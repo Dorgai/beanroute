@@ -105,8 +105,10 @@ export default async function handler(req, res) {
       }
       
       // Calculate the new quantities
-      const newSmallBagsEspresso = smallBagsEspressoValue !== undefined ? smallBagsEspressoValue : (currentInventory.smallBagsEspresso || 0);
-      const newSmallBagsFilter = smallBagsFilterValue !== undefined ? smallBagsFilterValue : (currentInventory.smallBagsFilter || 0);
+      // For now, we'll use the existing smallBags field and split it evenly if not specified
+      const currentSmallBags = currentInventory.smallBags || 0;
+      const newSmallBagsEspresso = smallBagsEspressoValue !== undefined ? smallBagsEspressoValue : Math.floor(currentSmallBags / 2);
+      const newSmallBagsFilter = smallBagsFilterValue !== undefined ? smallBagsFilterValue : Math.floor(currentSmallBags / 2);
       const newLargeBags = largeBagsValue !== undefined ? largeBagsValue : currentInventory.largeBags;
       
       // Calculate new total quantity in kg
