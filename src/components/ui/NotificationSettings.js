@@ -1,63 +1,57 @@
-// Notification Settings Management Component
+// Simple Notification Settings Component
 import React, { useState, useEffect } from 'react';
 import { FiBell, FiBellOff, FiSettings, FiRefreshCw } from 'react-icons/fi';
 
 const NotificationSettings = () => {
-  const [isSupported, setIsSupported] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [permission, setPermission] = useState('default');
   const [loading, setLoading] = useState(true);
   const [testLoading, setTestLoading] = useState(false);
   const [testMessage, setTestMessage] = useState('');
+  const [isEnabled, setIsEnabled] = useState(false);
 
   useEffect(() => {
-    const checkNotificationSupport = async () => {
+    // Simple initialization without complex browser API calls
+    const initializeComponent = () => {
       try {
-        // Check if we're in a browser environment
-        if (typeof window === 'undefined') {
-          return;
-        }
-
-        // Check basic notification support
-        const hasNotification = 'Notification' in window;
-        const hasServiceWorker = 'serviceWorker' in navigator;
-        const hasPushManager = 'PushManager' in window;
-        
-        setIsSupported(hasNotification);
-        
-        if (hasNotification) {
-          const currentPermission = Notification.permission;
-          setPermission(currentPermission);
-          
-          // Check if already subscribed
-          if (hasServiceWorker && hasPushManager) {
-            try {
-              const registration = await navigator.serviceWorker.ready;
-              const subscription = await registration.pushManager.getSubscription();
-              setIsSubscribed(!!subscription);
-            } catch (error) {
-              console.log('Service worker check failed:', error);
-            }
-          }
-        }
+        // Basic check for browser support
+        const hasNotification = typeof window !== 'undefined' && 'Notification' in window;
+        setIsEnabled(hasNotification && Notification.permission === 'granted');
       } catch (error) {
-        console.error('Error checking notification support:', error);
+        console.error('Error initializing notification settings:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    checkNotificationSupport();
+    // Delay initialization to ensure proper component mounting
+    const timer = setTimeout(initializeComponent, 100);
+    return () => clearTimeout(timer);
   }, []);
 
-  const requestPermission = async () => {
+  const handleToggleNotifications = async () => {
     try {
-      const newPermission = await Notification.requestPermission();
-      setPermission(newPermission);
-      setTestMessage(`Permission ${newPermission}`);
+      if (typeof window === 'undefined') {
+        setTestMessage('Not available in server-side rendering');
+        return;
+      }
+
+      if (!('Notification' in window)) {
+        setTestMessage('Notifications not supported in this browser');
+        return;
+      }
+
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        setIsEnabled(permission === 'granted');
+        setTestMessage(permission === 'granted' ? 'Notifications enabled!' : 'Notifications blocked');
+      } else if (Notification.permission === 'granted') {
+        setIsEnabled(false);
+        setTestMessage('Notifications disabled');
+      } else {
+        setTestMessage('Notifications are blocked. Please enable them in your browser settings.');
+      }
     } catch (error) {
-      console.error('Error requesting permission:', error);
-      setTestMessage('Error requesting permission');
+      console.error('Error toggling notifications:', error);
+      setTestMessage('Error: ' + error.message);
     }
   };
 
@@ -66,7 +60,17 @@ const NotificationSettings = () => {
     setTestMessage('');
     
     try {
-      if (permission === 'granted') {
+      if (typeof window === 'undefined') {
+        setTestMessage('Not available in server-side rendering');
+        return;
+      }
+
+      if (!('Notification' in window)) {
+        setTestMessage('Notifications not supported');
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
         new Notification('Test Notification', {
           body: 'This is a test notification from BeanRoute',
           icon: '/images/sonic-beans-logo.svg'
@@ -75,39 +79,12 @@ const NotificationSettings = () => {
       } else {
         setTestMessage('Please enable notifications first');
       }
-    } catch (err) {
-      setTestMessage(`Failed to send test: ${err.message}`);
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      setTestMessage('Failed to send test: ' + error.message);
     } finally {
       setTestLoading(false);
     }
-  };
-
-  const handleToggleNotifications = async () => {
-    try {
-      if (permission === 'default') {
-        await requestPermission();
-      } else if (permission === 'granted') {
-        setIsSubscribed(!isSubscribed);
-        setTestMessage(isSubscribed ? 'Notifications disabled' : 'Notifications enabled');
-      }
-    } catch (err) {
-      setTestMessage(`Error: ${err.message}`);
-    }
-  };
-
-  const getStatusColor = () => {
-    if (!isSupported) return 'gray';
-    if (permission === 'denied') return 'red';
-    if (isSubscribed) return 'green';
-    return 'yellow';
-  };
-
-  const getStatusText = () => {
-    if (!isSupported) return 'Not Supported';
-    if (permission === 'denied') return 'Blocked';
-    if (isSubscribed) return 'Enabled';
-    if (permission === 'granted') return 'Available';
-    return 'Disabled';
   };
 
   if (loading) {
@@ -127,7 +104,7 @@ const NotificationSettings = () => {
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Push Notifications</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Manage your notification preferences and devices
+              Manage your notification preferences
             </p>
           </div>
         </div>
@@ -140,8 +117,10 @@ const NotificationSettings = () => {
             <h3 className="text-lg font-medium text-gray-900">Status</h3>
             <p className="text-sm text-gray-600">Current notification state</p>
           </div>
-          <div className={`px-3 py-1 rounded-full text-sm font-medium bg-${getStatusColor()}-100 text-${getStatusColor()}-800`}>
-            {getStatusText()}
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            isEnabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            {isEnabled ? 'Enabled' : 'Disabled'}
           </div>
         </div>
       </div>
@@ -154,16 +133,13 @@ const NotificationSettings = () => {
           <div className="space-y-3">
             <button
               onClick={handleToggleNotifications}
-              disabled={!isSupported || permission === 'denied'}
               className={`w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                !isSupported || permission === 'denied'
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : isSubscribed
+                isEnabled
                   ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              {isSubscribed ? (
+              {isEnabled ? (
                 <>
                   <FiBellOff className="w-4 h-4 mr-2" />
                   Disable Notifications
@@ -178,9 +154,9 @@ const NotificationSettings = () => {
 
             <button
               onClick={handleTestNotification}
-              disabled={!isSupported || permission !== 'granted' || testLoading}
+              disabled={!isEnabled || testLoading}
               className={`w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ${
-                (!isSupported || permission !== 'granted' || testLoading) && 'opacity-50 cursor-not-allowed'
+                (!isEnabled || testLoading) && 'opacity-50 cursor-not-allowed'
               }`}
             >
               {testLoading ? (
