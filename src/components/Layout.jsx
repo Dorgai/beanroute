@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
+import { NotificationBanner } from './ui/NotificationStatusBadge';
 
 
 // Component to fetch and display coffee inventory
