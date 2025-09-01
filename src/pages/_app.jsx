@@ -107,7 +107,13 @@ export default function App({ Component, pageProps }) {
             <>
               <Head>
                 <title>Bean Route</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+                <meta name="theme-color" content="#2563eb" />
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+                <meta name="apple-mobile-web-app-title" content="BeanRoute" />
+                <link rel="manifest" href="/manifest.json" />
+                <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
               </Head>
               {getLayout(<Component {...pageProps} />)}
             </>
@@ -117,7 +123,13 @@ export default function App({ Component, pageProps }) {
               <Head>
                 <title>Bean Route</title>
                 <meta name="description" content="Coffee Supply Chain Management System" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+                <meta name="theme-color" content="#2563eb" />
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+                <meta name="apple-mobile-web-app-title" content="BeanRoute" />
+                <link rel="manifest" href="/manifest.json" />
+                <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
                 <link rel="icon" href="/favicon.ico" />
               </Head>
               <Layout>

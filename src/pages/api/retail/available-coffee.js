@@ -221,10 +221,18 @@ export default async function handler(req, res) {
           quantity: parseFloat((item.originalQuantity * 0.85).toFixed(2)), // Apply 15% haircut (85% of original)
           haircutAmount: parseFloat((item.originalQuantity * 0.15).toFixed(2)) // Calculate haircut amount
         };
+      } else if (item.source === 'shop_inventory') {
+        // For shop inventory coffees, use the shop's total quantity as available for ordering
+        const shopTotalQuantity = (item.shopSmallBags * 0.2) + (item.shopLargeBags * 1.0);
+        return {
+          ...item,
+          quantity: parseFloat(shopTotalQuantity.toFixed(2)), // Use shop inventory as available quantity
+          haircutAmount: 0 // No haircut for shop inventory
+        };
       } else {
         return {
           ...item,
-          quantity: 0, // No green stock available for ordering
+          quantity: 0, // No stock available for ordering
           haircutAmount: 0
         };
       }
