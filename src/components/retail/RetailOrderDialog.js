@@ -101,6 +101,7 @@ export default function RetailOrderDialog({ open, onClose }) {
     };
 
     if (open) {
+      setError(null); // Clear any previous errors when dialog opens
       fetchData();
     }
   }, [open, selectedShop]);
@@ -172,6 +173,8 @@ export default function RetailOrderDialog({ open, onClose }) {
         throw new Error('Failed to create order');
       }
 
+      // Clear error and close dialog on success
+      setError(null);
       onClose();
     } catch (error) {
       console.error('Error creating order:', error);

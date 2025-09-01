@@ -69,9 +69,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
       setOrderItems(initialItems);
       setValidationErrors({});
       setComment('');
+      setError(null); // Clear any previous errors when dialog opens
     } else if (open) {
       // If coffeeItems is not a valid array or is empty
       console.warn('No valid coffee items available for ordering');
+      setError(null); // Clear any previous errors when dialog opens
     }
   }, [open, coffeeItems]);
 
@@ -276,6 +278,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
       }
 
       console.log('Order created successfully, calling onClose(true)');
+      setError(null); // Clear any previous errors
       onClose(true); // Pass true to indicate successful order
     } catch (error) {
       console.error('Error creating order:', error);
@@ -1469,6 +1472,8 @@ export default function RetailOrders() {
       // Refresh data after successful order
       fetchData();
     }
+    // Clear any error state when dialog is closed
+    setError(null);
   };
   
   const handleOpenStatusDialog = (order) => {
