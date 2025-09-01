@@ -1,6 +1,5 @@
-// Simple Notification Settings Component
+// Ultra-Simple Notification Settings Component
 import React, { useState, useEffect } from 'react';
-import { FiBell, FiBellOff, FiSettings, FiRefreshCw } from 'react-icons/fi';
 
 const NotificationSettings = () => {
   const [loading, setLoading] = useState(true);
@@ -9,21 +8,19 @@ const NotificationSettings = () => {
   const [isEnabled, setIsEnabled] = useState(false);
 
   useEffect(() => {
-    // Simple initialization without complex browser API calls
-    const initializeComponent = () => {
+    // Simple initialization without any complex logic
+    const timer = setTimeout(() => {
       try {
-        // Basic check for browser support
-        const hasNotification = typeof window !== 'undefined' && 'Notification' in window;
-        setIsEnabled(hasNotification && Notification.permission === 'granted');
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          setIsEnabled(Notification.permission === 'granted');
+        }
       } catch (error) {
         console.error('Error initializing notification settings:', error);
       } finally {
         setLoading(false);
       }
-    };
-
-    // Delay initialization to ensure proper component mounting
-    const timer = setTimeout(initializeComponent, 100);
+    }, 200);
+    
     return () => clearTimeout(timer);
   }, []);
 
@@ -73,7 +70,7 @@ const NotificationSettings = () => {
       if (Notification.permission === 'granted') {
         new Notification('Test Notification', {
           body: 'This is a test notification from BeanRoute',
-          icon: '/images/sonic-beans-logo.svg'
+          icon: '/icons/icon-192x192.png'
         });
         setTestMessage('Test notification sent! Check your device.');
       } else {
@@ -100,7 +97,7 @@ const NotificationSettings = () => {
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center">
-          <FiBell className="w-6 h-6 text-blue-500 mr-3" />
+          <div className="w-6 h-6 text-blue-500 mr-3 text-center text-xl">🔔</div>
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Push Notifications</h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -133,40 +130,31 @@ const NotificationSettings = () => {
           <div className="space-y-3">
             <button
               onClick={handleToggleNotifications}
-              className={`w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+              className={`w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white touch-manipulation ${
                 isEnabled
                   ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              {isEnabled ? (
-                <>
-                  <FiBellOff className="w-4 h-4 mr-2" />
-                  Disable Notifications
-                </>
-              ) : (
-                <>
-                  <FiBell className="w-4 h-4 mr-2" />
-                  Enable Notifications
-                </>
-              )}
+              <span className="mr-2">{isEnabled ? '🔕' : '🔔'}</span>
+              {isEnabled ? 'Disable Notifications' : 'Enable Notifications'}
             </button>
 
             <button
               onClick={handleTestNotification}
               disabled={!isEnabled || testLoading}
-              className={`w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ${
+              className={`w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 touch-manipulation ${
                 (!isEnabled || testLoading) && 'opacity-50 cursor-not-allowed'
               }`}
             >
               {testLoading ? (
                 <>
-                  <FiRefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  <span className="mr-2">⏳</span>
                   Sending...
                 </>
               ) : (
                 <>
-                  <FiSettings className="w-4 h-4 mr-2" />
+                  <span className="mr-2">⚙️</span>
                   Send Test Notification
                 </>
               )}
