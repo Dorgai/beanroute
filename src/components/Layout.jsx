@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
-import { NotificationBanner } from './ui/NotificationBanner';
+// import { NotificationBanner } from './ui/NotificationBanner';
 
 
 // Component to fetch and display coffee inventory
@@ -380,8 +380,8 @@ export default function Layout({ children }) {
         </div>
       </header>
       
-      {/* Notification Banner */}
-      {user && <NotificationBanner />}
+      {/* Notification Banner - temporarily disabled */}
+      {/* {user && <NotificationBanner />} */}
       
       {/* Main content area */}
       <main>
