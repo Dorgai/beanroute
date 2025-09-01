@@ -40,22 +40,23 @@ export default async function handler(req, res) {
     }
 
     // Get the inventory update data from request body
-    const { inventoryId, smallBags, largeBags } = req.body;
-    console.log('[update-inventory] Update request for:', { inventoryId, smallBags, largeBags });
+    const { inventoryId, smallBagsEspresso, smallBagsFilter, largeBags } = req.body;
+    console.log('[update-inventory] Update request for:', { inventoryId, smallBagsEspresso, smallBagsFilter, largeBags });
     
     if (!inventoryId) {
       await prisma.$disconnect();
       return res.status(400).json({ error: 'Missing required field: inventoryId' });
     }
     
-    if (smallBags === undefined && largeBags === undefined) {
+    if (smallBagsEspresso === undefined && smallBagsFilter === undefined && largeBags === undefined) {
       await prisma.$disconnect();
-      return res.status(400).json({ error: 'At least one of smallBags or largeBags must be provided' });
+      return res.status(400).json({ error: 'At least one quantity field must be provided' });
     }
     
     // Validate numeric values
-    const smallBagsValue = smallBags !== undefined ? parseFloat(smallBags) : undefined;
-    const largeBagsValue = largeBags !== undefined ? parseFloat(largeBags) : undefined;
+    const smallBagsEspressoValue = smallBagsEspresso !== undefined ? parseInt(smallBagsEspresso) : undefined;
+    const smallBagsFilterValue = smallBagsFilter !== undefined ? parseInt(smallBagsFilter) : undefined;
+    const largeBagsValue = largeBags !== undefined ? parseInt(largeBags) : undefined;
     
     if ((smallBags !== undefined && (isNaN(smallBagsValue) || smallBagsValue < 0)) || 
         (largeBags !== undefined && (isNaN(largeBagsValue) || largeBagsValue < 0))) {

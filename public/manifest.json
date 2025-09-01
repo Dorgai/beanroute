@@ -7,6 +7,15 @@
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
+  "background": {
+    "service_worker": "/sw.js",
+    "type": "module"
+  },
+  "permissions": [
+    "notifications",
+    "background-sync",
+    "periodic-sync"
+  ],
   "scope": "/",
   "lang": "en",
   "categories": ["business", "productivity", "food"],

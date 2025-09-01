@@ -104,6 +104,15 @@ export const getMobileSpecificFeatures = () => {
     // Service worker support
     supportsServiceWorker: 'serviceWorker' in navigator,
     
+    // Background sync support
+    supportsBackgroundSync: 'serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration,
+    
+    // Periodic sync support
+    supportsPeriodicSync: 'serviceWorker' in navigator && 'periodicSync' in window.ServiceWorkerRegistration,
+    
+    // Background processing support
+    supportsBackgroundProcessing: mobileInfo.isMobile && 'serviceWorker' in navigator,
+    
     // Standalone app mode
     supportsStandalone: mobileInfo.isIOS ? 'standalone' in window.navigator : true,
     
@@ -131,13 +140,17 @@ export const getMobileSpecificFeatures = () => {
         supportsSafari: true,
         supportsWebKit: true,
         supportsApplePay: 'ApplePaySession' in window,
-        supportsFaceID: 'credentials' in navigator && 'preventExtensions' in navigator.credentials
+        supportsFaceID: 'credentials' in navigator && 'preventExtensions' in navigator.credentials,
+        supportsBackgroundAppRefresh: true, // iOS supports background app refresh
+        supportsSilentPush: true // iOS supports silent push notifications
       } : {},
       android: mobileInfo.isAndroid ? {
         supportsChrome: true,
         supportsWebView: true,
         supportsGooglePay: 'PaymentRequest' in window,
-        supportsFingerprint: 'credentials' in navigator
+        supportsFingerprint: 'credentials' in navigator,
+        supportsBackgroundSync: true, // Android has better background sync support
+        supportsWakeLocks: 'wakeLock' in navigator // Android supports wake locks
       } : {}
     }
   };

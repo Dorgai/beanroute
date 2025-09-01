@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext.js';
 import MessageBoard from './MessageBoard';
 import InstallPWA from './ui/InstallPWA';
+import BackgroundSyncManager from './ui/BackgroundSyncManager';
+import WakeLockManager from './ui/WakeLockManager';
 // import { NotificationBanner } from './ui/NotificationBanner';
 
 
@@ -394,8 +396,14 @@ export default function Layout({ children }) {
       {/* Message Board - only show for authenticated users */}
       {user && <MessageBoard />}
       
-      {/* PWA Install Prompt */}
-      <InstallPWA />
-    </div>
-  );
+          {/* PWA Install Prompt */}
+    <InstallPWA />
+    
+    {/* Background Sync Manager for mobile background processing */}
+    <BackgroundSyncManager />
+    
+    {/* Wake Lock Manager for Android devices */}
+    <WakeLockManager />
+  </div>
+);
 } 

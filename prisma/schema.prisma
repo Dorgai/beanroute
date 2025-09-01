@@ -215,17 +215,19 @@ model RetailOrderItem {
 }
 
 model RetailInventory {
-  id            String      @id @default(uuid())
-  shopId        String
-  coffeeId      String
-  smallBags     Int         @default(0)
-  largeBags     Int         @default(0)
-  totalQuantity Float
-  lastOrderDate DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  coffee        GreenCoffee @relation(fields: [coffeeId], references: [id])
-  shop          Shop        @relation(fields: [shopId], references: [id])
+  id                  String      @id @default(uuid())
+  shopId              String
+  coffeeId            String
+  smallBags           Int         @default(0)
+  smallBagsEspresso   Int         @default(0)
+  smallBagsFilter     Int         @default(0)
+  largeBags           Int         @default(0)
+  totalQuantity       Float
+  lastOrderDate       DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  coffee              GreenCoffee @relation(fields: [coffeeId], references: [id])
+  shop                Shop        @relation(fields: [shopId], references: [id])
 
   @@unique([shopId, coffeeId])
   @@index([shopId])

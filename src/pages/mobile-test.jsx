@@ -5,6 +5,7 @@ export default function MobileTestPage() {
   const [mobileInfo, setMobileInfo] = useState(null);
   const [pwaInfo, setPwaInfo] = useState(null);
   const [notificationInfo, setNotificationInfo] = useState(null);
+  const [backgroundInfo, setBackgroundInfo] = useState(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -29,6 +30,16 @@ export default function MobileTestPage() {
         canRequest: 'Notification' in window && Notification.permission === 'default'
       };
       setNotificationInfo(notification);
+
+      // Get background processing info
+      const background = {
+        supportsBackgroundSync: 'serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration,
+        supportsPeriodicSync: 'serviceWorker' in navigator && 'periodicSync' in window.ServiceWorkerRegistration,
+        supportsWakeLock: 'wakeLock' in navigator,
+        serviceWorkerStatus: 'serviceWorker' in navigator ? 'supported' : 'not-supported',
+        backgroundSyncStatus: 'serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration ? 'supported' : 'not-supported'
+      };
+      setBackgroundInfo(background);
     }
   }, []);
 
@@ -90,6 +101,24 @@ export default function MobileTestPage() {
               <div>
                 <p><strong>Push Manager:</strong> {pwaInfo.hasPushManager ? 'Supported' : 'Not Supported'}</p>
                 <p><strong>Notifications:</strong> {pwaInfo.hasNotification ? 'Supported' : 'Not Supported'}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Background Processing Information */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Background Processing</h2>
+          {backgroundInfo && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p><strong>Background Sync:</strong> {backgroundInfo.supportsBackgroundSync ? '✅ Supported' : '❌ Not Supported'}</p>
+                <p><strong>Periodic Sync:</strong> {backgroundInfo.supportsPeriodicSync ? '✅ Supported' : '❌ Not Supported'}</p>
+                <p><strong>Wake Lock:</strong> {backgroundInfo.supportsWakeLock ? '✅ Supported' : '❌ Not Supported'}</p>
+              </div>
+              <div>
+                <p><strong>Service Worker:</strong> <span className={backgroundInfo.serviceWorkerStatus === 'supported' ? 'text-green-600' : 'text-red-600'}>{backgroundInfo.serviceWorkerStatus}</span></p>
+                <p><strong>Background Sync Status:</strong> <span className={backgroundInfo.backgroundSyncStatus === 'supported' ? 'text-green-600' : 'text-red-600'}>{backgroundInfo.backgroundSyncStatus}</span></p>
               </div>
             </div>
           )}

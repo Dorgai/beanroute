@@ -1,8 +1,15 @@
-// BeanRoute Service Worker v2.0
-// Enhanced for better mobile support and push notification handling
+// BeanRoute Service Worker v3.0
+// Enhanced for background processing, mobile support, and reliable push notifications
 
-const CACHE_NAME = 'beanroute-v2';
+const CACHE_NAME = 'beanroute-v3';
 const OFFLINE_URL = '/offline.html';
+
+// Background sync tags
+const BACKGROUND_SYNC_TAGS = {
+  PUSH_SUBSCRIPTION: 'push-subscription-sync',
+  NOTIFICATION_UPDATE: 'notification-update-sync',
+  DATA_SYNC: 'data-sync'
+};
 
 // Critical pages to cache for offline access
 const CRITICAL_PAGES = [
@@ -401,11 +408,23 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Background sync for future implementation
+// Background sync for reliable data synchronization
 self.addEventListener('sync', (event) => {
   console.log('[SW] Background sync event:', event.tag);
   
   switch (event.tag) {
+    case BACKGROUND_SYNC_TAGS.PUSH_SUBSCRIPTION:
+      event.waitUntil(syncPushSubscription());
+      break;
+      
+    case BACKGROUND_SYNC_TAGS.NOTIFICATION_UPDATE:
+      event.waitUntil(syncNotificationUpdates());
+      break;
+      
+    case BACKGROUND_SYNC_TAGS.DATA_SYNC:
+      event.waitUntil(syncData());
+      break;
+      
     case 'background-order-sync':
       event.waitUntil(syncOrders());
       break;
@@ -414,6 +433,87 @@ self.addEventListener('sync', (event) => {
       console.log('[SW] Unknown sync tag:', event.tag);
   }
 });
+
+// Periodic sync for background data updates (when supported)
+self.addEventListener('periodicsync', (event) => {
+  console.log('[SW] Periodic sync event:', event.tag);
+  
+  if (event.tag === 'data-refresh') {
+    event.waitUntil(refreshDataInBackground());
+  }
+});
+
+// Background sync functions
+async function syncPushSubscription() {
+  console.log('[SW] Syncing push subscription in background');
+  try {
+    // Attempt to sync push subscription with server
+    const response = await fetch('/api/push/sync-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      console.log('[SW] Push subscription synced successfully');
+    } else {
+      console.log('[SW] Push subscription sync failed:', response.status);
+    }
+  } catch (error) {
+    console.error('[SW] Error syncing push subscription:', error);
+  }
+}
+
+async function syncNotificationUpdates() {
+  console.log('[SW] Syncing notification updates in background');
+  try {
+    // Check for new notifications or updates
+    const response = await fetch('/api/push/check-updates', {
+      method: 'GET'
+    });
+    
+    if (response.ok) {
+      const updates = await response.json();
+      if (updates.hasNewNotifications) {
+        // Show notification about new updates
+        self.registration.showNotification('BeanRoute Updates', {
+          body: 'You have new notifications',
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-72x72.png',
+          tag: 'updates-available'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[SW] Error syncing notification updates:', error);
+  }
+}
+
+async function syncData() {
+  console.log('[SW] Syncing data in background');
+  try {
+    // Sync critical data like orders and inventory
+    const response = await fetch('/api/retail/sync-data', {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      console.log('[SW] Data synced successfully');
+    }
+  } catch (error) {
+    console.error('[SW] Error syncing data:', error);
+  }
+}
+
+async function refreshDataInBackground() {
+  console.log('[SW] Refreshing data in background');
+  try {
+    // Refresh data even when app is not active
+    await syncData();
+    await syncNotificationUpdates();
+  } catch (error) {
+    console.error('[SW] Error refreshing data in background:', error);
+  }
+}
 
 // Future: Background sync for orders
 async function syncOrders() {
