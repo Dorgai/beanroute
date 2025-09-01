@@ -11,7 +11,7 @@ class OrderEmailService {
   }
 
   /**
-   * Initialize the nodemailer transporter with Gmail SMTP settings
+   * Initialize the nodemailer transporter with enhanced configuration
    */
   initializeTransporter() {
     const emailUser = process.env.EMAIL_USER;
@@ -24,21 +24,30 @@ class OrderEmailService {
     }
 
     try {
+      // Enhanced Gmail configuration with better delivery settings
       this.transporter = nodemailer.createTransport({
         service: 'gmail',
         host: 'smtp.gmail.com',
         port: 587,
-        secure: false,
+        secure: false, // Use STARTTLS
         auth: {
           user: emailUser,
           pass: emailPassword,
         },
         tls: {
           rejectUnauthorized: false
-        }
+        },
+        // Enhanced delivery options
+        pool: true, // Use pooled connections
+        maxConnections: 5,
+        maxMessages: 100,
+        rateLimit: 14, // Max 14 messages per second (Gmail limit is 15/sec)
+        debug: process.env.NODE_ENV === 'development', // Enable debug in development
+        logger: process.env.NODE_ENV === 'development' // Enable logging in development
       });
 
-      console.log('[OrderEmailService] Email transporter initialized successfully');
+      console.log('[OrderEmailService] Enhanced Gmail transporter initialized successfully');
+      console.log(`[OrderEmailService] Configuration: User=${emailUser}, From=${emailFrom}`);
     } catch (error) {
       console.error('[OrderEmailService] Failed to initialize email transporter:', error);
     }
@@ -293,37 +302,84 @@ class OrderEmailService {
   }
 
   /**
-   * Test email configuration
+   * Test email configuration with enhanced debugging
    */
   async testEmailConfiguration(testEmail = 'test@example.com') {
+    console.log(`[OrderEmailService] Starting email test to: ${testEmail}`);
+    
     if (!this.transporter) {
+      console.log('[OrderEmailService] No transporter configured');
       return { success: false, error: 'Email transporter not configured' };
     }
 
     try {
-      await this.transporter.verify();
+      // Step 1: Verify SMTP connection
+      console.log('[OrderEmailService] Verifying SMTP connection...');
+      const verifyResult = await this.transporter.verify();
+      console.log('[OrderEmailService] SMTP verification result:', verifyResult);
       
-      // Send a test email
+      // Step 2: Send test email with detailed tracking
       const emailFrom = process.env.EMAIL_FROM || '"Bean Route System" <no-reply@beanroute.com>';
+      console.log(`[OrderEmailService] Sending test email from: ${emailFrom} to: ${testEmail}`);
       
-      await this.transporter.sendMail({
+      const mailOptions = {
         from: emailFrom,
         to: testEmail,
-        subject: 'Bean Route - Email Configuration Test',
+        subject: `Bean Route Test - ${new Date().toISOString()}`,
         html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Email Configuration Test</h2>
-            <p>This is a test email to verify that your Bean Route email notification system is working correctly.</p>
-            <p>If you received this email, your configuration is successful!</p>
+          <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #4CAF50;">
+            <h2 style="color: #4CAF50;">✅ Bean Route Email Test</h2>
+            <p><strong>Test Status:</strong> Email system is working correctly!</p>
+            <p><strong>Sent From:</strong> ${emailFrom}</p>
+            <p><strong>Sent To:</strong> ${testEmail}</p>
             <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+            <p><strong>Server Time:</strong> ${new Date().toISOString()}</p>
+            <hr>
+            <p><em>If you received this email, your Bean Route notification system is configured properly.</em></p>
+            <p><strong>Note:</strong> Check your spam/junk folder if you don't see this in your inbox.</p>
           </div>
-        `
+        `,
+        text: `Bean Route Email Test - ${new Date().toISOString()}\n\nEmail system is working correctly!\nSent from: ${emailFrom}\nSent to: ${testEmail}\nTimestamp: ${new Date().toLocaleString()}`
+      };
+
+      const result = await this.transporter.sendMail(mailOptions);
+      
+      console.log('[OrderEmailService] Email send result:', {
+        messageId: result.messageId,
+        response: result.response,
+        accepted: result.accepted,
+        rejected: result.rejected,
+        pending: result.pending
       });
 
-      return { success: true, message: 'Test email sent successfully' };
+      // Check if email was accepted by the server
+      if (result.rejected && result.rejected.length > 0) {
+        console.warn('[OrderEmailService] Some recipients were rejected:', result.rejected);
+        return { 
+          success: false, 
+          error: `Email rejected by server for: ${result.rejected.join(', ')}`,
+          details: result
+        };
+      }
+
+      return { 
+        success: true, 
+        message: `Test email sent successfully to ${testEmail}`,
+        messageId: result.messageId,
+        details: {
+          accepted: result.accepted,
+          response: result.response,
+          timestamp: new Date().toISOString()
+        }
+      };
     } catch (error) {
       console.error('[OrderEmailService] Email configuration test failed:', error);
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        error: error.message,
+        code: error.code,
+        command: error.command
+      };
     }
   }
 }
