@@ -104,30 +104,37 @@ export default async function handler(req, res) {
         }
       }
       
-      // Calculate the new total quantity
-      const newSmallBags = smallBagsValue !== undefined ? smallBagsValue : currentInventory.smallBags;
+      // Calculate the new quantities
+      const newSmallBagsEspresso = smallBagsEspressoValue !== undefined ? smallBagsEspressoValue : (currentInventory.smallBagsEspresso || 0);
+      const newSmallBagsFilter = smallBagsFilterValue !== undefined ? smallBagsFilterValue : (currentInventory.smallBagsFilter || 0);
       const newLargeBags = largeBagsValue !== undefined ? largeBagsValue : currentInventory.largeBags;
       
       // Calculate new total quantity in kg
-      const newTotalQuantity = (newSmallBags * 0.2) + (newLargeBags * 1.0);
+      const newTotalQuantity = ((newSmallBagsEspresso + newSmallBagsFilter) * 0.2) + (newLargeBags * 1.0);
       
       console.log('[update-inventory] Updating inventory with new values:', {
-        smallBags: newSmallBags,
+        smallBagsEspresso: newSmallBagsEspresso,
+        smallBagsFilter: newSmallBagsFilter,
         largeBags: newLargeBags,
         totalQuantity: newTotalQuantity
       });
       
-      // Update the inventory record
+      // Update the inventory record - use backward compatible approach for now
+      const updateData = {
+        largeBags: newLargeBags,
+        totalQuantity: newTotalQuantity,
+        updatedAt: new Date()
+      };
+
+      // Only update smallBags fields if they exist in the database
+      // For now, we'll use the combined smallBags field for backward compatibility
+      updateData.smallBags = newSmallBagsEspresso + newSmallBagsFilter;
+
       const updatedInventory = await prisma.retailInventory.update({
         where: {
           id: inventoryId
         },
-        data: {
-          smallBags: newSmallBags,
-          largeBags: newLargeBags,
-          totalQuantity: newTotalQuantity,
-          updatedAt: new Date()
-        }
+        data: updateData
       });
       
       // Log the activity for audit
@@ -140,16 +147,16 @@ export default async function handler(req, res) {
             resourceId: inventoryId,
             details: JSON.stringify({
               shopId: currentInventory.shopId,
-              previousValues: {
-                smallBags: currentInventory.smallBags,
-                largeBags: currentInventory.largeBags,
-                totalQuantity: currentInventory.totalQuantity
-              },
-              newValues: {
-                smallBags: newSmallBags,
-                largeBags: newLargeBags,
-                totalQuantity: newTotalQuantity
-              }
+                          previousValues: {
+              smallBags: currentInventory.smallBags || 0,
+              largeBags: currentInventory.largeBags || 0,
+              totalQuantity: currentInventory.totalQuantity || 0
+            },
+            newValues: {
+              smallBags: newSmallBagsEspresso + newSmallBagsFilter, // Backward compatibility
+              largeBags: newLargeBags,
+              totalQuantity: newTotalQuantity
+            }
             })
           }
         });
