@@ -95,9 +95,6 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
     setError(null);
 
     try {
-      // Calculate total small bags for backward compatibility with the API
-      const totalSmallBags = espressoValue + filterValue;
-      
       const response = await fetch('/api/retail/update-inventory', {
         method: 'PUT',
         headers: {
@@ -105,7 +102,8 @@ export default function InventoryUpdateDialog({ open, onClose, inventoryItem, re
         },
         body: JSON.stringify({
           inventoryId: inventoryItem.id,
-          smallBags: totalSmallBags,
+          smallBagsEspresso: espressoValue,
+          smallBagsFilter: filterValue,
           largeBags: largeBagsValue
         }),
       });

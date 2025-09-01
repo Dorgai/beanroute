@@ -1,6 +1,7 @@
 // Direct Prisma client implementation for better reliability
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
+import { getHaircutPercentage } from '@/lib/haircut-service';
 
 export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
@@ -40,13 +41,15 @@ export default async function handler(req, res) {
     // 1. Available in the shop's inventory (with actual stock > 0), OR
     // 2. Available in green stock (quantity > 0) AND the shop has access to order them
     let coffee;
+    let greenStockCoffee; // Move to outer scope
     try {
       // First, get all coffees that are in the shop's inventory WITH ACTUAL STOCK
       const shopInventoryCoffee = await prisma.retailInventory.findMany({
         where: {
           shopId: shopId,
           OR: [
-            { smallBags: { gt: 0 } },
+            { smallBagsEspresso: { gt: 0 } },
+            { smallBagsFilter: { gt: 0 } },
             { largeBags: { gt: 0 } }
           ]
         },
@@ -66,21 +69,15 @@ export default async function handler(req, res) {
 
       console.log(`Shop inventory query returned ${shopInventoryCoffee.length} items with stock > 0`);
       shopInventoryCoffee.forEach(item => {
-        console.log(`  - ${item.coffee.name}: Small=${item.smallBags}, Large=${item.largeBags}`);
+        console.log(`  - ${item.coffee.name}: Espresso=${item.smallBagsEspresso}, Filter=${item.smallBagsFilter}, Large=${item.largeBags}`);
       });
 
       // Then, get coffees with green stock that the shop can order
-      // Only include coffees that are NOT already in the shop's inventory
-      const shopInventoryCoffeeIds = shopInventoryCoffee.map(item => item.coffee.id);
-      
-      const greenStockCoffee = await prisma.greenCoffee.findMany({
+      // Include ALL coffees with green stock, regardless of shop inventory
+      greenStockCoffee = await prisma.greenCoffee.findMany({
         where: {
           quantity: {
             gt: 0
-          },
-          // Only include coffees that are NOT already in the shop's inventory
-          id: {
-            notIn: shopInventoryCoffeeIds
           }
         },
         select: {
@@ -116,40 +113,57 @@ export default async function handler(req, res) {
       
       console.log(`Total coffees in shop ${shopId} inventory: ${allShopCoffees.length}`);
       allShopCoffees.forEach(item => {
-        const totalStock = item.smallBags + item.largeBags;
-        console.log(`  - ${item.coffee.name}: Small=${item.smallBags}, Large=${item.largeBags}, Total=${totalStock}`);
+        const totalStock = (item.smallBagsEspresso || 0) + (item.smallBagsFilter || 0) + (item.largeBags || 0);
+        console.log(`  - ${item.coffee.name}: Espresso=${item.smallBagsEspresso || 0}, Filter=${item.smallBagsFilter || 0}, Large=${item.largeBags || 0}, Total=${totalStock}`);
       });
 
-      // Combine both lists
+      // Combine both lists - prioritize green stock for ordering
       const coffeeMap = new Map();
 
-      // Add shop inventory coffees first (these are definitely available)
-      shopInventoryCoffee.forEach(item => {
-        console.log(`Adding shop inventory coffee: ${item.coffee.name} - Small: ${item.smallBags}, Large: ${item.largeBags}`);
-        coffeeMap.set(item.coffee.id, {
-          ...item.coffee,
-          quantity: 0, // No green stock available for ordering
-          source: 'shop_inventory',
-          originalQuantity: 0,
-          // Include shop inventory details
-          shopSmallBags: item.smallBags,
-          shopLargeBags: item.largeBags,
-          shopTotalQuantity: item.totalQuantity
-        });
-      });
-
-      // Add green stock coffees (if not already added)
+      // Add green stock coffees first (these are available for ordering)
       greenStockCoffee.forEach(coffee => {
         console.log(`Adding green stock coffee: ${coffee.name} - Quantity: ${coffee.quantity}`);
         coffeeMap.set(coffee.id, {
           ...coffee,
           source: 'green_stock',
           originalQuantity: coffee.quantity,
-          // No shop inventory
-          shopSmallBags: 0,
+          // No shop inventory initially
+          shopSmallBagsEspresso: 0,
+          shopSmallBagsFilter: 0,
           shopLargeBags: 0,
           shopTotalQuantity: 0
         });
+      });
+
+      // Add shop inventory coffees (these show current shop stock)
+      shopInventoryCoffee.forEach(item => {
+        console.log(`Adding shop inventory coffee: ${item.coffee.name} - Small: ${item.smallBagsEspresso}, Filter: ${item.smallBagsFilter}, Large: ${item.largeBags}`);
+        
+        // If this coffee is already in the map (has green stock), update it with shop inventory
+        if (coffeeMap.has(item.coffee.id)) {
+          const existingCoffee = coffeeMap.get(item.coffee.id);
+          coffeeMap.set(item.coffee.id, {
+            ...existingCoffee,
+            source: 'both', // Has both green stock and shop inventory
+            shopSmallBagsEspresso: item.smallBagsEspresso,
+            shopSmallBagsFilter: item.smallBagsFilter,
+            shopLargeBags: item.largeBags,
+            shopTotalQuantity: item.totalQuantity
+          });
+        } else {
+          // Only shop inventory, no green stock
+          coffeeMap.set(item.coffee.id, {
+            ...item.coffee,
+            quantity: 0, // No green stock available for ordering
+            source: 'shop_inventory',
+            originalQuantity: 0,
+            // Include shop inventory details
+            shopSmallBagsEspresso: item.smallBagsEspresso,
+            shopSmallBagsFilter: item.smallBagsFilter,
+            shopLargeBags: item.largeBags,
+            shopTotalQuantity: item.totalQuantity
+          });
+        }
       });
 
       coffee = Array.from(coffeeMap.values());
@@ -157,7 +171,7 @@ export default async function handler(req, res) {
       // Additional validation: filter out any coffees that somehow have zero stock in both places
       const filteredCoffee = coffee.filter(item => {
         if (item.source === 'shop_inventory') {
-          const hasStock = (item.shopSmallBags > 0 || item.shopLargeBags > 0);
+          const hasStock = (item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.largeBags > 0);
           if (!hasStock) {
             console.log(`Filtering out shop inventory coffee with zero stock: ${item.name}`);
           }
@@ -168,6 +182,13 @@ export default async function handler(req, res) {
             console.log(`Filtering out green stock coffee with zero stock: ${item.name}`);
           }
           return hasStock;
+        } else if (item.source === 'both') {
+          // Has both green stock and shop inventory - always include for ordering
+          const hasGreenStock = item.originalQuantity > 0;
+          if (!hasGreenStock) {
+            console.log(`Filtering out both source coffee with zero green stock: ${item.name}`);
+          }
+          return hasGreenStock;
         }
         return false;
       });
@@ -179,14 +200,16 @@ export default async function handler(req, res) {
       const finalFilteredCoffee = filteredCoffee.filter(item => {
         let hasStock = false;
         if (item.source === 'shop_inventory') {
-          hasStock = (item.shopSmallBags > 0 || item.shopLargeBags > 0);
+          hasStock = (item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.largeBags > 0);
         } else if (item.source === 'green_stock') {
           hasStock = item.originalQuantity > 0;
+        } else if (item.source === 'both') {
+          hasStock = item.originalQuantity > 0; // For ordering, green stock is what matters
         }
         
         if (!hasStock) {
           console.log(`FINAL FILTER: Removing coffee with zero stock: ${item.name} (${item.source})`);
-          console.log(`  Shop stock: Small=${item.shopSmallBags}, Large=${item.shopLargeBags}`);
+          console.log(`  Shop stock: Espresso=${item.shopSmallBagsEspresso}, Filter=${item.shopSmallBagsFilter}, Large=${item.largeBags}`);
           console.log(`  Green stock: ${item.originalQuantity}`);
         }
         
@@ -199,13 +222,11 @@ export default async function handler(req, res) {
       coffee = finalFilteredCoffee;
     } catch (dbError) {
       console.error('Database error fetching available coffee:', dbError);
+      await prisma.$disconnect();
       return res.status(500).json({ 
         error: 'Database error fetching available coffee',
         details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
       });
-    } finally {
-      // Always disconnect to prevent connection pool issues
-      await prisma.$disconnect();
     }
 
     if (!coffee || !Array.isArray(coffee)) {
@@ -213,33 +234,93 @@ export default async function handler(req, res) {
       return res.status(200).json([]);
     }
 
-    // Apply 15% haircut to available quantities for ordering (only for green stock coffees)
+    // Apply dynamic haircut to available quantities for ordering (only for green stock coffees)
+    const haircutPercentage = await getHaircutPercentage(prisma);
+    console.log(`[available-coffee] Using haircut percentage: ${haircutPercentage}%`);
+    
     const coffeeWithHaircut = coffee.map(item => {
       if (item.source === 'green_stock' && item.originalQuantity > 0) {
+        // For green stock coffees, show the quantity AFTER haircut (this is what's actually available for ordering)
+        const haircutAmount = parseFloat((item.originalQuantity * (haircutPercentage / 100)).toFixed(2));
+        const quantityAfterHaircut = parseFloat((item.originalQuantity * (1 - haircutPercentage / 100)).toFixed(2));
+        
+        console.log(`[available-coffee] ${item.name}: Green stock ${item.originalQuantity}kg, haircut ${haircutAmount}kg (${haircutPercentage}%), available for ordering: ${quantityAfterHaircut}kg`);
+        
         return {
           ...item,
-          quantity: parseFloat((item.originalQuantity * 0.85).toFixed(2)), // Apply 15% haircut (85% of original)
-          haircutAmount: parseFloat((item.originalQuantity * 0.15).toFixed(2)) // Calculate haircut amount
+          quantity: quantityAfterHaircut, // Show quantity AFTER haircut (what's actually available for ordering)
+          haircutAmount: haircutAmount,
+          haircutPercentage: haircutPercentage,
+          originalQuantity: item.originalQuantity, // Keep original for reference
+          note: `Green stock: ${item.originalQuantity}kg. After ${haircutPercentage}% haircut: ${quantityAfterHaircut}kg available for ordering.`
+        };
+      } else if (item.source === 'both' && item.originalQuantity > 0) {
+        // This coffee has both shop inventory AND green stock - show green stock for ordering
+        const haircutAmount = parseFloat((item.originalQuantity * (haircutPercentage / 100)).toFixed(2));
+        const quantityAfterHaircut = parseFloat((item.originalQuantity * (1 - haircutPercentage / 100)).toFixed(2));
+        const shopTotalQuantity = (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopLargeBags * 1.0);
+        
+        console.log(`[available-coffee] ${item.name}: Both sources - Shop inventory: ${shopTotalQuantity.toFixed(2)}kg, Green stock: ${item.originalQuantity}kg, available for ordering: ${quantityAfterHaircut}kg`);
+        
+        return {
+          ...item,
+          quantity: quantityAfterHaircut, // Available for ordering from green stock
+          originalQuantity: item.originalQuantity, // Green stock quantity
+          haircutAmount: haircutAmount,
+          haircutPercentage: haircutPercentage,
+          shopInventoryQuantity: parseFloat(shopTotalQuantity.toFixed(2)), // Shop inventory quantity
+          note: `Shop inventory: ${parseFloat(shopTotalQuantity.toFixed(2))}kg. Green stock: ${item.originalQuantity}kg. After ${haircutPercentage}% haircut: ${quantityAfterHaircut}kg available for ordering.`
         };
       } else if (item.source === 'shop_inventory') {
-        // For shop inventory coffees, use the shop's total quantity as available for ordering
-        const shopTotalQuantity = (item.shopSmallBags * 0.2) + (item.shopLargeBags * 1.0);
-        return {
-          ...item,
-          quantity: parseFloat(shopTotalQuantity.toFixed(2)), // Use shop inventory as available quantity
-          haircutAmount: 0 // No haircut for shop inventory
-        };
+        // For shop inventory coffees, check if they also have green stock available for ordering
+        const shopTotalQuantity = (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopLargeBags * 1.0);
+        console.log(`[available-coffee] ${item.name}: Shop inventory - Espresso: ${item.shopSmallBagsEspresso}×0.2kg, Filter: ${item.shopSmallBagsFilter}×0.2kg, Large: ${item.shopLargeBags}×1.0kg = ${shopTotalQuantity.toFixed(2)}kg in shop inventory`);
+        
+        // Check if this coffee also has green stock available for ordering
+        const greenStockItem = greenStockCoffee.find(coffee => coffee.id === item.id);
+        if (greenStockItem && greenStockItem.quantity > 0) {
+          // This coffee has both shop inventory AND green stock - show green stock for ordering
+          const haircutAmount = parseFloat((greenStockItem.quantity * (haircutPercentage / 100)).toFixed(2));
+          const quantityAfterHaircut = parseFloat((greenStockItem.quantity * (1 - haircutPercentage / 100)).toFixed(2));
+          
+          console.log(`[available-coffee] ${item.name}: Also has green stock ${greenStockItem.quantity}kg, available for ordering: ${quantityAfterHaircut}kg`);
+          
+          return {
+            ...item,
+            quantity: quantityAfterHaircut, // Available for ordering from green stock
+            originalQuantity: greenStockItem.quantity, // Green stock quantity
+            haircutAmount: haircutAmount,
+            haircutPercentage: haircutPercentage,
+            shopInventoryQuantity: parseFloat(shopTotalQuantity.toFixed(2)), // Shop inventory quantity
+            note: `Shop inventory: ${parseFloat(shopTotalQuantity.toFixed(2))}kg. Green stock: ${greenStockItem.quantity}kg. After ${haircutPercentage}% haircut: ${quantityAfterHaircut}kg available for ordering.`
+          };
+        } else {
+          // Only shop inventory, no green stock available for ordering
+          return {
+            ...item,
+            quantity: 0, // NOT available for ordering (no green stock)
+            shopInventoryQuantity: parseFloat(shopTotalQuantity.toFixed(2)), // Shop inventory quantity
+            haircutAmount: 0, // No haircut for shop inventory
+            haircutPercentage: 0,
+            note: `Shop inventory: ${parseFloat(shopTotalQuantity.toFixed(2))}kg (no green stock available for ordering).`
+          };
+        }
       } else {
         return {
           ...item,
           quantity: 0, // No stock available for ordering
-          haircutAmount: 0
+          haircutAmount: 0,
+          haircutPercentage: 0,
+          note: 'No stock available.'
         };
       }
     });
 
-    console.log(`Applied 15% haircut to ${coffeeWithHaircut.filter(c => c.source === 'green_stock').length} green stock coffee items`);
+    console.log(`Applied ${haircutPercentage}% haircut to ${coffeeWithHaircut.filter(c => c.source === 'green_stock').length} green stock coffee items`);
 
+    // Disconnect Prisma at the end
+    await prisma.$disconnect();
+    
     return res.status(200).json(coffeeWithHaircut);
   } catch (error) {
     console.error('Unhandled error in available coffee API:', error);

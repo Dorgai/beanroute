@@ -2,11 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import orderEmailService from '@/lib/order-email-service';
-import pushNotificationService from '@/lib/push-notification-service';
-
-// Force Node.js runtime for auth operations
-export const runtime = 'nodejs';
-
 
 /**
  * Handle label quantity updates based on order status changes
@@ -187,7 +182,9 @@ export default async function handler(req, res) {
             select: {
               id: true,
               coffeeId: true,
-              smallBags: true,
+              smallBags: true,        // Keep for backward compatibility
+              smallBagsEspresso: true, // Add separate espresso field
+              smallBagsFilter: true,   // Add separate filter field
               largeBags: true,
               totalQuantity: true
             }
@@ -330,13 +327,43 @@ export default async function handler(req, res) {
           const deliveredUpdateStart = Date.now();
           console.log(`[update-order-status] Order ${orderId} marked as DELIVERED - updating inventory quantities for ${existingOrder.items.length} items`);
           
+          // Log the order items for debugging
+          existingOrder.items.forEach((item, index) => {
+            console.log(`[update-order-status] Order item ${index + 1}: Coffee ${item.coffeeId}, Espresso: ${item.smallBagsEspresso || 0}, Filter: ${item.smallBagsFilter || 0}, Large: ${item.largeBags || 0}, Total: ${item.totalQuantity || 0}kg`);
+          });
+          
           // Batch process all items in parallel for better performance
           const inventoryUpdatePromises = existingOrder.items.map(async (item) => {
-            console.log(`[update-order-status] Processing inventory update for item: Coffee ${item.coffeeId} - ${item.smallBags} small bags, ${item.largeBags} large bags`);
+            // Handle backward compatibility - if separate fields don't exist, split the combined field
+            const smallBagsEspresso = item.smallBagsEspresso !== undefined ? item.smallBagsEspresso : 
+              (item.smallBags ? Math.ceil(item.smallBags / 2) : 0);
+            const smallBagsFilter = item.smallBagsFilter !== undefined ? item.smallBagsFilter : 
+              (item.smallBags ? Math.floor(item.smallBags / 2) : 0);
+            
+            console.log(`[update-order-status] Processing inventory update for item: Coffee ${item.coffeeId} - ${smallBagsEspresso} espresso bags, ${smallBagsFilter} filter bags, ${item.largeBags || 0} large bags`);
             
             try {
-              // Update shop inventory with minimal field selection to avoid schema differences
-              await tx.retailInventory.upsert({
+              // First, check if the inventory record exists
+              const existingInventory = await tx.retailInventory.findUnique({
+                where: {
+                  shopId_coffeeId: {
+                    shopId: existingOrder.shopId,
+                    coffeeId: item.coffeeId
+                  }
+                },
+                select: {
+                  id: true,
+                  smallBagsEspresso: true,
+                  smallBagsFilter: true,
+                  largeBags: true,
+                  totalQuantity: true
+                }
+              });
+              
+              console.log(`[update-order-status] Existing inventory for coffee ${item.coffeeId}:`, existingInventory);
+              
+              // Update shop inventory with separate espresso/filter fields
+              const updatedInventory = await tx.retailInventory.upsert({
                 where: {
                   shopId_coffeeId: {
                     shopId: existingOrder.shopId,
@@ -346,14 +373,18 @@ export default async function handler(req, res) {
                 create: {
                   shopId: existingOrder.shopId,
                   coffeeId: item.coffeeId,
-                  smallBags: item.smallBags || 0,
+                  smallBagsEspresso: smallBagsEspresso,
+                  smallBagsFilter: smallBagsFilter,
                   largeBags: item.largeBags || 0,
                   totalQuantity: item.totalQuantity || 0,
                   lastOrderDate: new Date()
                 },
                 update: {
-                  smallBags: {
-                    increment: item.smallBags || 0
+                  smallBagsEspresso: {
+                    increment: smallBagsEspresso
+                  },
+                  smallBagsFilter: {
+                    increment: smallBagsFilter
                   },
                   largeBags: {
                     increment: item.largeBags || 0
@@ -365,10 +396,25 @@ export default async function handler(req, res) {
                 }
               });
               
-              console.log(`[update-order-status] Inventory updated for coffee ${item.coffeeId} in shop ${existingOrder.shopId}`);
-              return { success: true, coffeeId: item.coffeeId };
+              console.log(`[update-order-status] Successfully updated inventory for coffee ${item.coffeeId} in shop ${existingOrder.shopId}:`, {
+                previous: existingInventory,
+                added: {
+                  smallBagsEspresso: smallBagsEspresso,
+                  smallBagsFilter: smallBagsFilter,
+                  largeBags: item.largeBags || 0,
+                  totalQuantity: item.totalQuantity || 0
+                },
+                result: updatedInventory
+              });
+              
+              return { success: true, coffeeId: item.coffeeId, updatedInventory };
             } catch (inventoryError) {
               console.error(`[update-order-status] Error updating inventory for coffee ${item.coffeeId}:`, inventoryError);
+              console.error(`[update-order-status] Error details:`, {
+                error: inventoryError.message,
+                code: inventoryError.code,
+                meta: inventoryError.meta
+              });
               return { success: false, coffeeId: item.coffeeId, error: inventoryError.message };
             }
           });
@@ -376,7 +422,28 @@ export default async function handler(req, res) {
           // Execute all inventory updates in parallel within the transaction
           const inventoryResults = await Promise.allSettled(inventoryUpdatePromises);
           const deliveredUpdateTime = Date.now() - deliveredUpdateStart;
-          console.log(`[update-order-status] DELIVERED inventory updates completed in ${deliveredUpdateTime}ms:`, inventoryResults.filter(r => r.status === 'fulfilled').length, 'successful,', inventoryResults.filter(r => r.status === 'rejected').length, 'failed');
+          
+          // Log detailed results
+          console.log(`[update-order-status] DELIVERED inventory updates completed in ${deliveredUpdateTime}ms`);
+          console.log(`[update-order-status] Results:`, inventoryResults.map((result, index) => {
+            if (result.status === 'fulfilled') {
+              return `Item ${index + 1}: ${result.value.success ? 'SUCCESS' : 'FAILED'} - ${result.value.coffeeId}`;
+            } else {
+              return `Item ${index + 1}: REJECTED - ${result.reason}`;
+            }
+          }));
+          
+          // Check for failures
+          const failedUpdates = inventoryResults
+            .filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success))
+            .map(r => r.status === 'rejected' ? { error: r.reason } : r.value);
+          
+          if (failedUpdates.length > 0) {
+            console.error(`[update-order-status] ${failedUpdates.length} inventory updates failed:`, failedUpdates);
+            // Don't fail the transaction, but log the errors
+          } else {
+            console.log(`[update-order-status] All inventory updates completed successfully`);
+          }
         }
         
         return updated;
@@ -412,31 +479,6 @@ export default async function handler(req, res) {
     } catch (emailError) {
       // Don't fail the entire operation if email sending fails
       console.error('[update-order-status] Error sending email notifications:', emailError);
-    }
-
-    // Send push notifications for status change
-    console.log(`[update-order-status] Sending push notifications for status change from ${existingOrder.status} to ${status}`);
-    try {
-      const notificationType = status === 'DELIVERED' ? 'DELIVERED' : 'STATUS_CHANGE';
-      
-      const pushResult = await pushNotificationService.sendOrderNotification(notificationType, {
-        orderId: updatedOrder.id,
-        orderNumber: updatedOrder.id.slice(-8), // Use last 8 chars as order number
-        shopId: updatedOrder.shopId,
-        shopName: updatedOrder.shop?.name || 'Unknown Shop',
-        oldStatus: existingOrder.status,
-        newStatus: status,
-        updatedBy: user.username
-      });
-      
-      if (pushResult.success) {
-        console.log(`[update-order-status] Push notifications sent to ${pushResult.successful}/${pushResult.total} recipients`);
-      } else {
-        console.log(`[update-order-status] Push notifications not sent: ${pushResult.error}`);
-      }
-    } catch (pushError) {
-      // Don't fail the entire operation if push notification fails
-      console.error('[update-order-status] Error sending push notifications:', pushError);
     }
 
     // Success! Return the updated order with minimal data

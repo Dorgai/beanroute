@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { FiBell } from 'react-icons/fi';
 
 export function NotificationBanner() {
   const [isSupported, setIsSupported] = useState(false);
@@ -11,10 +10,11 @@ export function NotificationBanner() {
   useEffect(() => {
     // Check if we're in a browser environment
     if (typeof window === 'undefined') {
+      setLoading(false);
       return;
     }
 
-    const checkNotificationSupport = async () => {
+    const checkNotificationSupport = () => {
       try {
         // Check basic notification support
         const hasNotification = 'Notification' in window;
@@ -28,15 +28,10 @@ export function NotificationBanner() {
           setNeedsPermission(permission === 'default');
           setCanSubscribe(permission === 'granted');
           
-          // Check if already subscribed
+          // Check if already subscribed (simplified)
           if (hasServiceWorker && hasPushManager) {
-            try {
-              const registration = await navigator.serviceWorker.ready;
-              const subscription = await registration.pushManager.getSubscription();
-              setIsSubscribed(!!subscription);
-            } catch (error) {
-              console.log('Service worker check failed:', error);
-            }
+            // Don't check subscription status immediately to avoid async issues
+            setIsSubscribed(false);
           }
         }
       } catch (error) {
@@ -46,11 +41,16 @@ export function NotificationBanner() {
       }
     };
 
-    checkNotificationSupport();
+    // Delay initialization slightly to ensure everything is ready
+    const timer = setTimeout(checkNotificationSupport, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const requestPermission = async () => {
     try {
+      if (typeof window === 'undefined' || !('Notification' in window)) {
+        return;
+      }
       const permission = await Notification.requestPermission();
       setNeedsPermission(permission === 'default');
       setCanSubscribe(permission === 'granted');
@@ -78,7 +78,7 @@ export function NotificationBanner() {
     <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <FiBell className="w-5 h-5 text-blue-400 mr-2" />
+          <span className="w-5 h-5 text-blue-400 mr-2">🔔</span>
           <p className="text-sm text-blue-700">
             {needsPermission 
               ? 'Enable push notifications to stay updated'

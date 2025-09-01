@@ -58,7 +58,8 @@ export default async function handler(req, res) {
     const smallBagsFilterValue = smallBagsFilter !== undefined ? parseInt(smallBagsFilter) : undefined;
     const largeBagsValue = largeBags !== undefined ? parseInt(largeBags) : undefined;
     
-    if ((smallBags !== undefined && (isNaN(smallBagsValue) || smallBagsValue < 0)) || 
+    if ((smallBagsEspresso !== undefined && (isNaN(smallBagsEspressoValue) || smallBagsEspressoValue < 0)) || 
+        (smallBagsFilter !== undefined && (isNaN(smallBagsFilterValue) || smallBagsFilterValue < 0)) ||
         (largeBags !== undefined && (isNaN(largeBagsValue) || largeBagsValue < 0))) {
       await prisma.$disconnect();
       return res.status(400).json({ error: 'Bag quantities must be non-negative numbers' });
@@ -75,7 +76,8 @@ export default async function handler(req, res) {
           id: true,
           shopId: true,
           coffeeId: true,
-          smallBags: true,
+          smallBagsEspresso: true,
+          smallBagsFilter: true,
           largeBags: true,
           totalQuantity: true
         }
@@ -105,10 +107,9 @@ export default async function handler(req, res) {
       }
       
       // Calculate the new quantities
-      // For now, we'll use the existing smallBags field and split it evenly if not specified
-      const currentSmallBags = currentInventory.smallBags || 0;
-      const newSmallBagsEspresso = smallBagsEspressoValue !== undefined ? smallBagsEspressoValue : Math.floor(currentSmallBags / 2);
-      const newSmallBagsFilter = smallBagsFilterValue !== undefined ? smallBagsFilterValue : Math.floor(currentSmallBags / 2);
+      // Handle espresso and filter bags separately
+      const newSmallBagsEspresso = smallBagsEspressoValue !== undefined ? smallBagsEspressoValue : currentInventory.smallBagsEspresso || 0;
+      const newSmallBagsFilter = smallBagsFilterValue !== undefined ? smallBagsFilterValue : currentInventory.smallBagsFilter || 0;
       const newLargeBags = largeBagsValue !== undefined ? largeBagsValue : currentInventory.largeBags;
       
       // Calculate new total quantity in kg
@@ -121,16 +122,14 @@ export default async function handler(req, res) {
         totalQuantity: newTotalQuantity
       });
       
-      // Update the inventory record - use backward compatible approach for now
+      // Update the inventory record with separate fields
       const updateData = {
+        smallBagsEspresso: newSmallBagsEspresso,
+        smallBagsFilter: newSmallBagsFilter,
         largeBags: newLargeBags,
         totalQuantity: newTotalQuantity,
         updatedAt: new Date()
       };
-
-      // Only update smallBags fields if they exist in the database
-      // For now, we'll use the combined smallBags field for backward compatibility
-      updateData.smallBags = newSmallBagsEspresso + newSmallBagsFilter;
 
       const updatedInventory = await prisma.retailInventory.update({
         where: {
@@ -149,13 +148,15 @@ export default async function handler(req, res) {
             resourceId: inventoryId,
             details: JSON.stringify({
               shopId: currentInventory.shopId,
-                          previousValues: {
-              smallBags: currentInventory.smallBags || 0,
-              largeBags: currentInventory.largeBags || 0,
-              totalQuantity: currentInventory.totalQuantity || 0
-            },
-            newValues: {
-              smallBags: newSmallBagsEspresso + newSmallBagsFilter, // Backward compatibility
+              previousValues: {
+                smallBagsEspresso: currentInventory.smallBagsEspresso || 0,
+                smallBagsFilter: currentInventory.smallBagsFilter || 0,
+                largeBags: currentInventory.largeBags || 0,
+                totalQuantity: currentInventory.totalQuantity || 0
+              },
+                          newValues: {
+              smallBagsEspresso: newSmallBagsEspresso,
+              smallBagsFilter: newSmallBagsFilter,
               largeBags: newLargeBags,
               totalQuantity: newTotalQuantity
             }

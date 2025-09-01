@@ -3,250 +3,224 @@ import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
 export default async function handler(req, res) {
-  console.log('[api/retail/inventory] Starting inventory API request');
-  
   // Create a dedicated prisma instance for this request
   const prisma = new PrismaClient();
   
-  // Check for direct access mode (for debugging)
-  const bypassAuth = req.query.direct === 'true';
+  console.log(`[api/retail/inventory] Request received: ${req.method} ${req.url}`);
+  console.log(`[api/retail/inventory] Query parameters:`, req.query);
   
   if (req.method !== 'GET') {
+    console.log(`[api/retail/inventory] Method ${req.method} not allowed`);
     await prisma.$disconnect();
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Get user session with enhanced error handling, unless bypassing auth
-    let session;
-    if (!bypassAuth) {
-      try {
-        console.log('[api/retail/inventory] Environment:', process.env.NODE_ENV);
-        console.log('[api/retail/inventory] Cookie settings:', {
-          secure: process.env.COOKIE_SECURE,
-          sameSite: process.env.COOKIE_SAMESITE
-        });
-        console.log('[api/retail/inventory] Request cookies:', req.cookies);
-        console.log('[api/retail/inventory] Cookie header:', req.headers.cookie);
-        
-        session = await getServerSession(req, res);
-        
-        if (!session) {
-          console.log('[api/retail/inventory] No valid session found, returning unauthorized');
-          await prisma.$disconnect();
-          return res.status(401).json({ error: 'Unauthorized' });
-        }
-        
-        console.log('[api/retail/inventory] Session user role:', session.user.role);
-      } catch (sessionError) {
-        console.error('[api/retail/inventory] Session validation error:', sessionError);
-        await prisma.$disconnect();
-        return res.status(401).json({ error: 'Session validation failed', details: sessionError.message });
-      }
-    } else {
-      console.log('[api/retail/inventory] AUTH BYPASS MODE - Skipping authentication check');
+    // Get user session
+    const session = await getServerSession(req, res);
+    if (!session) {
+      console.log('[api/retail/inventory] No session found');
+      await prisma.$disconnect();
+      return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    console.log(`[api/retail/inventory] User authenticated: ${session.user.role}`);
 
-    // Check shop ID parameter
+    // Get shopId from query parameters
     const { shopId } = req.query;
     if (!shopId) {
-      console.log('[api/retail/inventory] No shopId provided, returning empty result');
+      console.log('[api/retail/inventory] No shopId provided');
       await prisma.$disconnect();
-      return res.status(200).json({});
+      return res.status(400).json({ error: 'Shop ID is required' });
     }
 
-    console.log('[api/retail/inventory] Fetching inventory for shopId:', shopId);
+    console.log(`[api/retail/inventory] Fetching inventory for shop ${shopId}`);
 
-    // Get retail inventory for the specified shop with error handling
-    let inventory;
+    // Test database connection first
     try {
-      // First check if the shop exists with minimal fields to avoid schema issues
-      const shop = await prisma.shop.findUnique({
-        where: { id: shopId },
-        select: {
-          id: true,
-          name: true
-        }
-      });
-      
-      if (!shop) {
-        console.log(`[api/retail/inventory] Shop with ID ${shopId} not found`);
-        await prisma.$disconnect();
-        return res.status(404).json({ error: 'Shop not found' });
-      }
-      
-      console.log(`[api/retail/inventory] Found shop: ${shop.name}`);
-      
-      // Get all green coffee with minimal fields to avoid schema issues
-      const allCoffee = await prisma.greenCoffee.findMany({
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('[api/retail/inventory] Database connection verified');
+    } catch (dbTestError) {
+      console.error('[api/retail/inventory] Database connection test failed:', dbTestError);
+      await prisma.$disconnect();
+      return res.status(500).json({ error: 'Database connection failed' });
+    }
+
+    // First, get all available green coffee in the system
+    let allCoffee = [];
+    try {
+      allCoffee = await prisma.greenCoffee.findMany({
+        where: {
+          quantity: { gt: 0 } // Only get coffees with actual stock
+        },
         select: {
           id: true,
           name: true,
-          grade: true
-        }
+          grade: true,
+          country: true,
+          producer: true,
+          process: true,
+          notes: true,
+          quantity: true,
+          isEspresso: true,
+          isFilter: true,
+          isSignature: true,
+          price: true
+        },
+        orderBy: [
+          { grade: 'asc' },
+          { name: 'asc' }
+        ]
       });
-      console.log(`[api/retail/inventory] Found ${allCoffee.length} coffee items in total`);
-      
-      // Now get the inventory records with minimal required fields
-      try {
-        inventory = await prisma.retailInventory.findMany({
-          where: {
-            shopId,
-            // Only include coffees that have actual stock
-            OR: [
-              { smallBags: { gt: 0 } },
-              { largeBags: { gt: 0 } }
-            ]
-          },
-          select: {
-            id: true,
-            smallBags: true,
-            largeBags: true,
-            totalQuantity: true,
-            lastOrderDate: true,
-            coffeeId: true,
-            coffee: {
-              select: {
-                id: true,
-                name: true,
-                grade: true
-              }
-            }
-          },
-          orderBy: [
-            {
-              coffee: {
-                grade: 'asc'
-              }
-            },
-            {
-              coffee: {
-                name: 'asc'
-              }
-            }
-          ]
-        });
-      } catch (inventoryError) {
-        console.error('[api/retail/inventory] Error with full inventory query:', inventoryError);
-        
-        // Fallback to simpler query - still filter for stock > 0
-        inventory = await prisma.retailInventory.findMany({
-          where: {
-            shopId,
-            // Only include coffees that have actual stock
-            OR: [
-              { smallBags: { gt: 0 } },
-              { largeBags: { gt: 0 } }
-            ]
-          },
-          select: {
-            id: true,
-            smallBags: true,
-            largeBags: true,
-            totalQuantity: true,
-            lastOrderDate: true,
-            coffeeId: true
-          }
-        });
-        
-        // Manually join with coffee data
-        inventory = await Promise.all(
-          inventory.map(async (item) => {
-            try {
-              const coffee = await prisma.greenCoffee.findUnique({
-                where: { id: item.coffeeId },
-                select: {
-                  id: true,
-                  name: true,
-                  grade: true
-                }
-              });
-              return { ...item, coffee };
-            } catch (err) {
-              return item;
-            }
-          })
-        );
-      }
-      
-      console.log(`[api/retail/inventory] Found ${inventory.length} inventory items with stock > 0 for shop ${shopId}`);
-      
-      // Additional safety check: filter out any items that somehow have zero stock
-      inventory = inventory.filter(item => {
-        const hasStock = (item.smallBags > 0 || item.largeBags > 0);
-        if (!hasStock) {
-          console.log(`[api/retail/inventory] Filtering out item with zero stock: ${item.coffee?.name || 'Unknown'}`);
-        }
-        return hasStock;
-      });
-      
-      console.log(`[api/retail/inventory] After filtering, ${inventory.length} items have actual stock`);
-      
-      // Make sure all inventory items have a valid coffee reference
-      inventory = inventory.filter(item => item && item.coffee);
-      
-      // Transform inventory data to match frontend expectations
-      // The frontend expects smallBagsEspresso and smallBagsFilter, but DB only has smallBags
-      // For now, we'll split the general smallBags evenly between espresso and filter
-      // This is a temporary fix until the database schema is updated
-      inventory = inventory.map(item => {
-        const halfSmallBags = Math.floor((item.smallBags || 0) / 2);
-        const remainderBag = (item.smallBags || 0) % 2;
-        
-        return {
-          ...item,
-          // Map the general smallBags to specific types for frontend compatibility
-          smallBagsEspresso: halfSmallBags + remainderBag, // Give remainder to espresso
-          smallBagsFilter: halfSmallBags,
-          // Keep original smallBags for backward compatibility
-          smallBags: item.smallBags || 0
-        };
-      });
-      
-    } catch (dbError) {
-      console.error('[api/retail/inventory] Database error fetching inventory:', dbError);
-      // Return empty data instead of error to allow UI to render
+      console.log(`[api/retail/inventory] Found ${allCoffee.length} active green coffee types with stock > 0`);
+    } catch (coffeeError) {
+      console.error('[api/retail/inventory] Error fetching green coffee:', coffeeError);
       await prisma.$disconnect();
-      return res.status(200).json({ 'UNKNOWN': [] });
-    } finally {
-      // Always disconnect to prevent connection pool issues
-      await prisma.$disconnect();
+      return res.status(500).json({ error: 'Failed to fetch green coffee data' });
     }
 
-    if (!inventory || !Array.isArray(inventory)) {
-      console.log('[api/retail/inventory] Invalid inventory data, returning empty result');
-      return res.status(200).json({ 'UNKNOWN': [] });
-    }
-
-    // Group inventory by coffee grade with defensive coding
+    // Then, get the shop's current inventory for these coffees
+    let shopInventory = [];
     try {
-      const groupedInventory = inventory.reduce((acc, item) => {
-        if (!item || !item.coffee) {
-          console.warn('[api/retail/inventory] Invalid inventory item found:', item);
-          return acc;
+      shopInventory = await prisma.retailInventory.findMany({
+        where: {
+          shopId,
+          coffeeId: {
+            in: allCoffee.map(coffee => coffee.id)
+          }
+        },
+        select: {
+          id: true,
+          shopId: true,
+          coffeeId: true,
+          smallBagsEspresso: true,
+          smallBagsFilter: true,
+          largeBags: true,
+          totalQuantity: true,
+          lastOrderDate: true,
+          createdAt: true,
+          updatedAt: true
         }
-        
-        const grade = item.coffee.grade || 'UNKNOWN';
-        if (!acc[grade]) {
-          acc[grade] = [];
-        }
-        acc[grade].push(item);
-        return acc;
-      }, {});
-
-      console.log('[api/retail/inventory] Successfully returning inventory data with frontend mapping');
-      return res.status(200).json(groupedInventory);
-    } catch (processError) {
-      console.error('[api/retail/inventory] Error processing inventory data:', processError);
-      // Return the raw inventory as a fallback
-      return res.status(200).json({ 'UNKNOWN': inventory });
+      });
+      console.log(`[api/retail/inventory] Found ${shopInventory.length} inventory records for shop ${shopId}`);
+    } catch (inventoryError) {
+      console.error('[api/retail/inventory] Error fetching shop inventory:', inventoryError);
+      // Continue with empty inventory - we'll show all coffee with zero quantities
+      shopInventory = [];
     }
-  } catch (error) {
-    console.error('[api/retail/inventory] Unhandled error in inventory API:', error);
-    // Make sure to disconnect prisma in case of unhandled errors
-    await prisma.$disconnect().catch(console.error);
+
+    // Create a map of shop inventory for quick lookup
+    const inventoryMap = new Map();
+    shopInventory.forEach(item => {
+      inventoryMap.set(item.coffeeId, item);
+    });
+
+    // Combine all coffee with shop inventory data
+    // Show ALL available green coffee, with zero quantities for items not in shop inventory
+    const combinedInventory = allCoffee.map(coffee => {
+      const shopItem = inventoryMap.get(coffee.id);
+      
+      if (shopItem) {
+        // Shop has this coffee in inventory
+        return {
+          id: shopItem.id,
+          shopId: shopItem.shopId,
+          coffeeId: coffee.id,
+          smallBagsEspresso: shopItem.smallBagsEspresso || 0,
+          smallBagsFilter: shopItem.smallBagsFilter || 0,
+          largeBags: shopItem.largeBags || 0,
+          totalQuantity: shopItem.totalQuantity || 0,
+          lastOrderDate: shopItem.lastOrderDate,
+          createdAt: shopItem.createdAt,
+          updatedAt: shopItem.updatedAt,
+          source: 'shop_inventory',
+          greenStockAvailable: coffee.quantity || 0,
+          canOrder: coffee.quantity > 0,
+          coffee: {
+            id: coffee.id,
+            name: coffee.name,
+            grade: coffee.grade,
+            country: coffee.country,
+            producer: coffee.producer,
+            process: coffee.process,
+            notes: coffee.notes,
+            quantity: coffee.quantity,
+            isEspresso: coffee.isEspresso,
+            isFilter: coffee.isFilter,
+            isSignature: coffee.isSignature,
+            price: coffee.price
+          }
+        };
+      } else {
+        // Shop doesn't have this coffee in inventory - show with zero quantities but indicate green stock availability
+        const hasGreenStock = coffee.quantity > 0;
+        return {
+          id: null, // No inventory record exists yet
+          shopId: shopId,
+          coffeeId: coffee.id,
+          smallBagsEspresso: 0,
+          smallBagsFilter: 0,
+          largeBags: 0,
+          totalQuantity: 0,
+          lastOrderDate: null,
+          createdAt: null,
+          updatedAt: null,
+          source: 'green_stock_only',
+          greenStockAvailable: coffee.quantity || 0,
+          canOrder: hasGreenStock,
+          note: hasGreenStock ? 
+            `Available for ordering from green stock (${coffee.quantity}kg available)` : 
+            'Not currently available for ordering',
+          coffee: {
+            id: coffee.id,
+            name: coffee.name,
+            grade: coffee.grade,
+            country: coffee.country,
+            producer: coffee.producer,
+            process: coffee.process,
+            notes: coffee.notes,
+            quantity: coffee.quantity,
+            isEspresso: coffee.isEspresso,
+            isFilter: coffee.isFilter,
+            isSignature: coffee.isSignature,
+            price: coffee.price
+          }
+        };
+      }
+    });
+
+    // Sort by grade and name
+    combinedInventory.sort((a, b) => {
+      if (a.coffee.grade !== b.coffee.grade) {
+        return a.coffee.grade.localeCompare(b.coffee.grade);
+      }
+      return a.coffee.name.localeCompare(b.coffee.name);
+    });
+
+    // Calculate summary statistics
+    const summary = {
+      totalCoffees: combinedInventory.length,
+      shopInventory: combinedInventory.filter(item => item.source === 'shop_inventory').length,
+      greenStockOnly: combinedInventory.filter(item => item.source === 'green_stock_only').length,
+      availableForOrder: combinedInventory.filter(item => item.canOrder).length,
+      totalGreenStock: combinedInventory.reduce((sum, item) => sum + (item.greenStockAvailable || 0), 0)
+    };
+
+    console.log(`[api/retail/inventory] Returning ${combinedInventory.length} coffee items for shop ${shopId}`);
+    console.log(`[api/retail/inventory] Summary: ${summary.shopInventory} in shop inventory, ${summary.greenStockOnly} available from green stock, ${summary.availableForOrder} total available for ordering`);
     
-    // Return empty data instead of error to allow UI to render
-    return res.status(200).json({ 'UNKNOWN': [] });
+    await prisma.$disconnect();
+    return res.status(200).json({
+      summary,
+      inventory: combinedInventory
+    });
+
+  } catch (error) {
+    console.error('[api/retail/inventory] Unexpected error:', error);
+    await prisma.$disconnect();
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 } 

@@ -4,6 +4,7 @@ import { getServerSession } from '@/lib/session';
 import { createActivityLog } from '@/lib/activity-service';
 import orderEmailService from '@/lib/order-email-service';
 import pushNotificationService from '@/lib/push-notification-service';
+import { getHaircutPercentage } from '@/lib/haircut-service';
 
 export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
@@ -15,6 +16,19 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Test database connection and SystemSettings table
+    try {
+      await prisma.$connect();
+      console.log('Database connection successful');
+      
+      // Test if SystemSettings table exists by trying to count records
+      const settingsCount = await prisma.systemSettings.count();
+      console.log(`SystemSettings table accessible, found ${settingsCount} records`);
+    } catch (dbTestError) {
+      console.error('Database connection or SystemSettings table test failed:', dbTestError);
+      // Continue anyway - we'll handle haircut failures gracefully
+    }
+
     // Get user session with error handling
     let session;
     try {
@@ -114,13 +128,21 @@ export default async function handler(req, res) {
     }
     
     // Batch create order items and update inventory for better performance
+    let orderItems = []; // Declare orderItems in outer scope
+    
     try {
       const batchStart = Date.now();
       console.log(`Creating ${processedItems.length} order items in batch`);
       
       // Create all order items in parallel
       const orderItemPromises = processedItems.map(item => {
-        console.log(`Adding item for order ${newOrder.id}, coffee ${item.coffeeId}, small: ${item.smallBags}, large: ${item.largeBags}, total: ${item.totalQuantity}kg`);
+        console.log(`[create-order] Adding item for order ${newOrder.id}, coffee ${item.coffeeId}:`, {
+          smallBagsEspresso: item.smallBagsEspresso,
+          smallBagsFilter: item.smallBagsFilter,
+          largeBags: item.largeBags,
+          totalQuantity: item.totalQuantity,
+          smallBags: item.smallBags // For backward compatibility
+        });
         
         return prisma.retailOrderItem.create({
           data: {
@@ -135,22 +157,49 @@ export default async function handler(req, res) {
         });
       });
       
-      const orderItems = await Promise.all(orderItemPromises);
+      orderItems = await Promise.all(orderItemPromises);
       console.log(`Created ${orderItems.length} order items successfully`);
       
-      // Update coffee quantities in parallel
+      // Update coffee quantities in parallel with haircut applied
       const coffeeUpdatePromises = processedItems.map(async (item) => {
         try {
+          // Get haircut percentage for this coffee
+          let haircutPercentage = 15; // Default fallback
+          try {
+            haircutPercentage = await getHaircutPercentage(prisma);
+            console.log(`[create-order] Coffee ${item.coffeeId}: Using haircut percentage: ${haircutPercentage}%`);
+          } catch (haircutError) {
+            console.error(`Error getting haircut percentage for coffee ${item.coffeeId}:`, haircutError);
+            // Already set to default 15%
+          }
+          
+          // Ensure haircut percentage is a valid number
+          if (isNaN(haircutPercentage) || haircutPercentage < 0 || haircutPercentage > 100) {
+            console.warn(`Invalid haircut percentage for coffee ${item.coffeeId}: ${haircutPercentage}, using default 15%`);
+            haircutPercentage = 15;
+          }
+          
+          const haircutMultiplier = 1 + (haircutPercentage / 100);
+          const totalGreenConsumption = item.totalQuantity * haircutMultiplier;
+          const haircutAmount = item.totalQuantity * (haircutPercentage / 100);
+          
+          console.log(`[create-order] Coffee ${item.coffeeId} calculation:`);
+          console.log(`  - Retail quantity ordered: ${item.totalQuantity}kg`);
+          console.log(`  - Haircut percentage: ${haircutPercentage}%`);
+          console.log(`  - Haircut amount: ${haircutAmount.toFixed(2)}kg`);
+          console.log(`  - Total green consumption: ${totalGreenConsumption.toFixed(2)}kg`);
+          
           await prisma.greenCoffee.update({
             where: { id: item.coffeeId },
             data: {
               quantity: {
-                decrement: item.totalQuantity
+                decrement: totalGreenConsumption
               }
             }
           });
-          console.log(`Updated coffee ${item.coffeeId} quantity by -${item.totalQuantity}kg`);
-          return { success: true, coffeeId: item.coffeeId };
+          
+          console.log(`Updated coffee ${item.coffeeId} quantity by -${totalGreenConsumption.toFixed(2)}kg (retail: ${item.totalQuantity}kg + haircut: ${haircutAmount.toFixed(2)}kg)`);
+          return { success: true, coffeeId: item.coffeeId, greenConsumption: totalGreenConsumption };
         } catch (coffeeError) {
           console.error(`Error updating coffee quantity for ${item.coffeeId}:`, coffeeError);
           return { success: false, coffeeId: item.coffeeId, error: coffeeError.message };
@@ -159,6 +208,16 @@ export default async function handler(req, res) {
       
       const coffeeUpdateResults = await Promise.allSettled(coffeeUpdatePromises);
       console.log(`Coffee quantity updates completed:`, coffeeUpdateResults.filter(r => r.status === 'fulfilled').length, 'successful');
+      
+      // Check if any coffee updates failed
+      const failedCoffeeUpdates = coffeeUpdateResults
+        .filter(r => r.status === 'fulfilled' && !r.value.success)
+        .map(r => r.value);
+      
+      if (failedCoffeeUpdates.length > 0) {
+        console.warn(`Some coffee quantity updates failed:`, failedCoffeeUpdates);
+        // Continue with order creation - don't fail the entire order
+      }
       
       // Update retail inventory records in parallel
       const inventoryUpdatePromises = processedItems.map(async (item) => {
@@ -173,7 +232,8 @@ export default async function handler(req, res) {
             create: {
               shopId,
               coffeeId: item.coffeeId,
-              smallBags: 0,
+              smallBagsEspresso: 0,
+              smallBagsFilter: 0,
               largeBags: 0,
               totalQuantity: 0,
               lastOrderDate: new Date()
@@ -193,6 +253,16 @@ export default async function handler(req, res) {
       
       const inventoryResults = await Promise.allSettled(inventoryUpdatePromises);
       console.log(`Retail inventory updates completed:`, inventoryResults.filter(r => r.status === 'fulfilled').length, 'successful');
+      
+      // Check if any inventory updates failed
+      const failedInventoryUpdates = inventoryResults
+        .filter(r => r.status === 'fulfilled' && !r.value.success)
+        .map(r => r.value);
+      
+      if (failedInventoryUpdates.length > 0) {
+        console.warn(`Some inventory updates failed:`, failedInventoryUpdates);
+        // Continue with order creation - don't fail the entire order
+      }
       
       const batchTime = Date.now() - batchStart;
       console.log(`[create-order] Batch operations completed in ${batchTime}ms`);

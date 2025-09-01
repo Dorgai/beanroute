@@ -190,6 +190,7 @@ export default function Layout({ children }) {
   const adminLinks = [
     { href: '/admin/inventory-alerts', label: 'Inventory Alerts', roles: ['ADMIN', 'OWNER'] },
     { href: '/admin/order-email-notifications', label: 'Order Email Notifications', roles: ['ADMIN', 'OWNER'] },
+    { href: '/admin/haircut-settings', label: 'Haircut Settings', roles: ['ADMIN', 'OWNER'] },
   ];
 
   return (

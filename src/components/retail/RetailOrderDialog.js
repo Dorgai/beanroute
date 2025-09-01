@@ -74,11 +74,14 @@ export default function RetailOrderDialog({ open, onClose }) {
           }
           setAvailableCoffee(groupedCoffee);
 
-          // Initialize order items
+          // Initialize order items (for any coffee that has available quantity for ordering)
           const items = {};
           if (Array.isArray(coffeeData)) {
             coffeeData.forEach(coffee => {
-              items[coffee.id] = { smallBags: 0, largeBags: 0 };
+              // Allow ordering from any coffee that has available quantity
+              if (coffee.quantity > 0) {
+                items[coffee.id] = { smallBags: 0, largeBags: 0 };
+              }
             });
           }
           setOrderItems(items);
@@ -241,8 +244,8 @@ export default function RetailOrderDialog({ open, onClose }) {
         <IconlessAlert severity="info" sx={{ mt: 2, mb: 2 }}>
           <Typography variant="subtitle2" gutterBottom>Available Quantities</Typography>
           <Typography variant="body2">
-            Available quantities shown are after applying a 15% haircut for processing losses. 
-            The actual green stock is higher than what's available for ordering.
+            Any coffee with green stock available can be ordered, with quantities shown after applying the current haircut percentage for processing losses. 
+            Shop inventory levels are displayed for reference.
           </Typography>
         </IconlessAlert>
 
@@ -256,11 +259,31 @@ export default function RetailOrderDialog({ open, onClose }) {
                 <Box key={coffee.id} sx={{ mb: 2, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
                   <Typography variant="h6">{coffee.name}</Typography>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Available: {coffee.quantity} kg
-                    {coffee.originalQuantity && (
-                      <span style={{ marginLeft: '8px', color: '#666' }}>
-                        (Green stock: {coffee.originalQuantity.toFixed(2)} kg)
-                      </span>
+                    {coffee.quantity > 0 ? (
+                      <>
+                        Available for ordering: <strong>{coffee.quantity} kg</strong>
+                        {coffee.originalQuantity && (
+                          <span style={{ marginLeft: '8px', color: '#666' }}>
+                            (Green stock: {coffee.originalQuantity.toFixed(2)} kg)
+                          </span>
+                        )}
+                        {coffee.shopInventoryQuantity && (
+                          <span style={{ marginLeft: '8px', color: '#666' }}>
+                            (Shop inventory: {coffee.shopInventoryQuantity.toFixed(2)} kg)
+                          </span>
+                        )}
+                      </>
+                    ) : coffee.shopInventoryQuantity ? (
+                      <>
+                        <span style={{ color: '#666' }}>
+                          Shop inventory: <strong>{coffee.shopInventoryQuantity} kg</strong>
+                        </span>
+                        <span style={{ marginLeft: '8px', color: '#999', fontStyle: 'italic' }}>
+                          (No green stock available for ordering)
+                        </span>
+                      </>
+                    ) : (
+                      'No stock available'
                     )}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
@@ -303,7 +326,7 @@ export default function RetailOrderDialog({ open, onClose }) {
                   </Box>
                   {coffee.haircutAmount && (
                     <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                      Haircut applied: -{coffee.haircutAmount.toFixed(2)} kg (15%)
+                      Haircut applied: -{coffee.haircutAmount.toFixed(2)} kg ({coffee.haircutPercentage}%)
                     </Typography>
                   )}
                   {pendingSmallBags > 0 && (
@@ -311,26 +334,37 @@ export default function RetailOrderDialog({ open, onClose }) {
                       ⚠️ {pendingSmallBags} small bags in {pendingData.orderCount} pending order{pendingData.orderCount !== 1 ? 's' : ''} (all shops)
                     </Typography>
                   )}
-                  <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                    <TextField
-                      label="Small Bags (200g)"
-                      type="number"
-                      value={orderItems[coffee.id]?.smallBags || 0}
-                      onChange={(e) => handleQuantityChange(coffee.id, 'smallBags', e.target.value)}
-                      InputProps={{ inputProps: { min: 0 } }}
-                      fullWidth
-                      error={Boolean(validationErrors[coffee.id])}
-                      helperText={validationErrors[coffee.id] || ''}
-                    />
-                    <TextField
-                      label="Large Bags (1kg)"
-                      type="number"
-                      InputProps={{ inputProps: { min: 0 } }}
-                      value={orderItems[coffee.id]?.largeBags || 0}
-                      onChange={(e) => handleQuantityChange(coffee.id, 'largeBags', e.target.value)}
-                      size="small"
-                    />
-                  </Box>
+                  {coffee.quantity > 0 ? (
+                    <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                      <TextField
+                        label="Small Bags (200g)"
+                        type="number"
+                        value={orderItems[coffee.id]?.smallBags || 0}
+                        onChange={(e) => handleQuantityChange(coffee.id, 'smallBags', e.target.value)}
+                        InputProps={{ inputProps: { min: 0 } }}
+                        fullWidth
+                        error={Boolean(validationErrors[coffee.id])}
+                        helperText={validationErrors[coffee.id] || ''}
+                      />
+                      <TextField
+                        label="Large Bags (1kg)"
+                        type="number"
+                        InputProps={{ inputProps: { min: 0 } }}
+                        value={orderItems[coffee.id]?.largeBags || 0}
+                        onChange={(e) => handleQuantityChange(coffee.id, 'largeBags', e.target.value)}
+                        size="small"
+                      />
+                    </Box>
+                  ) : (
+                    <Box sx={{ mt: 1, p: 1, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {coffee.shopInventoryQuantity ? 
+                          'This coffee is only available in shop inventory. No green stock available for ordering.' :
+                          'No stock available for ordering.'
+                        }
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               );
             })}

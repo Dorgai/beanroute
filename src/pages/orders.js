@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from '@/lib/session';
+import { getHaircutPercentage } from '@/lib/haircut-service';
 import {
   Box,
   Button,
@@ -339,7 +340,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
             <IconlessAlert severity="info" sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>Available Quantities</Typography>
               <Typography variant="body2">
-                Available quantities shown are after applying a 15% haircut for processing losses. 
+                Available quantities shown are after applying a {haircutPercentage}% haircut for processing losses. 
                 The actual green stock is higher than what's available for ordering.
               </Typography>
             </IconlessAlert>
@@ -349,7 +350,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
                 <TableHead>
                   <TableRow>
                     <TableCell>Coffee</TableCell>
-                    <TableCell>Available (After 15% Haircut)</TableCell>
+                    <TableCell>Available (After {haircutPercentage}% Haircut)</TableCell>
                     <TableCell>Pending Espresso Bags (All Shops)</TableCell>
                     <TableCell>Pending Filter Bags (All Shops)</TableCell>
                     <TableCell>Espresso Bags (200g)</TableCell>
@@ -360,7 +361,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
                 <TableBody>
                   {coffeeItems
                     .filter(coffee => {
-                      // Only show coffees with available stock after haircut
+                      // Only show coffees with available stock after haircut (using dynamic haircut percentage)
                       return coffee && coffee.quantity > 0;
                     })
                     .map((coffee) => {
@@ -970,6 +971,7 @@ export default function RetailOrders() {
   const [alertMessage, setAlertMessage] = useState(null);
   const [allPendingOrders, setAllPendingOrders] = useState([]);
   const [allPendingOrdersLoading, setAllPendingOrdersLoading] = useState(false);
+  const [haircutPercentage, setHaircutPercentage] = useState(15); // Default to 15%
   
   // Check user role for conditional UI elements
   const userRole = session?.user?.role || '';
@@ -1010,6 +1012,20 @@ export default function RetailOrders() {
       setSelectedShop(storedShopId);
     }
   }, []);
+
+  // Fetch haircut percentage
+  const fetchHaircutPercentage = async () => {
+    try {
+      const response = await fetch('/api/admin/haircut-settings');
+      if (response.ok) {
+        const data = await response.json();
+        setHaircutPercentage(data.percentage);
+      }
+    } catch (error) {
+      console.error('Failed to fetch haircut percentage:', error);
+      // Keep default value of 15%
+    }
+  };
 
   // Fetch shops
   useEffect(() => {
@@ -1175,6 +1191,9 @@ export default function RetailOrders() {
       setError(null);
       
       try {
+        // Fetch haircut percentage
+        await fetchHaircutPercentage();
+        
         // Fetch inventory data
         let inventoryResponse;
         try {
@@ -1213,17 +1232,19 @@ export default function RetailOrders() {
           const inventoryData = await inventoryResponse.json();
           console.log('Inventory API response:', inventoryData);
           
-          if (!inventoryData || typeof inventoryData !== 'object') {
+          if (!inventoryData || !inventoryData.inventory || !Array.isArray(inventoryData.inventory)) {
             console.error('Invalid inventory data format:', inventoryData);
             setInventory([]);
           } else {
-            const flatInventory = Object.values(inventoryData).flat().filter(Boolean);
-            console.log('Processed inventory:', flatInventory);
-            setInventory(Array.isArray(flatInventory) ? flatInventory : []);
+            // The new API returns an object with summary and inventory
+            const inventoryArray = inventoryData.inventory;
+            console.log('Processed inventory:', inventoryArray);
+            console.log('Inventory summary:', inventoryData.summary);
+            setInventory(inventoryArray.filter(Boolean)); // Filter out null/undefined items
             
             // Cache inventory data for emergency fallback
             try {
-              localStorage.setItem('cachedInventory', JSON.stringify(flatInventory));
+              localStorage.setItem('cachedInventory', JSON.stringify(inventoryArray));
               console.log('Saved inventory to localStorage cache');
             } catch (cacheError) {
               console.error('Failed to cache inventory:', cacheError);
@@ -1519,105 +1540,7 @@ export default function RetailOrders() {
     }
   };
   
-  const fetchData = async () => {
-    if (!selectedShop) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Fetch inventory with error handling
-      try {
-        console.log('Refreshing inventory for shop:', selectedShop);
-        const inventoryResponse = await fetch(`/api/retail/inventory?shopId=${selectedShop}`);
-        
-        if (!inventoryResponse.ok) {
-          console.error('Error response from inventory API:', inventoryResponse.status);
-        } else {
-          try {
-            const inventoryData = await inventoryResponse.json();
-            const flatInventory = inventoryData && typeof inventoryData === 'object'
-              ? Object.values(inventoryData).flat().filter(Boolean)
-              : [];
-            setInventory(flatInventory);
-          } catch (jsonError) {
-            console.error('Error parsing inventory JSON:', jsonError);
-          }
-        }
-      } catch (error) {
-        console.error('Error refreshing inventory:', error);
-      }
-      
-      // Fetch inventory history with error handling
-      try {
-        console.log('Refreshing inventory history for shop:', selectedShop);
-        const historyResponse = await fetch(`/api/retail/inventory-history?shopId=${selectedShop}`);
-        
-        if (!historyResponse.ok) {
-          console.error('Error response from inventory history API:', historyResponse.status);
-        } else {
-          try {
-            const historyData = await historyResponse.json();
-            setInventoryHistory(Array.isArray(historyData) ? historyData : []);
-          } catch (jsonError) {
-            console.error('Error parsing inventory history JSON:', jsonError);
-          }
-        }
-      } catch (error) {
-        console.error('Error refreshing inventory history:', error);
-      }
-      
-      // Fetch orders with error handling
-      try {
-        console.log('Refreshing orders for shop:', selectedShop);
-        const ordersResponse = await fetch(`/api/retail/orders?shopId=${selectedShop}`);
-        
-        if (!ordersResponse.ok) {
-          console.error('Error response from orders API:', ordersResponse.status);
-        } else {
-          try {
-            const ordersData = await ordersResponse.json();
-            setOrders(Array.isArray(ordersData) ? ordersData.filter(Boolean) : []);
-          } catch (jsonError) {
-            console.error('Error parsing orders JSON:', jsonError);
-            setOrders([]);
-          }
-        }
-      } catch (error) {
-        console.error('Error refreshing orders:', error);
-        setOrders([]);
-      }
-      
-      // Refresh available coffee with error handling
-      try {
-        console.log('Refreshing available coffee');
-        if (selectedShop) {
-          const coffeeResponse = await fetch(`/api/retail/available-coffee?shopId=${selectedShop}`);
-          
-          if (!coffeeResponse.ok) {
-            console.error('Error response from available coffee API:', coffeeResponse.status);
-          } else {
-            try {
-              const coffeeData = await coffeeResponse.json();
-              const flatCoffee = coffeeData && typeof coffeeData === 'object'
-                ? Object.values(coffeeData).flat().filter(Boolean)
-                : [];
-              setAvailableCoffee(flatCoffee);
-            } catch (jsonError) {
-              console.error('Error parsing coffee JSON:', jsonError);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error refreshing available coffee:', error);
-      }
-    } catch (error) {
-      console.error('Unhandled error in refreshData:', error);
-      setError('Failed to refresh data');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   // Fetch all pending orders across all shops
   useEffect(() => {
@@ -1858,6 +1781,7 @@ export default function RetailOrders() {
                             <TableCell align="right">Large Bags (1kg)</TableCell>
                             <TableCell>Last Order Date</TableCell>
                             <TableCell>Stock Status</TableCell>
+                            <TableCell>Availability</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -1945,6 +1869,34 @@ export default function RetailOrders() {
                                     />
                                   )}
                                 </TableCell>
+                                <TableCell>
+                                  {/* Show basic availability information */}
+                                  <div className="text-sm">
+                                    {item.id ? (
+                                      <>
+                                        <div className="text-green-600 font-medium">In Stock</div>
+                                        {item.greenStockAvailable > 0 && (
+                                          <div className="text-gray-500 text-xs">
+                                            Green stock: {parseFloat(item.greenStockAvailable).toFixed(2)}kg
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="text-blue-600 font-medium">Available for Order</div>
+                                        {item.greenStockAvailable > 0 ? (
+                                          <div className="text-gray-500 text-xs">
+                                            Green stock: {parseFloat(item.greenStockAvailable).toFixed(2)}kg
+                                          </div>
+                                        ) : (
+                                          <div className="text-gray-400 text-xs">
+                                            Out of stock
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             );
                           })}
@@ -1964,15 +1916,15 @@ export default function RetailOrders() {
                                 <Typography variant="subtitle2">TOTAL</Typography>
                               </TableCell>
                               <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.smallBagsEspresso || 0), 0)}
+                                {inventory.reduce((sum, item) => sum + (item.smallBagsEspresso || 0), 0).toFixed(2)}
                               </TableCell>
                               <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.smallBagsFilter || 0), 0)}
+                                {inventory.reduce((sum, item) => sum + (item.smallBagsFilter || 0), 0).toFixed(2)}
                               </TableCell>
                               <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0)}
+                                {inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0).toFixed(2)}
                               </TableCell>
-                              <TableCell colSpan={2} />
+                              <TableCell colSpan={3} />
                             </TableRow>
                           )}
                         </TableBody>
