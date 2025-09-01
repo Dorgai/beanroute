@@ -101,18 +101,40 @@ self.addEventListener('fetch', (event) => {
   
   // Handle navigation requests (page loads)
   if (request.mode === 'navigate') {
-    event.respondWith(handleNavigationRequest(request));
+    event.respondWith(handleNavigationRequest(request).catch(error => {
+      console.error('[SW] Navigation request failed:', error);
+      // Return offline page as fallback
+      return caches.match(OFFLINE_URL);
+    }));
     return;
   }
   
   // Handle API requests with network-first strategy
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(handleApiRequest(request));
+    event.respondWith(handleApiRequest(request).catch(error => {
+      console.error('[SW] API request failed:', error);
+      // For API requests, try to return cached version or let error propagate
+      if (request.method === 'GET') {
+        return caches.match(request).catch(() => {
+          // If even cache fails, return a basic error response
+          return new Response(JSON.stringify({ error: 'Request failed' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        });
+      }
+      // For non-GET requests, let the error propagate naturally
+      throw error;
+    }));
     return;
   }
   
   // Handle static assets with cache-first strategy
-  event.respondWith(handleStaticRequest(request));
+  event.respondWith(handleStaticRequest(request).catch(error => {
+    console.error('[SW] Static request failed:', error);
+    // Return a basic error response for static assets
+    return new Response('Asset not available', { status: 404 });
+  }));
 });
 
 // Navigation request handler - network first, fallback to cache, then offline page

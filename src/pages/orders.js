@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from '@/lib/session';
-import { getHaircutPercentage } from '@/lib/haircut-service';
 import {
   Box,
   Button,
@@ -46,7 +45,7 @@ import ShopStockSummary from '../components/retail/ShopStockSummary';
 import PendingOrdersSummary from '../components/retail/PendingOrdersSummary';
 
 // Simple Order Dialog Component
-function OrderDialog({ open, onClose, coffeeItems, selectedShop }) {
+function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercentage }) {
   const [orderItems, setOrderItems] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1179,6 +1178,137 @@ export default function RetailOrders() {
     fetchShopDetails();
   }, [selectedShop]);
 
+  // Fetch data function - moved to component level for accessibility
+  const fetchData = async (useDirectMode = false) => {
+    if (!selectedShop) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch haircut percentage
+      await fetchHaircutPercentage();
+      
+      // Fetch inventory data
+      let inventoryResponse;
+      try {
+        // Construct URL with direct mode parameter if needed
+        const url = useDirectMode 
+          ? `/api/retail/inventory?shopId=${selectedShop}&direct=true` 
+          : `/api/retail/inventory?shopId=${selectedShop}`;
+        
+        console.log(`Fetching inventory for shop: ${selectedShop}${useDirectMode ? ' (direct mode)' : ''}`);
+        inventoryResponse = await fetch(url, {
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!inventoryResponse.ok) {
+          if (!useDirectMode && inventoryResponse.status === 401) {
+            console.log('Authentication failed for inventory, trying direct mode...');
+            // Stop current attempt and retry with direct mode
+            return fetchData(true);
+          }
+          
+          throw new Error(`Failed to fetch inventory (${inventoryResponse.status})`);
+        }
+      } catch (err) {
+        console.error('Error fetching inventory:', err);
+        setError('Failed to load inventory. Please try again later.');
+        setLoading(false);
+        return;
+      }
+
+      // Process inventory data with defensive coding
+      try {
+        const inventoryData = await inventoryResponse.json();
+        console.log('Inventory API response:', inventoryData);
+        
+        if (!inventoryData || !inventoryData.inventory || !Array.isArray(inventoryData.inventory)) {
+          console.error('Invalid inventory data format:', inventoryData);
+          setInventory([]);
+        } else {
+          // The new API returns an object with summary and inventory
+          const inventoryArray = inventoryData.inventory;
+          console.log('Processed inventory:', inventoryArray);
+          console.log('Inventory summary:', inventoryData.summary);
+          setInventory(inventoryArray.filter(Boolean)); // Filter out null/undefined items
+          
+          // Cache inventory data for emergency fallback
+          try {
+            localStorage.setItem('cachedInventory', JSON.stringify(inventoryArray));
+            console.log('Saved inventory to localStorage cache');
+          } catch (cacheError) {
+            console.error('Failed to cache inventory:', cacheError);
+          }
+        }
+      } catch (jsonError) {
+        console.error('Error parsing inventory JSON:', jsonError);
+        setInventory([]);
+        
+        // Try to load from cache as fallback
+        try {
+          const cachedInventoryJson = localStorage.getItem('cachedInventory');
+          if (cachedInventoryJson) {
+            const cachedInventory = JSON.parse(cachedInventoryJson);
+            console.log('Using cached inventory as fallback');
+            setInventory(cachedInventory);
+          }
+        } catch (cacheError) {
+          console.error('Error reading cached inventory:', cacheError);
+        }
+      }
+      
+      // Fetch orders for the selected shop
+      try {
+        console.log('Fetching orders for shop:', selectedShop);
+        const ordersResponse = await fetch(`/api/retail/orders?shopId=${selectedShop}`);
+        if (!ordersResponse.ok) {
+          throw new Error(`Failed to fetch orders (${ordersResponse.status})`);
+        }
+        
+        try {
+          const ordersData = await ordersResponse.json();
+          console.log('Orders API response:', ordersData);
+          
+          if (!Array.isArray(ordersData)) {
+            console.warn('Orders data is not an array:', ordersData);
+            setOrders([]);
+          } else {
+            setOrders(ordersData.filter(Boolean)); // Filter out null/undefined items
+          }
+        } catch (jsonError) {
+          console.error('Error parsing orders JSON:', jsonError);
+          setOrders([]);
+        }
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setOrders([]);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error in fetchData:', error);
+      setError('An unexpected error occurred. Please try again later.');
+      setLoading(false);
+      
+      // Try to load cached data
+      try {
+        const cachedInventoryJson = localStorage.getItem('cachedInventory');
+        if (cachedInventoryJson) {
+          const cachedInventory = JSON.parse(cachedInventoryJson);
+          console.log('Using cached inventory after error');
+          setInventory(cachedInventory);
+        }
+      } catch (cacheError) {
+        console.error('Error reading cached inventory during error recovery:', cacheError);
+      }
+    }
+  };
+
   // Fetch inventory and available coffee when shop changes
   useEffect(() => {
     if (!selectedShop) return;
@@ -1186,134 +1316,6 @@ export default function RetailOrders() {
     // Store selected shop in localStorage for persistence
     localStorage.setItem('selectedShopId', selectedShop);
     
-    const fetchData = async (useDirectMode = false) => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch haircut percentage
-        await fetchHaircutPercentage();
-        
-        // Fetch inventory data
-        let inventoryResponse;
-        try {
-          // Construct URL with direct mode parameter if needed
-          const url = useDirectMode 
-            ? `/api/retail/inventory?shopId=${selectedShop}&direct=true` 
-            : `/api/retail/inventory?shopId=${selectedShop}`;
-          
-          console.log(`Fetching inventory for shop: ${selectedShop}${useDirectMode ? ' (direct mode)' : ''}`);
-          inventoryResponse = await fetch(url, {
-            credentials: 'include',
-            headers: {
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            }
-          });
-          
-          if (!inventoryResponse.ok) {
-            if (!useDirectMode && inventoryResponse.status === 401) {
-              console.log('Authentication failed for inventory, trying direct mode...');
-              // Stop current attempt and retry with direct mode
-              return fetchData(true);
-            }
-            
-            throw new Error(`Failed to fetch inventory (${inventoryResponse.status})`);
-          }
-        } catch (err) {
-          console.error('Error fetching inventory:', err);
-          setError('Failed to load inventory. Please try again later.');
-          setLoading(false);
-          return;
-        }
-
-        // Process inventory data with defensive coding
-        try {
-          const inventoryData = await inventoryResponse.json();
-          console.log('Inventory API response:', inventoryData);
-          
-          if (!inventoryData || !inventoryData.inventory || !Array.isArray(inventoryData.inventory)) {
-            console.error('Invalid inventory data format:', inventoryData);
-            setInventory([]);
-          } else {
-            // The new API returns an object with summary and inventory
-            const inventoryArray = inventoryData.inventory;
-            console.log('Processed inventory:', inventoryArray);
-            console.log('Inventory summary:', inventoryData.summary);
-            setInventory(inventoryArray.filter(Boolean)); // Filter out null/undefined items
-            
-            // Cache inventory data for emergency fallback
-            try {
-              localStorage.setItem('cachedInventory', JSON.stringify(inventoryArray));
-              console.log('Saved inventory to localStorage cache');
-            } catch (cacheError) {
-              console.error('Failed to cache inventory:', cacheError);
-            }
-          }
-        } catch (jsonError) {
-          console.error('Error parsing inventory JSON:', jsonError);
-          setInventory([]);
-          
-          // Try to load from cache as fallback
-          try {
-            const cachedInventoryJson = localStorage.getItem('cachedInventory');
-            if (cachedInventoryJson) {
-              const cachedInventory = JSON.parse(cachedInventoryJson);
-              console.log('Using cached inventory as fallback');
-              setInventory(cachedInventory);
-            }
-          } catch (cacheError) {
-            console.error('Error reading cached inventory:', cacheError);
-          }
-        }
-        
-        // Fetch orders for the selected shop
-        try {
-          console.log('Fetching orders for shop:', selectedShop);
-          const ordersResponse = await fetch(`/api/retail/orders?shopId=${selectedShop}`);
-          if (!ordersResponse.ok) {
-            throw new Error(`Failed to fetch orders (${ordersResponse.status})`);
-          }
-          
-          try {
-            const ordersData = await ordersResponse.json();
-            console.log('Orders API response:', ordersData);
-            
-            if (!Array.isArray(ordersData)) {
-              console.warn('Orders data is not an array:', ordersData);
-              setOrders([]);
-            } else {
-              setOrders(ordersData.filter(Boolean)); // Filter out null/undefined items
-            }
-          } catch (jsonError) {
-            console.error('Error parsing orders JSON:', jsonError);
-            setOrders([]);
-          }
-        } catch (err) {
-          console.error('Error fetching orders:', err);
-          setOrders([]);
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Error in fetchData:', error);
-        setError('An unexpected error occurred. Please try again later.');
-        setLoading(false);
-        
-        // Try to load cached data
-        try {
-          const cachedInventoryJson = localStorage.getItem('cachedInventory');
-          if (cachedInventoryJson) {
-            const cachedInventory = JSON.parse(cachedInventoryJson);
-            console.log('Using cached inventory after error');
-            setInventory(cachedInventory);
-          }
-        } catch (cacheError) {
-          console.error('Error reading cached inventory during error recovery:', cacheError);
-        }
-      }
-    };
-
     fetchData();
   }, [selectedShop]);
   
@@ -2288,6 +2290,7 @@ export default function RetailOrders() {
           onClose={handleCloseOrderDialog}
           coffeeItems={availableCoffee}
           selectedShop={selectedShop}
+          haircutPercentage={haircutPercentage}
         />
         
         <StatusUpdateDialog
@@ -2307,4 +2310,4 @@ export default function RetailOrders() {
       </Container>
     </>
   );
-} 
+}
