@@ -55,6 +55,11 @@ const InstallPWA = () => {
       // Add event listeners
       window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.addEventListener('appinstalled', handleAppInstalled);
+      
+      // For iOS, show install prompt since beforeinstallprompt doesn't fire
+      if (mobileInfo?.os === 'ios') {
+        setShowInstallPrompt(true);
+      }
     }
 
     return () => {
@@ -87,13 +92,13 @@ const InstallPWA = () => {
     setShowInstallPrompt(false);
   };
 
-  // Don't show if already installed or no prompt available
-  if (isInstalled || !showInstallPrompt) {
+  // Don't show if already installed
+  if (isInstalled) {
     return null;
   }
 
   // Show mobile-specific installation instructions
-  if (mobileInfo?.isMobile && !deferredPrompt) {
+  if (mobileInfo?.isMobile) {
     return (
       <div className="fixed bottom-4 left-4 right-4 bg-green-600 text-white p-4 rounded-lg shadow-lg z-50">
         <div className="flex items-center justify-between">
@@ -102,13 +107,18 @@ const InstallPWA = () => {
               <span className="text-green-600 font-bold text-lg">📱</span>
             </div>
             <div>
-              <h3 className="font-semibold">Add to Home Screen</h3>
+              <h3 className="font-semibold">Install BeanRoute App</h3>
               <p className="text-sm text-green-100">
                 {mobileInfo.os === 'ios' 
-                  ? 'Tap Share → Add to Home Screen'
-                  : 'Tap Menu → Add to Home Screen'
+                  ? 'Tap Share 📤 → Add to Home Screen'
+                  : 'Tap Menu ⋮ → Add to Home Screen'
                 }
               </p>
+              {mobileInfo.os === 'ios' && (
+                <p className="text-xs text-green-200 mt-1">
+                  Required for push notifications!
+                </p>
+              )}
             </div>
           </div>
           <button

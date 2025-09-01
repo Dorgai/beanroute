@@ -60,9 +60,10 @@ const NotificationSettings = () => {
       // Check for iOS device
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
       
-      if (isIOS && isSafari) {
-        setTestMessage('iOS Safari has limited notification support. Notifications only work when the app is open.');
+      if (isIOS && isSafari && !isStandalone) {
+        setTestMessage('⚠️ Please add this app to your home screen first, then try enabling notifications from the installed app.');
         return;
       }
       
@@ -119,9 +120,10 @@ const NotificationSettings = () => {
       // Check for iOS device
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
       
-      if (isIOS && isSafari) {
-        setTestMessage('iOS Safari has limited notification support. Notifications only work when the app is open.');
+      if (isIOS && isSafari && !isStandalone) {
+        setTestMessage('⚠️ Please add this app to your home screen first, then try testing notifications from the installed app.');
         return;
       }
       
@@ -189,15 +191,41 @@ const NotificationSettings = () => {
           if (typeof window !== 'undefined') {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
             const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
             
             if (isIOS && isSafari) {
-              return (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    📱 <strong>iOS Safari detected:</strong> Notifications have limited support and only work when the app is open.
-                  </p>
-                </div>
-              );
+              if (!isStandalone) {
+                return (
+                  <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start">
+                      <div className="text-2xl mr-3">📱</div>
+                      <div>
+                        <p className="text-sm font-medium text-amber-800 mb-2">
+                          <strong>iOS Safari:</strong> Add to Home Screen Required
+                        </p>
+                        <p className="text-sm text-amber-700 mb-3">
+                          To enable push notifications on iOS, you must first add this app to your home screen:
+                        </p>
+                        <ol className="text-sm text-amber-700 space-y-1 list-decimal list-inside">
+                          <li>Tap the Share button <span className="inline-block">📤</span> at the bottom of Safari</li>
+                          <li>Select "Add to Home Screen"</li>
+                          <li>Tap "Add" to install the app</li>
+                          <li>Open the app from your home screen</li>
+                          <li>Return here to enable notifications</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-800">
+                      ✅ <strong>iOS PWA detected:</strong> Push notifications are now available! You can enable them below.
+                    </p>
+                  </div>
+                );
+              }
             }
           }
           return null;
