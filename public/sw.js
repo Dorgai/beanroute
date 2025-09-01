@@ -460,8 +460,18 @@ self.addEventListener('sync', (event) => {
 self.addEventListener('periodicsync', (event) => {
   console.log('[SW] Periodic sync event:', event.tag);
   
-  if (event.tag === 'data-refresh') {
-    event.waitUntil(refreshDataInBackground());
+  switch (event.tag) {
+    case 'data-refresh':
+      event.waitUntil(refreshDataInBackground());
+      break;
+    case 'notification-check':
+      event.waitUntil(checkForNewNotifications());
+      break;
+    case 'inventory-sync':
+      event.waitUntil(syncInventoryData());
+      break;
+    default:
+      console.log('[SW] Unknown periodic sync tag:', event.tag);
   }
 });
 
@@ -541,6 +551,50 @@ async function refreshDataInBackground() {
 async function syncOrders() {
   console.log('[SW] Background sync for orders - placeholder for future implementation');
   // This will be implemented in Phase 3 with push notifications
+}
+
+async function checkForNewNotifications() {
+  console.log('[SW] Checking for new notifications in background');
+  try {
+    const response = await fetch('/api/push/check-updates', {
+      method: 'GET'
+    });
+    
+    if (response.ok) {
+      const updates = await response.json();
+      if (updates.hasNewNotifications) {
+        // Show notification about new updates
+        await self.registration.showNotification('BeanRoute Update', {
+          body: 'New updates available in the app',
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-72x72.png',
+          tag: 'app-update',
+          requireInteraction: false,
+          silent: false
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[SW] Error checking for notifications:', error);
+  }
+}
+
+async function syncInventoryData() {
+  console.log('[SW] Syncing inventory data in background');
+  try {
+    const response = await fetch('/api/retail/sync-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      console.log('[SW] Inventory data synced successfully');
+    } else {
+      console.log('[SW] Inventory sync failed:', response.status);
+    }
+  } catch (error) {
+    console.error('[SW] Error syncing inventory data:', error);
+  }
 }
 
 console.log('[SW] BeanRoute Service Worker loaded successfully');

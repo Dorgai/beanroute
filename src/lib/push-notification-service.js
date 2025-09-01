@@ -376,6 +376,121 @@ class PushNotificationService {
       await prisma.$disconnect();
     }
   }
+
+  /**
+   * Send order-related push notifications
+   */
+  async sendOrderNotification(eventType, data) {
+    if (!this.isConfigured()) {
+      console.log('[Push] Push notifications not configured, skipping order notification');
+      return { success: false, error: 'Push notifications not configured' };
+    }
+
+    try {
+      let notification;
+      let targetRoles = ['ADMIN', 'OWNER'];
+
+      switch (eventType) {
+        case 'NEW_ORDER':
+          notification = {
+            title: `New Order #${data.orderNumber || 'N/A'}`,
+            body: `${data.shopName} placed a new order${data.itemCount ? ` with ${data.itemCount} items` : ''}`,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: `order-new-${data.orderId}`,
+            data: {
+              type: 'ORDER',
+              orderId: data.orderId,
+              shopId: data.shopId,
+              action: 'view'
+            },
+            actions: [
+              {
+                action: 'view',
+                title: 'View Order',
+                icon: '/icons/icon-72x72.png'
+              }
+            ],
+            requireInteraction: true,
+            vibrate: [200, 100, 200]
+          };
+          targetRoles = ['ADMIN', 'OWNER', 'ROASTER'];
+          break;
+
+        case 'STATUS_CHANGE':
+          notification = {
+            title: `Order ${data.newStatus}`,
+            body: `Order #${data.orderNumber || 'N/A'} for ${data.shopName} is now ${data.newStatus.toLowerCase()}`,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: `order-status-${data.orderId}`,
+            data: {
+              type: 'ORDER',
+              orderId: data.orderId,
+              shopId: data.shopId,
+              status: data.newStatus,
+              action: 'view'
+            },
+            actions: [
+              {
+                action: 'view',
+                title: 'View Order',
+                icon: '/icons/icon-72x72.png'
+              }
+            ],
+            requireInteraction: false,
+            vibrate: [100, 50, 100]
+          };
+          targetRoles = ['ADMIN', 'OWNER', 'RETAILER'];
+          break;
+
+        default:
+          console.error(`[Push] Unknown order event type: ${eventType}`);
+          return { success: false, error: `Unknown event type: ${eventType}` };
+      }
+
+      // Send to target roles
+      let totalSent = 0;
+      let totalRecipients = 0;
+      const results = [];
+
+      for (const role of targetRoles) {
+        const result = await this.sendToRole(role, notification);
+        totalSent += result.sent;
+        totalRecipients += result.total;
+        results.push({ role, ...result });
+      }
+
+      console.log(`[Push] Order notification sent: ${totalSent}/${totalRecipients} recipients`);
+
+      return {
+        success: true,
+        message: `Order notification sent to ${totalSent}/${totalRecipients} recipients`,
+        successful: totalSent,
+        total: totalRecipients,
+        results
+      };
+
+    } catch (error) {
+      console.error('[Push] Error sending order notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Send order status change notification
+   */
+  async sendOrderStatusChangeNotification(orderId, oldStatus, newStatus, data) {
+    return this.sendOrderNotification('STATUS_CHANGE', {
+      orderId,
+      oldStatus,
+      newStatus,
+      orderNumber: data.orderNumber || orderId.slice(-8),
+      shopId: data.shopId,
+      shopName: data.shopName || 'Shop',
+      userId: data.userId
+    });
+  }
 }
 
 export default new PushNotificationService();

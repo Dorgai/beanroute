@@ -1,217 +1,124 @@
-import { useEffect, useState, useCallback } from 'react';
-import { detectMobileOS } from '../../utils/mobileDetection';
+// Background Sync Manager for mobile background functionality
+import { useEffect, useState } from 'react';
 
 const BackgroundSyncManager = () => {
   const [isSupported, setIsSupported] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('idle');
-  const [mobileInfo, setMobileInfo] = useState(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    const initializeBackgroundSync = async () => {
+      if (typeof window === 'undefined') return;
 
-    const mobileInfo = detectMobileOS();
-    setMobileInfo(mobileInfo);
-
-    // Check for background sync support
-    const checkSupport = () => {
-      const hasBackgroundSync = 'serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration;
-      const hasPeriodicSync = 'periodicSync' in window.ServiceWorkerRegistration;
-      const hasNotifications = 'Notification' in window;
-      
-      setIsSupported(hasBackgroundSync || hasPeriodicSync || hasNotifications);
-      
-      if (hasBackgroundSync || hasPeriodicSync) {
-        console.log('[BackgroundSync] Background sync supported');
-      }
-      
-      if (hasPeriodicSync) {
-        console.log('[BackgroundSync] Periodic sync supported');
-      }
-      
-      if (hasNotifications) {
-        console.log('[BackgroundSync] Notifications supported');
-      }
-    };
-
-    checkSupport();
-  }, []);
-
-  // Register periodic sync for background data updates
-  const registerPeriodicSync = useCallback(async () => {
-    if (!('periodicSync' in window.ServiceWorkerRegistration)) {
-      console.log('[BackgroundSync] Periodic sync not supported');
-      return false;
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Request permission for periodic sync
-      const status = await registration.periodicSync.getStatus();
-      
-      if (status === 'denied') {
-        console.log('[BackgroundSync] Periodic sync permission denied');
-        return false;
-      }
-
-      // Register periodic sync for data refresh
-      await registration.periodicSync.register('data-refresh', {
-        minInterval: 24 * 60 * 60 * 1000, // Minimum 24 hours
-        maxInterval: 7 * 24 * 60 * 60 * 1000, // Maximum 7 days
-      });
-
-      console.log('[BackgroundSync] Periodic sync registered successfully');
-      return true;
-    } catch (error) {
-      console.error('[BackgroundSync] Error registering periodic sync:', error);
-      return false;
-    }
-  }, []);
-
-  // Register background sync for immediate operations
-  const registerBackgroundSync = useCallback(async (tag, options = {}) => {
-    if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration)) {
-      console.log('[BackgroundSync] Background sync not supported');
-      return false;
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Register background sync
-      await registration.sync.register(tag, options);
-      
-      console.log(`[BackgroundSync] Background sync registered for tag: ${tag}`);
-      return true;
-    } catch (error) {
-      console.error('[BackgroundSync] Error registering background sync:', error);
-      return false;
-    }
-  }, []);
-
-  // Keep the app alive with periodic heartbeats
-  const startHeartbeat = useCallback(() => {
-    if (!mobileInfo?.isMobile) return;
-
-    console.log('[BackgroundSync] Starting heartbeat for mobile device');
-    
-    // Send periodic heartbeat to keep service worker active
-    const heartbeat = setInterval(async () => {
       try {
+        // Check if service worker and background sync are supported
         if ('serviceWorker' in navigator) {
           const registration = await navigator.serviceWorker.ready;
           
-          // Send heartbeat message to service worker
-          registration.active?.postMessage({
-            type: 'HEARTBEAT',
-            timestamp: Date.now()
-          });
-          
-          // Also trigger a background sync to keep the connection alive
-          await registerBackgroundSync('heartbeat-sync');
-        }
-      } catch (error) {
-        console.error('[BackgroundSync] Heartbeat error:', error);
-      }
-    }, 5 * 60 * 1000); // Every 5 minutes
-
-    return () => clearInterval(heartbeat);
-  }, [mobileInfo, registerBackgroundSync]);
-
-  // Initialize background sync when component mounts
-  useEffect(() => {
-    if (!isSupported) return;
-
-    const initializeBackgroundSync = async () => {
-      try {
-        setSyncStatus('initializing');
-        
-        // Register periodic sync for background data updates
-        const periodicSyncRegistered = await registerPeriodicSync();
-        
-        // Register initial background sync
-        const backgroundSyncRegistered = await registerBackgroundSync('initial-sync');
-        
-        if (periodicSyncRegistered || backgroundSyncRegistered) {
-          setIsRegistered(true);
-          setSyncStatus('active');
-          
-          // Start heartbeat for mobile devices
-          if (mobileInfo?.isMobile) {
-            startHeartbeat();
+          // Check for background sync support
+          if ('sync' in registration) {
+            setIsSupported(true);
+            console.log('[Background Sync] Background sync supported');
+            
+            // Register background sync for data updates
+            await registration.sync.register('data-sync');
+            console.log('[Background Sync] Data sync registered');
           }
+          
+          // Check for periodic sync support (mainly Android)
+          if ('periodicSync' in registration) {
+            console.log('[Background Sync] Periodic sync supported');
+            
+            try {
+              // Request permission for background sync
+              const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+              
+              if (status.state === 'granted') {
+                // Register periodic sync for data refresh (every 12 hours)
+                await registration.periodicSync.register('data-refresh', {
+                  minInterval: 12 * 60 * 60 * 1000 // 12 hours in milliseconds
+                });
+                
+                // Register periodic sync for notification checks (every 30 minutes)
+                await registration.periodicSync.register('notification-check', {
+                  minInterval: 30 * 60 * 1000 // 30 minutes in milliseconds
+                });
+                
+                // Register periodic sync for inventory updates (every 2 hours)
+                await registration.periodicSync.register('inventory-sync', {
+                  minInterval: 2 * 60 * 60 * 1000 // 2 hours in milliseconds
+                });
+                
+                setIsRegistered(true);
+                console.log('[Background Sync] Periodic sync registered successfully');
+              } else {
+                console.log('[Background Sync] Periodic sync permission not granted:', status.state);
+              }
+            } catch (error) {
+              console.log('[Background Sync] Periodic sync not supported or failed:', error);
+            }
+          }
+          
+          // Listen for visibility changes to trigger sync when app becomes active
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+          
+          // Listen for online/offline events
+          window.addEventListener('online', handleOnline);
+          window.addEventListener('offline', handleOffline);
+          
         } else {
-          setSyncStatus('failed');
+          console.log('[Background Sync] Service workers not supported');
         }
       } catch (error) {
-        console.error('[BackgroundSync] Initialization error:', error);
-        setSyncStatus('error');
+        console.error('[Background Sync] Error initializing background sync:', error);
       }
     };
 
-    initializeBackgroundSync();
-  }, [isSupported, registerPeriodicSync, registerBackgroundSync, startHeartbeat, mobileInfo]);
-
-  // Request notification permission for better background operation
-  useEffect(() => {
-    if (!isSupported || !mobileInfo?.isMobile) return;
-
-    const requestNotificationPermission = async () => {
-      try {
-        if ('Notification' in window && Notification.permission === 'default') {
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
-            console.log('[BackgroundSync] Notification permission granted');
+    const handleVisibilityChange = async () => {
+      if (!document.hidden && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          if ('sync' in registration) {
+            // Trigger background sync when app becomes visible
+            await registration.sync.register('data-sync');
+            console.log('[Background Sync] Data sync triggered on visibility change');
           }
+        } catch (error) {
+          console.error('[Background Sync] Error triggering sync on visibility change:', error);
         }
-      } catch (error) {
-        console.error('[BackgroundSync] Error requesting notification permission:', error);
       }
     };
 
-    requestNotificationPermission();
-  }, [isSupported, mobileInfo]);
-
-  // Handle visibility change to trigger sync when app becomes visible
-  useEffect(() => {
-    if (!isSupported) return;
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isRegistered) {
-        console.log('[BackgroundSync] App became visible, triggering sync');
-        registerBackgroundSync('visibility-sync');
+    const handleOnline = async () => {
+      console.log('[Background Sync] App came online, triggering sync');
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          if ('sync' in registration) {
+            await registration.sync.register('data-sync');
+            await registration.sync.register('notification-update-sync');
+          }
+        } catch (error) {
+          console.error('[Background Sync] Error triggering sync when online:', error);
+        }
       }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isSupported, isRegistered, registerBackgroundSync]);
-
-  // Handle online/offline events
-  useEffect(() => {
-    if (!isSupported) return;
-
-    const handleOnline = () => {
-      console.log('[BackgroundSync] Device came online, syncing data');
-      registerBackgroundSync('online-sync');
     };
 
     const handleOffline = () => {
-      console.log('[BackgroundSync] Device went offline');
-      setSyncStatus('offline');
+      console.log('[Background Sync] App went offline');
     };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    initializeBackgroundSync();
 
+    // Cleanup
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [isSupported, registerBackgroundSync]);
+  }, []);
 
-  // Don't render anything visible - this is a background component
+  // This component doesn't render anything visible
+  // It just manages background sync functionality
   return null;
 };
 
