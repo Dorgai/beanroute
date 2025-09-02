@@ -17,37 +17,61 @@ export default function BottomNavigation() {
   const [isVisible, setIsVisible] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
   const [pressedItem, setPressedItem] = useState(null);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Check if running as PWA
-    const checkPWA = () => {
-      const isStandalone = window.navigator.standalone || 
-        window.matchMedia('(display-mode: standalone)').matches;
-      setIsPWA(isStandalone);
-    };
-
-    checkPWA();
-    window.addEventListener('resize', checkPWA);
-    return () => window.removeEventListener('resize', checkPWA);
-  }, []);
-
-  useEffect(() => {
-    // Show navigation after a short delay to avoid flash
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Don't show on desktop or when not in PWA mode
-  if (!isPWA || typeof window !== 'undefined' && window.innerWidth > 768) {
+  // Error boundary - if anything goes wrong, don't crash the app
+  if (error) {
+    console.error('[BottomNavigation] Error:', error);
     return null;
   }
 
-  const user = session?.user;
-  const isAdmin = user?.role === 'ADMIN';
-  const isOwner = user?.role === 'OWNER';
-  const isRoaster = user?.role === 'ROASTER';
-  const isRetailer = user?.role === 'RETAILER';
-  const isBarista = user?.role === 'BARISTA';
+  useEffect(() => {
+    try {
+      // Check if running as PWA
+      const checkPWA = () => {
+        try {
+          const isStandalone = window.navigator.standalone || 
+            window.matchMedia('(display-mode: standalone)').matches;
+          setIsPWA(isStandalone);
+        } catch (err) {
+          console.warn('[BottomNavigation] PWA check failed:', err);
+          setIsPWA(false);
+        }
+      };
+
+      checkPWA();
+      window.addEventListener('resize', checkPWA);
+      return () => window.removeEventListener('resize', checkPWA);
+    } catch (err) {
+      console.error('[BottomNavigation] useEffect error:', err);
+      setError(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      // Show navigation after a short delay to avoid flash
+      const timer = setTimeout(() => setIsVisible(true), 100);
+      return () => clearTimeout(timer);
+    } catch (err) {
+      console.error('[BottomNavigation] Visibility timer error:', err);
+      setError(err);
+    }
+  }, []);
+
+  // Don't show on desktop or when not in PWA mode
+  // Also ensure we have a valid session before proceeding
+  if (!isPWA || typeof window !== 'undefined' && window.innerWidth > 768 || !session) {
+    return null;
+  }
+
+  try {
+    const user = session?.user;
+    const isAdmin = user?.role === 'ADMIN';
+    const isOwner = user?.role === 'OWNER';
+    const isRoaster = user?.role === 'ROASTER';
+    const isRetailer = user?.role === 'RETAILER';
+    const isBarista = user?.role === 'BARISTA';
 
   // Define navigation items based on user role
   const getNavigationItems = () => {
@@ -135,6 +159,12 @@ export default function BottomNavigation() {
     return baseItems;
   };
 
+  } catch (err) {
+    console.error('[BottomNavigation] Error in navigation logic:', err);
+    setError(err);
+    return null;
+  }
+
   const navigationItems = getNavigationItems().filter(item => item.show);
 
   const isActive = (href) => {
@@ -159,20 +189,25 @@ export default function BottomNavigation() {
   };
 
   const handleNavigation = (href) => {
-    // Add haptic feedback for mobile devices
-    if ('vibrate' in navigator) {
-      navigator.vibrate(50);
-    }
-    
-    if (href.includes('?tab=')) {
-      const [path, query] = href.split('?');
-      const tab = query.split('=')[1];
-      router.push({
-        pathname: path,
-        query: { tab }
-      });
-    } else {
-      router.push(href);
+    try {
+      // Add haptic feedback for mobile devices
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+      
+      if (href.includes('?tab=')) {
+        const [path, query] = href.split('?');
+        const tab = query.split('=')[1];
+        router.push({
+          pathname: path,
+          query: { tab }
+        });
+      } else {
+        router.push(href);
+      }
+    } catch (err) {
+      console.error('[BottomNavigation] Navigation error:', err);
+      setError(err);
     }
   };
 
