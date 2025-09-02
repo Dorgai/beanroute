@@ -61,29 +61,64 @@ class PushNotificationService {
       }
 
       // Check if user already has a subscription for this endpoint
-      const existingSubscription = await prisma.pushSubscription.findFirst({
-        where: { 
-          OR: [
-            { endpoint: subscription.endpoint },
-            { userId: userId }
-          ]
+      let existingSubscription;
+      try {
+        existingSubscription = await prisma.pushSubscription.findFirst({
+          where: { 
+            OR: [
+              { endpoint: subscription.endpoint },
+              { userId: userId }
+            ]
+          }
+        });
+      } catch (error) {
+        console.error('[Push] Error checking existing subscription:', error);
+        // If it's a column doesn't exist error, try a simpler query
+        if (error.code === 'P2022') {
+          try {
+            console.log('[Push] Retrying existing subscription check with basic field selection...');
+            existingSubscription = await prisma.pushSubscription.findFirst({
+              where: { 
+                OR: [
+                  { endpoint: subscription.endpoint },
+                  { userId: userId }
+                ]
+              },
+              select: {
+                id: true,
+                userId: true,
+                endpoint: true,
+                p256dh: true,
+                auth: true,
+                isActive: true,
+                createdAt: true,
+                lastUsed: true
+                // Omit mobile and limited fields that don't exist in production DB yet
+              }
+            });
+          } catch (retryError) {
+            console.error('[Push] Retry for existing subscription check also failed:', retryError);
+            // If we can't check for existing subscriptions, continue with creating new one
+            existingSubscription = null;
+          }
+        } else {
+          throw error;
         }
-      });
+      }
 
       if (existingSubscription) {
         if (existingSubscription.endpoint === subscription.endpoint) {
-          // Update existing subscription
+          // Update existing subscription (avoid missing columns)
+          const updateData = {
+            p256dh: subscription.keys.p256dh,
+            auth: subscription.keys.auth,
+            updatedAt: new Date()
+            // Skip mobile and limited fields that don't exist in production DB yet
+          };
+          
           const updatedSubscription = await prisma.pushSubscription.update({
             where: { id: existingSubscription.id },
-            data: {
-              p256dh: subscription.keys.p256dh,
-              auth: subscription.keys.auth,
-              updatedAt: new Date(),
-              // Add mobile flags if this is a mobile subscription (skip limited field for now due to schema issues)
-              ...(isMobileBasic && { 
-                mobile: true
-              })
-            }
+            data: updateData
           });
           console.log(`[Push] User ${userId} subscription updated successfully`);
           return updatedSubscription;
@@ -95,19 +130,18 @@ class PushNotificationService {
         }
       }
 
-      // Create new subscription
+      // Create new subscription (avoid missing columns)
+      const createData = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9),
+        userId,
+        endpoint: subscription.endpoint,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth
+        // Skip mobile and limited fields that don't exist in production DB yet
+      };
+      
       const pushSubscription = await prisma.pushSubscription.create({
-        data: {
-          id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9),
-          userId,
-          endpoint: subscription.endpoint,
-          p256dh: subscription.keys.p256dh,
-          auth: subscription.keys.auth,
-          // Add mobile flags if this is a mobile subscription (skip limited field for now due to schema issues)
-          ...(isMobileBasic && { 
-            mobile: true
-          })
-        }
+        data: createData
       });
 
       console.log(`[Push] User ${userId} subscribed successfully (${isMobileBasic ? 'mobile basic' : 'full push'})`);
