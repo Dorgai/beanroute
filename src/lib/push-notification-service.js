@@ -456,7 +456,7 @@ class PushNotificationService {
 
       for (const role of targetRoles) {
         const result = await this.sendToRole(role, notification);
-        totalSent += result.sent;
+        totalSent += result.successful; // Fix: use 'successful' instead of 'sent'
         totalRecipients += result.total;
         results.push({ role, ...result });
       }
@@ -484,7 +484,7 @@ class PushNotificationService {
     return this.sendOrderNotification('STATUS_CHANGE', {
       orderId,
       oldStatus,
-      newStatus,
+      newStatus, // This is the key fix - making sure newStatus is passed correctly
       orderNumber: data.orderNumber || orderId.slice(-8),
       shopId: data.shopId,
       shopName: data.shopName || 'Shop',
