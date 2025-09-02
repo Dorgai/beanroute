@@ -152,48 +152,6 @@ export const usePushNotifications = () => {
     checkSupport();
   }, [user, getDeviceInfo]);
 
-  // Check subscription status when component mounts
-  useEffect(() => {
-    if (!user || !isSupported || !isConfigured || hasCheckedSubscription.current) {
-      return;
-    }
-    
-    console.log('[Push Hook] Component mounted, checking initial subscription status...');
-    checkSubscriptionStatus();
-  }, [user, isSupported, isConfigured]);
-
-  // Periodic subscription status check
-  useEffect(() => {
-    if (!user || !isSupported || !isConfigured) {
-      console.log('[Push Hook] Skipping periodic status check - missing requirements');
-      return;
-    }
-
-    console.log('[Push Hook] Setting up periodic subscription status check...');
-
-    // Check subscription status every 30 seconds to ensure it stays in sync
-    const intervalId = setInterval(async () => {
-      try {
-        // Double-check that user is still authenticated before making API call
-        if (!user) {
-          console.log('[Push Hook] User no longer authenticated, stopping periodic checks');
-          clearInterval(intervalId);
-          return;
-        }
-        
-        console.log('[Push Hook] Periodic subscription status check...');
-        await checkSubscriptionStatus();
-      } catch (error) {
-        console.warn('[Push Hook] Periodic status check failed:', error);
-      }
-    }, 30000); // 30 seconds
-
-    return () => {
-      console.log('[Push Hook] Cleaning up periodic status check');
-      clearInterval(intervalId);
-    };
-  }, [user, isSupported, isConfigured, checkSubscriptionStatus]);
-
   // Check subscription status
   const checkSubscriptionStatus = useCallback(async () => {
     if (!user || !isSupported) {
@@ -313,6 +271,48 @@ export const usePushNotifications = () => {
       setIsSubscribed(false);
     }
   }, [user, isSupported, getDeviceInfo]);
+
+  // Check subscription status when component mounts
+  useEffect(() => {
+    if (!user || !isSupported || !isConfigured || hasCheckedSubscription.current) {
+      return;
+    }
+    
+    console.log('[Push Hook] Component mounted, checking initial subscription status...');
+    checkSubscriptionStatus();
+  }, [user, isSupported, isConfigured, checkSubscriptionStatus]);
+
+  // Periodic subscription status check
+  useEffect(() => {
+    if (!user || !isSupported || !isConfigured) {
+      console.log('[Push Hook] Skipping periodic status check - missing requirements');
+      return;
+    }
+
+    console.log('[Push Hook] Setting up periodic subscription status check...');
+
+    // Check subscription status every 30 seconds to ensure it stays in sync
+    const intervalId = setInterval(async () => {
+      try {
+        // Double-check that user is still authenticated before making API call
+        if (!user) {
+          console.log('[Push Hook] User no longer authenticated, stopping periodic checks');
+          clearInterval(intervalId);
+          return;
+        }
+        
+        console.log('[Push Hook] Periodic subscription status check...');
+        await checkSubscriptionStatus();
+      } catch (error) {
+        console.warn('[Push Hook] Periodic status check failed:', error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => {
+      console.log('[Push Hook] Cleaning up periodic status check');
+      clearInterval(intervalId);
+    };
+  }, [user, isSupported, isConfigured, checkSubscriptionStatus]);
 
   // Request notification permission
   const requestPermission = useCallback(async () => {
