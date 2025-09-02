@@ -311,7 +311,12 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
   };
 
   return (
-    <Dialog open={open} onClose={() => onClose(false)} maxWidth="md">
+    <Dialog open={open} onClose={(event, reason) => {
+      // Only close if user clicks outside or presses escape
+      if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+        onClose(false);
+      }
+    }} maxWidth="md">
       <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>Create Order</DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
         <IconlessAlert severity="info" sx={{ mb: 3 }}>
