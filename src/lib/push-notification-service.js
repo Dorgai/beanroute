@@ -243,9 +243,9 @@ class PushNotificationService {
               await prisma.pushSubscription.delete({
                 where: { id: subscription.id }
               });
-              console.log(`[Push] Removed invalid subscription ${subscription.id}`);
+              console.log(`[Push] Removed expired subscription ${subscription.id} for user ${userId}`);
             } catch (deleteError) {
-              console.error(`[Push] Error removing invalid subscription ${subscription.id}:`, deleteError.message);
+              console.error(`[Push] Error removing expired subscription ${subscription.id}:`, deleteError.message);
               // Don't throw - continue with other subscriptions
             }
           }
@@ -371,9 +371,9 @@ class PushNotificationService {
               await prisma.pushSubscription.delete({
                 where: { id: subscription.id }
               });
-              console.log(`[Push] Removed invalid subscription ${subscription.id}`);
+              console.log(`[Push] Removed expired subscription ${subscription.id} for user ${userId}`);
             } catch (deleteError) {
-              console.error(`[Push] Error removing invalid subscription ${subscription.id}:`, deleteError.message);
+              console.error(`[Push] Error removing expired subscription ${subscription.id}:`, deleteError.message);
               // Don't throw - continue with other subscriptions
             }
           }
