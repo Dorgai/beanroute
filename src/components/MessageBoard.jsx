@@ -166,7 +166,7 @@ export default function MessageBoard() {
   return (
     <>
       {/* Message Board Toggle Button */}
-      <div className="fixed right-4 top-20 z-50">
+      <div className="fixed right-4 top-20 md:top-20 bottom-20 md:bottom-auto z-50">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-200"
