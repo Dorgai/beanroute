@@ -178,11 +178,13 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
 
   const handleSubmit = async () => {
     try {
+      console.log('[OrderDialog] Starting order submission...');
       setLoading(true);
       setError(null);
 
       // Validate shop selection
       if (!selectedShop) {
+        console.log('[OrderDialog] No shop selected');
         setError('Please select a shop');
         setLoading(false);
         return;
@@ -190,6 +192,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
 
       // Defensive check for orderItems
       if (!orderItems || typeof orderItems !== 'object') {
+        console.log('[OrderDialog] Invalid order items:', orderItems);
         setError('Invalid order data');
         setLoading(false);
         return;
@@ -212,7 +215,10 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           largeBags: parseInt(item.largeBags) || 0
         }));
 
+      console.log('[OrderDialog] Filtered items for order:', items);
+
       if (items.length === 0) {
+        console.log('[OrderDialog] No items with quantities found');
         setError('Please add at least one item to the order');
         setLoading(false);
         return;
@@ -221,12 +227,14 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       // Check for any validation errors before submitting
       const hasValidationErrors = Object.values(validationErrors).some(error => error !== null);
       if (hasValidationErrors) {
+        console.log('[OrderDialog] Validation errors found:', validationErrors);
         setError('Please correct the quantity errors before submitting');
         setLoading(false);
         return;
       }
 
       // Create the order with fast timeout and optimistic handling
+      console.log('[OrderDialog] Sending order request to API...');
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
@@ -277,14 +285,21 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
         throw new Error(errorMessage);
       }
 
-      console.log('Order created successfully, calling onClose(true)');
+      console.log('[OrderDialog] Order created successfully, calling onClose(true)');
+      
+      // Clear form data
+      setOrderItems({});
+      setComment('');
+      setValidationErrors({});
       setError(null); // Clear any previous errors
+      
       onClose(true); // Pass true to indicate successful order
     } catch (error) {
-      console.error('Error creating order:', error);
+      console.error('[OrderDialog] Error creating order:', error);
       setError(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
+      console.log('[OrderDialog] Loading state reset to false');
     }
   };
 

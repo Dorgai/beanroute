@@ -12,8 +12,16 @@ const InstallPWA = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [mobileInfo, setMobileInfo] = useState(null);
   const [mobileFeatures, setMobileFeatures] = useState(null);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
+    // Check if user previously dismissed the install prompt
+    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    if (dismissed === 'true') {
+      setIsDismissed(true);
+      return;
+    }
+
     // Detect mobile device and features
     const mobileInfo = detectMobileOS();
     const mobileFeatures = getMobileSpecificFeatures();
@@ -122,10 +130,14 @@ const InstallPWA = () => {
 
   const handleDismiss = () => {
     setShowInstallPrompt(false);
+    setDeferredPrompt(null);
+    setIsDismissed(true);
+    // Remember user's dismissal preference
+    localStorage.setItem('pwa-install-dismissed', 'true');
   };
 
-  // Don't show if already installed
-  if (isInstalled) {
+  // Don't show if already installed or dismissed
+  if (isInstalled || isDismissed) {
     return null;
   }
 
