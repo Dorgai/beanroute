@@ -199,10 +199,26 @@ const NotificationSettings = () => {
                 );
               } else {
                 return (
-                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-green-800">
-                      ✅ <strong>iOS PWA detected:</strong> Push notifications are now available! You can enable them below.
-                    </p>
+                  <div className="mt-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start">
+                      <div className="text-2xl mr-3">✅</div>
+                      <div>
+                        <p className="text-sm font-medium text-green-800 mb-2">
+                          <strong>iOS PWA Detected:</strong> Enhanced Support Available
+                        </p>
+                        <p className="text-sm text-green-700 mb-3">
+                          Great! You're running BeanRoute as a PWA. While iOS doesn't support background push notifications, 
+                          you'll receive notifications when the app is open and can check for updates manually.
+                        </p>
+                        <div className="text-xs text-green-600 bg-green-100 p-2 rounded">
+                          <strong>iOS PWA Notifications:</strong> 
+                          • Notifications appear when app is active<br/>
+                          • Periodic sync checks for updates<br/>
+                          • Enhanced notification center integration<br/>
+                          • Better reliability than Safari
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
               }
@@ -211,10 +227,24 @@ const NotificationSettings = () => {
             // Show PWA status for all devices
             if (isPWA) {
               return (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    📱 <strong>PWA Mode:</strong> You're running BeanRoute as an installed app. This provides the best experience for notifications.
-                  </p>
+                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start">
+                    <div className="text-2xl mr-3">📱</div>
+                    <div>
+                      <p className="text-sm font-medium text-blue-800 mb-2">
+                        <strong>PWA Mode:</strong> Enhanced Experience
+                      </p>
+                      <p className="text-sm text-blue-700 mb-3">
+                        You're running BeanRoute as an installed app. This provides the best experience for notifications and background sync.
+                      </p>
+                      {isIOS && (
+                        <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                          <strong>iOS Note:</strong> Notifications work when the app is active. For background updates, 
+                          the app will check for changes when you open it.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             }

@@ -228,72 +228,148 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     console.log('[SW] Push notification data:', data);
     
-    // Enhanced notification options for better mobile support
-    const notificationOptions = {
-      body: data.body || 'You have a new notification',
-      icon: data.icon || '/icons/icon-192x192.png',
-      badge: data.badge || '/icons/icon-72x72.png',
-      data: data.data || {},
-      tag: data.tag || 'default',
-      requireInteraction: data.requireInteraction || false,
-      silent: data.silent || false,
-      actions: data.actions || [
-        {
-          action: 'view',
-          title: 'View',
-          icon: '/icons/icon-72x72.png'
-        },
-        {
-          action: 'dismiss',
-          title: 'Dismiss'
-        }
-      ],
-      vibrate: data.vibrate || [200, 100, 200],
-      timestamp: Date.now(),
-      // Enhanced mobile-specific options
-      dir: 'auto',
-      lang: 'en',
-      renotify: true,
-      sticky: false,
-      // Mobile notification center optimization
-      image: data.image || null,
-      // Ensure notifications appear in mobile notification center
-      requireInteraction: data.requireInteraction || false,
-      // Mobile-specific vibration patterns
-      vibrate: data.vibrate || (navigator.userAgent.includes('Mobile') ? [200, 100, 200, 100, 200] : [200, 100, 200])
-    };
+    // Check if we're on iOS PWA (which has limited push support)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isPWA = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
     
-    // Show the notification
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'BeanRoute', notificationOptions)
-        .then(() => {
-          console.log('[SW] Notification displayed successfully');
-          
-          // Log notification display for analytics
-          if (data.notificationId) {
-            return fetch('/api/push/display', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                notificationId: data.notificationId,
-                timestamp: Date.now()
-              })
-            }).catch(error => {
-              console.error('[SW] Error logging notification display:', error);
-            });
+    if (isIOS && isPWA) {
+      console.log('[SW] iOS PWA detected - using enhanced notification options');
+      
+      // For iOS PWA, we need to ensure notifications are visible
+      const notificationOptions = {
+        body: data.body || 'You have a new notification',
+        icon: data.icon || '/icons/icon-192x192.png',
+        badge: data.badge || '/icons/icon-72x72.png',
+        data: data.data || {},
+        tag: data.tag || 'ios-pwa-notification',
+        requireInteraction: true, // iOS PWA needs this to ensure visibility
+        silent: false,
+        actions: [
+          {
+            action: 'view',
+            title: 'View',
+            icon: '/icons/icon-72x72.png'
+          },
+          {
+            action: 'dismiss',
+            title: 'Dismiss'
           }
-        })
-        .catch((error) => {
-          console.error('[SW] Error showing notification:', error);
-          
-          // Fallback notification
-          return self.registration.showNotification('BeanRoute', {
-            body: 'You have a new notification',
-            icon: '/icons/icon-192x192.png',
-            tag: 'fallback'
-          });
-        })
-    );
+        ],
+        vibrate: [200, 100, 200, 100, 200], // Enhanced vibration for iOS
+        timestamp: Date.now(),
+        // iOS-specific optimizations
+        dir: 'auto',
+        lang: 'en',
+        renotify: true,
+        sticky: true, // Make it harder to dismiss on iOS
+        // Ensure notification appears in iOS notification center
+        requireInteraction: true,
+        // iOS-specific vibration patterns
+        vibrate: [200, 100, 200, 100, 200]
+      };
+      
+      // Show the notification with iOS-specific handling
+      event.waitUntil(
+        self.registration.showNotification(data.title || 'BeanRoute', notificationOptions)
+          .then(() => {
+            console.log('[SW] iOS PWA notification displayed successfully');
+            
+            // Log notification display for analytics
+            if (data.notificationId) {
+              return fetch('/api/push/display', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  notificationId: data.notificationId,
+                  timestamp: Date.now(),
+                  platform: 'ios-pwa'
+                })
+              }).catch(error => {
+                console.error('[SW] Error logging iOS PWA notification display:', error);
+              });
+            }
+          })
+          .catch((error) => {
+            console.error('[SW] Error showing iOS PWA notification:', error);
+            
+            // Fallback notification for iOS PWA
+            return self.registration.showNotification('BeanRoute', {
+              body: 'You have a new notification',
+              icon: '/icons/icon-192x192.png',
+              tag: 'ios-pwa-fallback',
+              requireInteraction: true,
+              vibrate: [200, 100, 200]
+            });
+          })
+      );
+    } else {
+      // Standard notification handling for other platforms
+      const notificationOptions = {
+        body: data.body || 'You have a new notification',
+        icon: data.icon || '/icons/icon-192x192.png',
+        badge: data.badge || '/icons/icon-72x72.png',
+        data: data.data || {},
+        tag: data.tag || 'default',
+        requireInteraction: data.requireInteraction || false,
+        silent: data.silent || false,
+        actions: data.actions || [
+          {
+            action: 'view',
+            title: 'View',
+            icon: '/icons/icon-72x72.png'
+          },
+          {
+            action: 'dismiss',
+            title: 'Dismiss'
+          }
+        ],
+        vibrate: data.vibrate || [200, 100, 200],
+        timestamp: Date.now(),
+        // Enhanced mobile-specific options
+        dir: 'auto',
+        lang: 'en',
+        renotify: true,
+        sticky: false,
+        // Mobile notification center optimization
+        image: data.image || null,
+        // Ensure notifications appear in mobile notification center
+        requireInteraction: data.requireInteraction || false,
+        // Mobile-specific vibration patterns
+        vibrate: data.vibrate || (navigator.userAgent.includes('Mobile') ? [200, 100, 200, 100, 200] : [200, 100, 200])
+      };
+      
+      // Show the notification
+      event.waitUntil(
+        self.registration.showNotification(data.title || 'BeanRoute', notificationOptions)
+          .then(() => {
+            console.log('[SW] Notification displayed successfully');
+            
+            // Log notification display for analytics
+            if (data.notificationId) {
+              return fetch('/api/push/display', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  notificationId: data.notificationId,
+                  timestamp: Date.now()
+                })
+              }).catch(error => {
+                console.error('[SW] Error logging notification display:', error);
+              });
+            }
+          })
+          .catch((error) => {
+            console.error('[SW] Error showing notification:', error);
+            
+            // Fallback notification
+            return self.registration.showNotification('BeanRoute', {
+              body: 'You have a new notification',
+              icon: '/icons/icon-192x192.png',
+              tag: 'fallback'
+            });
+          })
+      );
+    }
   } catch (error) {
     console.error('[SW] Error processing push notification:', error);
     
@@ -470,10 +546,64 @@ self.addEventListener('periodicsync', (event) => {
     case 'inventory-sync':
       event.waitUntil(syncInventoryData());
       break;
+    case 'ios-notification-check':
+      event.waitUntil(checkIOSNotifications());
+      break;
     default:
       console.log('[SW] Unknown periodic sync tag:', event.tag);
   }
 });
+
+// iOS-specific notification handling
+async function checkIOSNotifications() {
+  console.log('[SW] iOS-specific notification check');
+  
+  try {
+    // Check if we're on iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isPWA = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+    
+    if (isIOS && isPWA) {
+      console.log('[SW] iOS PWA detected - using alternative notification method');
+      
+      // Check for new notifications from the server
+      const response = await fetch('/api/push/check-updates', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Platform': 'ios-pwa'
+        }
+      });
+      
+      if (response.ok) {
+        const updates = await response.json();
+        
+        if (updates.hasNewNotifications) {
+          // Show a local notification (this will work on iOS PWA)
+          await self.registration.showNotification('BeanRoute Update', {
+            body: 'You have new notifications or updates',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: 'ios-update',
+            requireInteraction: false,
+            silent: false,
+            // iOS-specific options
+            vibrate: [200, 100, 200],
+            data: {
+              url: '/orders',
+              timestamp: Date.now(),
+              platform: 'ios-pwa'
+            }
+          });
+          
+          console.log('[SW] iOS PWA notification displayed');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[SW] Error in iOS notification check:', error);
+  }
+}
 
 // Background sync functions
 async function syncPushSubscription() {
