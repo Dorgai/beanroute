@@ -1,59 +1,35 @@
 // Ultra-Simple Notification Settings Component
 import React, { useState, useEffect } from 'react';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 const NotificationSettings = () => {
-  const [loading, setLoading] = useState(true);
   const [testLoading, setTestLoading] = useState(false);
   const [testMessage, setTestMessage] = useState('');
-  const [isEnabled, setIsEnabled] = useState(false);
+  
+  // Use the proper push notifications hook
+  const {
+    isSupported,
+    isSubscribed,
+    loading,
+    error,
+    subscribe,
+    unsubscribe,
+    permission
+  } = usePushNotifications();
 
+  // Clear any error messages when subscription state changes
   useEffect(() => {
-    // Simple initialization without any complex logic
-    const timer = setTimeout(() => {
-      try {
-        if (typeof window !== 'undefined') {
-          // Check for iOS device
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-          
-          if (isIOS && isSafari) {
-            // iOS Safari has limited notification support
-            console.log('iOS Safari detected - limited notification support');
-            setIsEnabled(false); // iOS Safari doesn't support background notifications
-          } else if ('Notification' in window) {
-            // Check user's stored preference first
-            const storedPreference = localStorage.getItem('notifications-enabled');
-            if (storedPreference !== null) {
-              // User has a stored preference, use that
-              const preferenceEnabled = storedPreference === 'true';
-              const browserGranted = Notification.permission === 'granted';
-              // Only enable if both user preference AND browser permission are true
-              setIsEnabled(preferenceEnabled && browserGranted);
-            } else {
-              // No stored preference, use browser permission
-              const browserEnabled = Notification.permission === 'granted';
-              setIsEnabled(browserEnabled);
-              // Store initial preference
-              localStorage.setItem('notifications-enabled', browserEnabled.toString());
-            }
-          } else {
-            console.log('Notifications not supported in this browser');
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing notification settings:', error);
-      } finally {
-        setLoading(false);
-      }
-    }, 200);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    if (error) {
+      setTestMessage(`Error: ${error}`);
+    }
+  }, [error]);
 
   const handleToggleNotifications = async () => {
     try {
-      if (typeof window === 'undefined') {
-        setTestMessage('Not available in server-side rendering');
+      setTestMessage('');
+      
+      if (!isSupported) {
+        setTestMessage('Push notifications are not supported in this browser');
         return;
       }
 
@@ -66,43 +42,20 @@ const NotificationSettings = () => {
         setTestMessage('⚠️ Please add this app to your home screen first, then try enabling notifications from the installed app.');
         return;
       }
-      
-      if (!('Notification' in window)) {
-        setTestMessage('Notifications not supported in this browser');
-        return;
-      }
 
-      if (isEnabled) {
+      if (isSubscribed) {
         // User wants to disable notifications
-        setIsEnabled(false);
-        localStorage.setItem('notifications-enabled', 'false');
-        setTestMessage('Notifications disabled');
+        console.log('[NotificationSettings] Unsubscribing from push notifications...');
+        await unsubscribe();
+        setTestMessage('Push notifications disabled');
       } else {
         // User wants to enable notifications
-        if (Notification.permission === 'default') {
-          // Need to request permission first
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
-            setIsEnabled(true);
-            localStorage.setItem('notifications-enabled', 'true');
-            setTestMessage('Notifications enabled!');
-          } else {
-            setIsEnabled(false);
-            localStorage.setItem('notifications-enabled', 'false');
-            setTestMessage('Notifications blocked');
-          }
-        } else if (Notification.permission === 'granted') {
-          // Permission already granted, just enable
-          setIsEnabled(true);
-          localStorage.setItem('notifications-enabled', 'true');
-          setTestMessage('Notifications enabled!');
-        } else {
-          // Permission denied
-          setTestMessage('Notifications are blocked. Please enable them in your browser settings.');
-        }
+        console.log('[NotificationSettings] Subscribing to push notifications...');
+        await subscribe();
+        setTestMessage('Push notifications enabled! You will receive notifications for order updates.');
       }
     } catch (error) {
-      console.error('Error toggling notifications:', error);
+      console.error('[NotificationSettings] Error toggling notifications:', error);
       setTestMessage('Error: ' + error.message);
     }
   };
@@ -112,8 +65,8 @@ const NotificationSettings = () => {
     setTestMessage('');
     
     try {
-      if (typeof window === 'undefined') {
-        setTestMessage('Not available in server-side rendering');
+      if (!isSubscribed) {
+        setTestMessage('Please enable push notifications first');
         return;
       }
 
@@ -126,24 +79,28 @@ const NotificationSettings = () => {
         setTestMessage('⚠️ Please add this app to your home screen first, then try testing notifications from the installed app.');
         return;
       }
-      
-      if (!('Notification' in window)) {
-        setTestMessage('Notifications not supported');
-        return;
+
+      // Send test notification via API
+      console.log('[NotificationSettings] Sending test push notification...');
+      const response = await fetch('/api/push/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send test notification');
       }
 
-      if (Notification.permission === 'granted') {
-        new Notification('Test Notification', {
-          body: 'This is a test notification from BeanRoute',
-          icon: '/icons/icon-192x192.png'
-        });
-        setTestMessage('Test notification sent! Check your device.');
-      } else {
-        setTestMessage('Please enable notifications first');
-      }
+      const result = await response.json();
+      console.log('[NotificationSettings] Test notification result:', result);
+      
+      setTestMessage('Test push notification sent! Check your device notification center.');
     } catch (error) {
-      console.error('Error sending test notification:', error);
-      setTestMessage('Failed to send test: ' + error.message);
+      console.error('[NotificationSettings] Error sending test notification:', error);
+      setTestMessage('Failed to send test notification: ' + error.message);
     } finally {
       setTestLoading(false);
     }
@@ -180,9 +137,9 @@ const NotificationSettings = () => {
             <p className="text-sm text-gray-600">Current notification state</p>
           </div>
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-            isEnabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            isSubscribed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
           }`}>
-            {isEnabled ? 'Enabled' : 'Disabled'}
+            {isSubscribed ? 'Enabled' : 'Disabled'}
           </div>
         </div>
         
@@ -240,21 +197,25 @@ const NotificationSettings = () => {
           <div className="space-y-3">
             <button
               onClick={handleToggleNotifications}
+              disabled={loading}
               className={`w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white touch-manipulation ${
-                isEnabled
+                isSubscribed
                   ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <span className="mr-2">{isEnabled ? '🔕' : '🔔'}</span>
-              {isEnabled ? 'Disable Notifications' : 'Enable Notifications'}
+              <span className="mr-2">{isSubscribed ? '🔕' : '🔔'}</span>
+              {loading 
+                ? (isSubscribed ? 'Disabling...' : 'Enabling...') 
+                : (isSubscribed ? 'Disable Notifications' : 'Enable Notifications')
+              }
             </button>
 
             <button
               onClick={handleTestNotification}
-              disabled={!isEnabled || testLoading}
+              disabled={!isSubscribed || testLoading || loading}
               className={`w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 touch-manipulation ${
-                (!isEnabled || testLoading) && 'opacity-50 cursor-not-allowed'
+                (!isSubscribed || testLoading || loading) && 'opacity-50 cursor-not-allowed'
               }`}
             >
               {testLoading ? (
