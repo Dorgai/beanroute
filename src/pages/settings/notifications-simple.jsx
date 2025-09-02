@@ -155,6 +155,42 @@ export default function SimpleNotificationSettingsPage() {
             >
               Test VAPID Config
             </button>
+
+            <button
+              onClick={async () => {
+                try {
+                  // Test subscription API directly
+                  const mockSubscription = {
+                    endpoint: 'test://mock-endpoint',
+                    keys: {
+                      p256dh: 'test-p256dh-key',
+                      auth: 'test-auth-key'
+                    }
+                  };
+                  
+                  const response = await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      subscription: mockSubscription,
+                      userAgent: navigator.userAgent
+                    })
+                  });
+                  
+                  const data = await response.json();
+                  if (response.ok) {
+                    alert(`Subscription API works: ${JSON.stringify(data, null, 2)}`);
+                  } else {
+                    alert(`Subscription API error: ${JSON.stringify(data, null, 2)}`);
+                  }
+                } catch (error) {
+                  alert(`Error: ${error.message}`);
+                }
+              }}
+              className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 ml-2 mt-2"
+            >
+              Test Subscription API
+            </button>
           </div>
         </div>
       </div>

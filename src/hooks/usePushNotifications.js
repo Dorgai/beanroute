@@ -554,8 +554,29 @@ export const usePushNotifications = () => {
 
     } catch (err) {
       console.error('[Push Hook] Error subscribing:', err);
-      setError(err.message);
-      throw err;
+      console.error('[Push Hook] Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+        cause: err.cause
+      });
+      
+      // Provide more specific error messages
+      let errorMessage = err.message;
+      if (err.message.includes('VAPID')) {
+        errorMessage = 'VAPID configuration error. Please contact support.';
+      } else if (err.message.includes('permission')) {
+        errorMessage = 'Notification permission denied. Please enable notifications in your browser settings.';
+      } else if (err.message.includes('service worker')) {
+        errorMessage = 'Service worker error. Please refresh the page and try again.';
+      } else if (err.message.includes('network') || err.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (!errorMessage || errorMessage === 'Failed to subscribe') {
+        errorMessage = 'Failed to subscribe to push notifications. Please try again or contact support.';
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
