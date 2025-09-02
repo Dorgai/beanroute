@@ -1,7 +1,7 @@
-# FORCE RAILWAY REBUILD - Database migration fixes deployed
-# LAST UPDATE: 2025-01-28 16:00 - Added database migration step
-# UNIQUE ID: $(date +%s) - Force Railway rebuild
-# FORCE RESTART: Adding database migration step
+# FORCE RAILWAY REBUILD - Push notification database migration
+# LAST UPDATE: 2025-01-28 18:30 - Force push notification DB migration
+# UNIQUE ID: push-migration-20250102 - Force Railway rebuild
+# FORCE RESTART: Push notification database schema migration
 FROM node:18-alpine
 
 # Force rebuild by adding unique identifier
