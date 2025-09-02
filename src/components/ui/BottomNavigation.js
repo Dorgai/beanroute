@@ -122,7 +122,7 @@ export default function BottomNavigation() {
           },
           {
             label: 'Analytics',
-            href: '/dashboard',
+            href: '/analytics',
             show: true
           },
           {
