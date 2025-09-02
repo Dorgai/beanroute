@@ -408,7 +408,14 @@ export default function Layout({ children }) {
     <WakeLockManager />
     
     {/* Bottom Navigation for Mobile PWA */}
-    <BottomNavigation />
+    {(() => {
+      try {
+        return <BottomNavigation />;
+      } catch (error) {
+        console.error('[Layout] Error rendering BottomNavigation:', error);
+        return null;
+      }
+    })()}
   </div>
 );
 } 
