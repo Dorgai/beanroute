@@ -79,10 +79,9 @@ class PushNotificationService {
               p256dh: subscription.keys.p256dh,
               auth: subscription.keys.auth,
               updatedAt: new Date(),
-              // Add mobile flags if this is a mobile subscription
+              // Add mobile flags if this is a mobile subscription (skip limited field for now due to schema issues)
               ...(isMobileBasic && { 
-                mobile: true, 
-                limited: true 
+                mobile: true
               })
             }
           });
@@ -104,10 +103,9 @@ class PushNotificationService {
           endpoint: subscription.endpoint,
           p256dh: subscription.keys.p256dh,
           auth: subscription.keys.auth,
-          // Add mobile flags if this is a mobile subscription
+          // Add mobile flags if this is a mobile subscription (skip limited field for now due to schema issues)
           ...(isMobileBasic && { 
-            mobile: true, 
-            limited: true 
+            mobile: true
           })
         }
       });
@@ -177,9 +175,16 @@ class PushNotificationService {
     const prisma = new PrismaClient();
     
     try {
-      // Get user's active subscriptions
+      // Get user's active subscriptions (select only essential fields to avoid schema issues)
       const subscriptions = await prisma.pushSubscription.findMany({
-        where: { userId }
+        where: { userId },
+        select: {
+          id: true,
+          endpoint: true,
+          p256dh: true,
+          auth: true,
+          isActive: true
+        }
       });
 
       if (subscriptions.length === 0) {

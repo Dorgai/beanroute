@@ -10,12 +10,12 @@ export default function DebugPush() {
     return <div className="p-4">Access denied. Admin/Owner only.</div>;
   }
 
-  const runTest = async (testName, endpoint, data = {}) => {
+  const runTest = async (testName, endpoint, method = 'GET', data = null) => {
     setLoading(prev => ({ ...prev, [testName]: true }));
     try {
       const response = await fetch(endpoint, {
-        method: data ? 'POST' : 'GET',
-        headers: data ? { 'Content-Type': 'application/json' } : {},
+        method: method,
+        headers: method === 'POST' ? { 'Content-Type': 'application/json' } : {},
         body: data ? JSON.stringify(data) : undefined
       });
       
@@ -50,7 +50,7 @@ export default function DebugPush() {
         <div className="border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">1. VAPID Configuration</h2>
           <button
-            onClick={() => runTest('vapid', '/api/admin/debug-vapid')}
+            onClick={() => runTest('vapid', '/api/admin/debug-vapid', 'GET')}
             disabled={loading.vapid}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
           >
@@ -67,7 +67,7 @@ export default function DebugPush() {
         <div className="border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">2. Active Push Subscriptions</h2>
           <button
-            onClick={() => runTest('subscriptions', '/api/admin/debug-push-subscriptions')}
+            onClick={() => runTest('subscriptions', '/api/admin/debug-push-subscriptions', 'GET')}
             disabled={loading.subscriptions}
             className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
           >
@@ -84,7 +84,7 @@ export default function DebugPush() {
         <div className="border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">3. Test Push Notification</h2>
           <button
-            onClick={() => runTest('testPush', '/api/push/test')}
+            onClick={() => runTest('testPush', '/api/push/test', 'POST')}
             disabled={loading.testPush}
             className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 disabled:opacity-50"
           >
@@ -101,7 +101,7 @@ export default function DebugPush() {
         <div className="border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">4. Test Status Change Notification</h2>
           <button
-            onClick={() => runTest('testStatus', '/api/admin/test-status-push')}
+            onClick={() => runTest('testStatus', '/api/admin/test-status-push', 'POST')}
             disabled={loading.testStatus}
             className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 disabled:opacity-50"
           >
