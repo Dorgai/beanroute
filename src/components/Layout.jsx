@@ -6,6 +6,7 @@ import MessageBoard from './MessageBoard';
 import InstallPWA from './ui/InstallPWA';
 import BackgroundSyncManager from './ui/BackgroundSyncManager';
 import WakeLockManager from './ui/WakeLockManager';
+import BottomNavigation from './ui/BottomNavigation';
 // import { NotificationBanner } from './ui/NotificationBanner';
 
 
@@ -389,7 +390,7 @@ export default function Layout({ children }) {
       
       {/* Main content area */}
       <main className="flex-1">
-        <div className="mx-auto max-w-6xl py-4 md:py-8 px-4 ios-safe-area">
+        <div className="mx-auto max-w-6xl py-4 md:py-8 px-4 ios-safe-area pb-safe">
           {children}
         </div>
       </main>
@@ -405,6 +406,9 @@ export default function Layout({ children }) {
     
     {/* Wake Lock Manager for Android devices */}
     <WakeLockManager />
+    
+    {/* Bottom Navigation for Mobile PWA */}
+    <BottomNavigation />
   </div>
 );
 } 

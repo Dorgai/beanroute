@@ -50,6 +50,23 @@ body {
     z-index: 50;
   }
   
+  /* Bottom navigation for mobile PWA */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    z-index: 50;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Ensure content doesn't get hidden behind bottom navigation on mobile */
+  .pb-safe {
+    padding-bottom: 4rem;
+  }
+  
   /* Mobile-friendly tables */
   .mobile-table {
     display: block;
@@ -98,6 +115,16 @@ body {
   
   .pwa-header {
     padding-top: env(safe-area-inset-top);
+    
+  /* Bottom navigation spacing for PWA */
+  .pb-safe {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  
+  /* Ensure content doesn't get hidden behind bottom navigation */
+  main {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
   }
   
   .pwa-footer {

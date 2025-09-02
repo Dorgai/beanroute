@@ -21,7 +21,33 @@ module.exports = {
           900: '#001a40',
         },
       },
+      spacing: {
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'nav-height': '4rem',
+      },
+      zIndex: {
+        'nav': '50',
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.pb-safe': {
+          'padding-bottom': 'calc(4rem + env(safe-area-inset-bottom))',
+        },
+        '.bottom-nav': {
+          'position': 'fixed',
+          'bottom': '0',
+          'left': '0',
+          'right': '0',
+          'background': 'white',
+          'border-top': '1px solid #e5e7eb',
+          'z-index': '50',
+          'box-shadow': '0 -2px 10px rgba(0, 0, 0, 0.1)',
+        },
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 }; 

@@ -101,17 +101,63 @@ export default function DebugPush() {
         <div className="border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-2">4. Test Status Change Notification</h2>
           <button
-            onClick={() => runTest('testStatus', '/api/admin/test-status-push', 'POST')}
-            disabled={loading.testStatus}
+            onClick={() => runTest('testStatusPush', '/api/admin/test-status-push', 'POST')}
+            disabled={loading.testStatusPush}
             className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 disabled:opacity-50"
           >
-            {loading.testStatus ? 'Sending...' : 'Send Test Status Change'}
+            {loading.testStatusPush ? 'Sending...' : 'Send Test Status Change'}
           </button>
-          {results.testStatus && (
+          {results.testStatusPush && (
             <pre className="mt-2 p-2 bg-gray-100 rounded text-sm overflow-auto">
-              {JSON.stringify(results.testStatus, null, 2)}
+              {JSON.stringify(results.testStatusPush, null, 2)}
             </pre>
           )}
+        </div>
+
+        {/* Browser Console Test */}
+        <div className="border rounded-lg p-4">
+          <h2 className="text-lg font-semibold mb-2">5. Browser Console Test</h2>
+          <button
+            onClick={() => {
+              console.log('=== PUSH NOTIFICATION DEBUG TEST ===');
+              console.log('Service Worker:', 'serviceWorker' in navigator);
+              console.log('PushManager:', 'PushManager' in window);
+              console.log('Notification:', 'Notification' in window);
+              console.log('Permission:', Notification.permission);
+              
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(registration => {
+                  console.log('Service Worker Registration:', registration);
+                  console.log('Service Worker Controller:', navigator.serviceWorker.controller);
+                  return registration.pushManager.getSubscription();
+                }).then(subscription => {
+                  console.log('Push Subscription:', subscription);
+                  if (subscription) {
+                    console.log('Subscription Endpoint:', subscription.endpoint);
+                    console.log('Subscription Keys:', subscription.keys);
+                  }
+                }).catch(error => {
+                  console.error('Service Worker Error:', error);
+                });
+              }
+              
+              // Test local notification
+              if (Notification.permission === 'granted') {
+                new Notification('Test Local Notification', {
+                  body: 'This is a test notification from the browser console',
+                  icon: '/icons/icon-192x192.png'
+                });
+              }
+              
+              alert('Check the browser console for detailed push notification debug information');
+            }}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Run Browser Console Test
+          </button>
+          <p className="text-sm text-gray-600 mt-2">
+            Click this button to test push notification support directly in the browser console.
+          </p>
         </div>
       </div>
     </div>

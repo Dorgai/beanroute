@@ -218,6 +218,9 @@ async function handleStaticRequest(request) {
 // Push notification event handler
 self.addEventListener('push', (event) => {
   console.log('[SW] Push notification received:', event);
+  console.log('[SW] Push event data:', event.data);
+  console.log('[SW] Push event data type:', typeof event.data);
+  console.log('[SW] Push event data string:', event.data ? event.data.text() : 'No data');
   
   if (!event.data) {
     console.log('[SW] Push event without data');
@@ -229,8 +232,10 @@ self.addEventListener('push', (event) => {
     console.log('[SW] Push notification data:', data);
     
     // Check if we're on iOS PWA (which has limited push support)
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isPWA = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+    // Note: navigator.userAgent and window are not available in service worker context
+    // We'll use a simpler approach based on the data received
+    const isIOS = data.platform === 'ios-pwa' || data.mobile === true;
+    const isPWA = data.pwa === true;
     
     if (isIOS && isPWA) {
       console.log('[SW] iOS PWA detected - using enhanced notification options');
