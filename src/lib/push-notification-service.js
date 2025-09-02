@@ -239,10 +239,15 @@ class PushNotificationService {
           
           // Remove invalid subscriptions
           if (error.statusCode === 410) {
-            await prisma.pushSubscription.delete({
-              where: { id: subscription.id }
-            });
-            console.log(`[Push] Removed invalid subscription ${subscription.id}`);
+            try {
+              await prisma.pushSubscription.delete({
+                where: { id: subscription.id }
+              });
+              console.log(`[Push] Removed invalid subscription ${subscription.id}`);
+            } catch (deleteError) {
+              console.error(`[Push] Error removing invalid subscription ${subscription.id}:`, deleteError.message);
+              // Don't throw - continue with other subscriptions
+            }
           }
         }
       }
@@ -362,9 +367,15 @@ class PushNotificationService {
           
           // Remove invalid subscriptions
           if (error.statusCode === 410) {
-            await prisma.pushSubscription.delete({
-              where: { id: subscription.id }
-            });
+            try {
+              await prisma.pushSubscription.delete({
+                where: { id: subscription.id }
+              });
+              console.log(`[Push] Removed invalid subscription ${subscription.id}`);
+            } catch (deleteError) {
+              console.error(`[Push] Error removing invalid subscription ${subscription.id}:`, deleteError.message);
+              // Don't throw - continue with other subscriptions
+            }
           }
         }
       }

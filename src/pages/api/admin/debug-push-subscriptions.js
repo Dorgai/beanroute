@@ -17,9 +17,15 @@ export default async function handler(req, res) {
 
     console.log('[debug-push-subscriptions] Fetching push subscriptions...');
 
-    // Get all push subscriptions
+    // Get all push subscriptions (select only essential fields to avoid schema issues)
     const subscriptions = await prisma.pushSubscription.findMany({
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        endpoint: true,
+        isActive: true,
+        createdAt: true,
+        lastUsed: true,
         user: {
           select: {
             id: true,
