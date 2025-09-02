@@ -293,7 +293,16 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       setValidationErrors({});
       setError(null); // Clear any previous errors
       
-      onClose(true); // Pass true to indicate successful order
+      console.log('[OrderDialog] About to call onClose(true), onClose function:', typeof onClose);
+      if (typeof onClose === 'function') {
+        // Use setTimeout to ensure the success state is processed before closing
+        setTimeout(() => {
+          onClose(true); // Pass true to indicate successful order
+          console.log('[OrderDialog] onClose(true) called successfully');
+        }, 100);
+      } else {
+        console.error('[OrderDialog] onClose is not a function:', onClose);
+      }
     } catch (error) {
       console.error('[OrderDialog] Error creating order:', error);
       setError(error.message || 'An unexpected error occurred');
@@ -1504,14 +1513,18 @@ export default function RetailOrders() {
   };
 
   const handleCloseOrderDialog = (success) => {
-    console.log('handleCloseOrderDialog called with success:', success);
+    console.log('[handleCloseOrderDialog] Called with success:', success);
+    console.log('[handleCloseOrderDialog] Current orderDialogOpen state:', orderDialogOpen);
     setOrderDialogOpen(false);
+    console.log('[handleCloseOrderDialog] Set orderDialogOpen to false');
     if (success) {
+      console.log('[handleCloseOrderDialog] Success=true, refreshing data...');
       // Refresh data after successful order
       fetchData();
     }
     // Clear any error state when dialog is closed
     setError(null);
+    console.log('[handleCloseOrderDialog] Completed');
   };
   
   const handleOpenStatusDialog = (order) => {
