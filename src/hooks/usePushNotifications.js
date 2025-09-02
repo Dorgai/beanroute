@@ -71,15 +71,23 @@ export const usePushNotifications = () => {
         const hasPushManager = 'PushManager' in window;
         const hasNotification = 'Notification' in window;
         
-        // More lenient support check for mobile devices
-        let supported = hasNotification; // At minimum, we need basic notification support
+        // Check if running as PWA (standalone mode)
+        const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+        const isPWA = isStandalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
         
-        // For mobile devices, we'll be more lenient
+        console.log('[Push Hook] PWA detection:', { isStandalone, isPWA, displayMode: window.matchMedia('(display-mode: standalone)').matches });
+        
+        // More lenient support check for mobile devices and PWA
+        let supported = false;
+        
         if (isMobile) {
           console.log('[Push Hook] Mobile device detected - using lenient support check');
+          
           // Mobile devices need at least basic notifications
           if (hasNotification) {
             supported = true;
+            console.log('[Push Hook] Mobile device has basic notification support');
+            
             // If they have full push support, that's even better
             if (hasServiceWorker && hasPushManager) {
               console.log('[Push Hook] Mobile device has full push support');
@@ -87,16 +95,45 @@ export const usePushNotifications = () => {
               console.log('[Push Hook] Mobile device has basic notification support only');
             }
           }
+          
+          // PWA installation makes notifications more reliable
+          if (isPWA && hasNotification) {
+            supported = true;
+            console.log('[Push Hook] PWA detected - enabling notification support');
+          }
         } else {
           // Desktop devices need full push support
           supported = hasServiceWorker && hasPushManager && hasNotification;
+          console.log('[Push Hook] Desktop device - requiring full push support:', supported);
         }
         
         // For iOS, we'll allow basic notifications even if push isn't fully supported
         if (isIOS && hasNotification) {
           console.log('[Push Hook] iOS device - enabling basic notification support');
           supported = true;
+          
+          // PWA installation on iOS is especially important
+          if (isPWA) {
+            console.log('[Push Hook] iOS PWA detected - enhanced notification support');
+          }
         }
+        
+        // For Android, PWA installation improves reliability
+        if (isAndroid && isPWA && hasNotification) {
+          console.log('[Push Hook] Android PWA detected - enhanced notification support');
+          supported = true;
+        }
+        
+        console.log('[Push Hook] Final support determination:', { 
+          supported, 
+          isMobile, 
+          isIOS, 
+          isAndroid, 
+          isPWA, 
+          hasNotification, 
+          hasServiceWorker, 
+          hasPushManager 
+        });
         
         setIsSupported(supported);
         
@@ -410,9 +447,10 @@ export const usePushNotifications = () => {
       });
 
       // Check if we're on a mobile device
-      const { isMobile, isIOS } = getDeviceInfo();
+      const { isMobile, isIOS, isAndroid } = getDeviceInfo();
+      const isPWA = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
       
-      console.log('[Push Hook] Device info for subscription:', { isMobile, isIOS });
+      console.log('[Push Hook] Device info for subscription:', { isMobile, isIOS, isAndroid, isPWA });
       
       let pushSubscription = null;
       let registration = null;
@@ -487,13 +525,16 @@ export const usePushNotifications = () => {
           },
           userAgent: navigator.userAgent,
           mobile: true,
-          limited: true
+          limited: true,
+          pwa: isPWA
         };
       } else {
         // Normal push subscription
         subscriptionData = {
           subscription: pushSubscription.toJSON(),
-          userAgent: navigator.userAgent
+          userAgent: navigator.userAgent,
+          mobile: isMobile,
+          pwa: isPWA
         };
       }
       
@@ -524,6 +565,7 @@ export const usePushNotifications = () => {
           keys: { p256dh: 'mobile-basic', auth: 'mobile-basic' },
           mobile: true,
           limited: true,
+          pwa: isPWA,
           toJSON: () => ({
             endpoint: `mobile://${navigator.userAgent}`,
             keys: { p256dh: 'mobile-basic', auth: 'mobile-basic' }

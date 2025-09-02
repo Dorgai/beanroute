@@ -29,6 +29,28 @@ const NotificationSettings = () => {
       setTestMessage('');
       
       if (!isSupported) {
+        // Check if this is a mobile device with limited support
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isPWA = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+        
+        if (isMobile) {
+          if (isIOS) {
+            if (isPWA) {
+              setTestMessage('⚠️ iOS PWA detected but notifications still not supported. This is a known iOS limitation. You can still receive email notifications for order updates.');
+            } else {
+              setTestMessage('⚠️ iOS Safari doesn\'t support push notifications. Please add this app to your home screen first, then try enabling notifications from the installed app.');
+            }
+          } else {
+            if (isPWA) {
+              setTestMessage('⚠️ Android PWA detected but notifications still not supported. Try refreshing the page or check your browser settings.');
+            } else {
+              setTestMessage('⚠️ Your mobile browser has limited push notification support. Try using Chrome or Firefox, or add this app to your home screen.');
+            }
+          }
+          return;
+        }
+        
         setTestMessage('Push notifications are not supported in this browser');
         return;
       }
@@ -149,6 +171,7 @@ const NotificationSettings = () => {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
             const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
             const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+            const isPWA = isStandalone || window.matchMedia('(display-mode: standalone)').matches;
             
             if (isIOS && isSafari) {
               if (!isStandalone) {
@@ -183,6 +206,17 @@ const NotificationSettings = () => {
                   </div>
                 );
               }
+            }
+            
+            // Show PWA status for all devices
+            if (isPWA) {
+              return (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-800">
+                    📱 <strong>PWA Mode:</strong> You're running BeanRoute as an installed app. This provides the best experience for notifications.
+                  </p>
+                </div>
+              );
             }
           }
           return null;
