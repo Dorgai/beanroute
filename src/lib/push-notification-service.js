@@ -127,12 +127,37 @@ class PushNotificationService {
     const prisma = new PrismaClient();
     
     try {
+      // Try the full query first
       const subscription = await prisma.pushSubscription.findFirst({
         where: { userId }
       });
       return subscription;
     } catch (error) {
       console.error('[Push] Error getting user subscription:', error);
+      // If it's a column doesn't exist error, try a simpler query with explicit field selection
+      if (error.code === 'P2022') {
+        try {
+          console.log('[Push] Retrying with basic field selection due to missing columns...');
+          const subscription = await prisma.pushSubscription.findFirst({
+            where: { userId },
+            select: {
+              id: true,
+              userId: true,
+              endpoint: true,
+              p256dh: true,
+              auth: true,
+              isActive: true,
+              createdAt: true,
+              lastUsed: true
+              // Omit mobile and limited fields that don't exist in production DB yet
+            }
+          });
+          return subscription;
+        } catch (retryError) {
+          console.error('[Push] Retry also failed:', retryError);
+          throw retryError;
+        }
+      }
       throw error;
     } finally {
       await prisma.$disconnect();
