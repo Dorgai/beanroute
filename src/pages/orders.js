@@ -295,11 +295,9 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       
       console.log('[OrderDialog] About to call onClose(true), onClose function:', typeof onClose);
       if (typeof onClose === 'function') {
-        // Use setTimeout to ensure the success state is processed before closing
-        setTimeout(() => {
-          onClose(true); // Pass true to indicate successful order
-          console.log('[OrderDialog] onClose(true) called successfully');
-        }, 100);
+        // Close immediately after successful API response
+        onClose(true); // Pass true to indicate successful order
+        console.log('[OrderDialog] onClose(true) called successfully');
       } else {
         console.error('[OrderDialog] onClose is not a function:', onClose);
       }
@@ -696,9 +694,13 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       setApiResponse(null);
 
       // Log the order and status being submitted
-      console.log(`Submitting status update: Order ID ${order.id}, Status ${status} (attempt ${retryCount + 1})`);
+      console.log(`[StatusUpdateDialog] Submitting status update: Order ID ${order.id}, Status ${status} (attempt ${retryCount + 1})`);
 
-      // Add short timeout with fast optimistic success handling
+      // Close dialog immediately for better UX (optimistic UI)
+      console.log('[StatusUpdateDialog] Closing dialog immediately for better UX');
+      onClose(true, status);
+      
+      // Continue with API call in background
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
@@ -717,42 +719,45 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       clearTimeout(timeoutId);
 
       const responseData = await response.json();
-      console.log('Status update response:', responseData);
+      console.log('[StatusUpdateDialog] Status update response:', responseData);
       
       if (!response.ok) {
-        setApiResponse(responseData);
+        console.error('[StatusUpdateDialog] Status update failed:', responseData);
+        // Note: Dialog is already closed, so we can't show error in dialog
+        // Could implement toast notifications here if needed
         throw new Error(responseData.error || 'Failed to update order status');
       }
 
-      console.log('Order status updated successfully');
+      console.log('[StatusUpdateDialog] Order status updated successfully in background');
       
-      // Force a refresh of the data
+      // Force a refresh of the data after successful update
       if (typeof refreshData === 'function') {
         setTimeout(() => {
+          console.log('[StatusUpdateDialog] Refreshing data after successful status update');
           refreshData();
         }, 500);
       } else {
-        console.warn('refreshData is not a function, skipping refresh');
+        console.warn('[StatusUpdateDialog] refreshData is not a function, skipping refresh');
       }
-      
-      // Pass the updated status back to the parent component
-      console.log('Status update successful, calling onClose(true, status)');
-      onClose(true, status); // Pass true to indicate successful update along with the new status
     } catch (error) {
-      console.error('Error updating order status:', error);
+      console.error('[StatusUpdateDialog] Error updating order status:', error);
       
       if (error.name === 'AbortError') {
         // On timeout, assume success since database usually updates even when response is lost
-        console.log('Request timed out, but assuming success due to Railway infrastructure issues');
+        console.log('[StatusUpdateDialog] Request timed out, but assuming success due to Railway infrastructure issues');
         
-        // Close dialog immediately and refresh data
+        // Refresh data to get latest status (dialog is already closed)
         if (typeof refreshData === 'function') {
-          refreshData(); // Refresh to get latest status
+          setTimeout(() => {
+            console.log('[StatusUpdateDialog] Refreshing data after timeout (assuming success)');
+            refreshData();
+          }, 500);
         }
-        onClose(true, status); // Close as if successful
-        
       } else {
-        setError(error.message || 'An unexpected error occurred');
+        // For other errors, we could implement toast notifications since dialog is closed
+        console.error('[StatusUpdateDialog] Status update failed with error:', error.message);
+        // Note: Dialog is already closed, so we can't show error in dialog UI
+        // Future: Could implement toast notifications or global error handling here
       }
     } finally {
       setLoading(false);
