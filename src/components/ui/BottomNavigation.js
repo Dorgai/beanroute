@@ -1,29 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from '../../lib/session';
-import {
-  Home,
-  Inventory,
-  ShoppingCart,
-  Coffee,
-  Settings,
-  Dashboard,
-  BarChart3
-} from 'lucide-react';
 
 export default function BottomNavigation() {
   const router = useRouter();
   const { session } = useSession();
   const [isVisible, setIsVisible] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
-  const [pressedItem, setPressedItem] = useState(null);
-  const [error, setError] = useState(null);
-
-  // Error boundary - if anything goes wrong, don't crash the app
-  if (error) {
-    console.error('[BottomNavigation] Error:', error);
-    return null;
-  }
 
   useEffect(() => {
     try {
@@ -44,7 +27,7 @@ export default function BottomNavigation() {
       return () => window.removeEventListener('resize', checkPWA);
     } catch (err) {
       console.error('[BottomNavigation] useEffect error:', err);
-      setError(err);
+      return null;
     }
   }, []);
 
@@ -55,7 +38,7 @@ export default function BottomNavigation() {
       return () => clearTimeout(timer);
     } catch (err) {
       console.error('[BottomNavigation] Visibility timer error:', err);
-      setError(err);
+      return null;
     }
   }, []);
 
@@ -73,95 +56,84 @@ export default function BottomNavigation() {
     const isRetailer = user?.role === 'RETAILER';
     const isBarista = user?.role === 'BARISTA';
 
-  // Define navigation items based on user role
-  const getNavigationItems = () => {
-    const baseItems = [
-      {
-        label: 'Home',
-        icon: Home,
-        href: '/dashboard',
-        show: true
+    // Define navigation items based on user role
+    const getNavigationItems = () => {
+      const baseItems = [
+        {
+          label: 'Home',
+          href: '/dashboard',
+          show: true
+        }
+      ];
+
+      if (isRoaster) {
+        // Roaster sees: Orders, Pending Orders Summary
+        return [
+          ...baseItems,
+          {
+            label: 'Orders',
+            href: '/orders',
+            show: true
+          },
+          {
+            label: 'Pending',
+            href: '/orders?tab=pending',
+            show: true
+          },
+          {
+            label: 'Coffee',
+            href: '/coffee',
+            show: true
+          }
+        ];
+      } else if (isRetailer || isBarista) {
+        // Retailer/Barista sees: Inventory, Orders, Coffee
+        return [
+          ...baseItems,
+          {
+            label: 'Inventory',
+            href: '/orders?tab=inventory',
+            show: true
+          },
+          {
+            label: 'Orders',
+            href: '/orders?tab=orders',
+            show: true
+          },
+          {
+            label: 'Coffee',
+            href: '/coffee',
+            show: true
+          }
+        ];
+      } else if (isAdmin || isOwner) {
+        // Admin/Owner sees: Dashboard, Orders, Coffee, Settings
+        return [
+          ...baseItems,
+          {
+            label: 'Orders',
+            href: '/orders',
+            show: true
+          },
+          {
+            label: 'Coffee',
+            href: '/coffee',
+            show: true
+          },
+          {
+            label: 'Settings',
+            href: '/settings',
+            show: true
+          }
+        ];
       }
-    ];
 
-    if (isRoaster) {
-      // Roaster sees: Orders, Pending Orders Summary
-      return [
-        ...baseItems,
-        {
-          label: 'Orders',
-          icon: ShoppingCart,
-          href: '/orders',
-          show: true
-        },
-        {
-          label: 'Pending',
-          icon: BarChart3,
-          href: '/orders?tab=pending',
-          show: true
-        },
-        {
-          label: 'Coffee',
-          icon: Coffee,
-          href: '/coffee',
-          show: true
-        }
-      ];
-    } else if (isRetailer || isBarista) {
-      // Retailer/Barista sees: Inventory, Orders, Coffee
-      return [
-        ...baseItems,
-        {
-          label: 'Inventory',
-          icon: Inventory,
-          href: '/orders?tab=inventory',
-          show: true
-        },
-        {
-          label: 'Orders',
-          icon: ShoppingCart,
-          href: '/orders?tab=orders',
-          show: true
-        },
-        {
-          label: 'Coffee',
-          icon: Coffee,
-          href: '/coffee',
-          show: true
-        }
-      ];
-    } else if (isAdmin || isOwner) {
-      // Admin/Owner sees: Dashboard, Orders, Coffee, Settings
-      return [
-        ...baseItems,
-        {
-          label: 'Orders',
-          icon: ShoppingCart,
-          href: '/orders',
-          show: true
-        },
-        {
-          label: 'Coffee',
-          icon: Coffee,
-          href: '/coffee',
-          show: true
-        },
-        {
-          label: 'Settings',
-          icon: Settings,
-          href: '/settings',
-          show: true
-        }
-      ];
-    }
-
-    // Default for unauthenticated users
-    return baseItems;
-  };
+      // Default for unauthenticated users
+      return baseItems;
+    };
 
   } catch (err) {
     console.error('[BottomNavigation] Error in navigation logic:', err);
-    setError(err);
     return null;
   }
 
@@ -207,7 +179,6 @@ export default function BottomNavigation() {
       }
     } catch (err) {
       console.error('[BottomNavigation] Navigation error:', err);
-      setError(err);
     }
   };
 
@@ -225,18 +196,17 @@ export default function BottomNavigation() {
     >
       <div className="flex justify-around items-center h-16 px-2">
         {navigationItems.map((item) => {
-          const IconComponent = item.icon;
           const active = isActive(item.href);
           
           return (
             <button
               key={item.href}
               onClick={() => handleNavigation(item.href)}
-              onTouchStart={() => setPressedItem(item.href)}
-              onTouchEnd={() => setPressedItem(null)}
-              onMouseDown={() => setPressedItem(item.href)}
-              onMouseUp={() => setPressedItem(null)}
-              onMouseLeave={() => setPressedItem(null)}
+              onTouchStart={() => {}}
+              onTouchEnd={() => {}}
+              onMouseDown={() => {}}
+              onMouseUp={() => {}}
+              onMouseLeave={() => {}}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -251,15 +221,17 @@ export default function BottomNavigation() {
                 active 
                   ? 'text-blue-600 bg-blue-50' 
                   : 'text-gray-600 hover:text-blue-500 hover:bg-gray-50'
-              } ${
-                pressedItem === item.href ? 'scale-95 bg-gray-100' : ''
               }`}
               style={{ minHeight: '44px' }} // Ensure touch target size
             >
-              <IconComponent 
-                size={20} 
-                className={`mb-1 ${active ? 'text-blue-600' : 'text-gray-500'}`}
-              />
+              <span className="text-lg mb-1">
+                {item.label === 'Home' && '🏠'}
+                {item.label === 'Inventory' && '📦'}
+                {item.label === 'Orders' && '🛒'}
+                {item.label === 'Coffee' && '☕'}
+                {item.label === 'Settings' && '⚙️'}
+                {item.label === 'Pending' && '📊'}
+              </span>
               <span className={`text-xs font-medium truncate max-w-full px-1 ${
                 active ? 'text-blue-600' : 'text-gray-600'
               }`}>
