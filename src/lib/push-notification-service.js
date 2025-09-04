@@ -392,8 +392,16 @@ class PushNotificationService {
     const prisma = new PrismaClient();
     
     try {
-      // Get all active subscriptions
-      const subscriptions = await prisma.pushSubscription.findMany();
+      // Get all active subscriptions (select only essential fields to avoid schema issues)
+      const subscriptions = await prisma.pushSubscription.findMany({
+        select: {
+          id: true,
+          endpoint: true,
+          p256dh: true,
+          auth: true,
+          isActive: true
+        }
+      });
 
       if (subscriptions.length === 0) {
         console.log('[Push] No subscriptions found');
