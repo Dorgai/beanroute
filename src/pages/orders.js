@@ -30,6 +30,8 @@ import {
   CircularProgress,
   Tooltip,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -394,8 +396,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                     if (!coffee || !coffee.id) return null;
                     
                     const pendingData = pendingOrdersData[coffee.id];
-                    const pendingEspressoBags = pendingData ? pendingData.totalEspressoBags : 0;
-                    const pendingFilterBags = pendingData ? pendingData.totalFilterBags : 0;
+                    const pendingEspressoBags = pendingData ? pendingData.smallBagsEspresso : 0;
+                    const pendingFilterBags = pendingData ? pendingData.smallBagsFilter : 0;
                     
                     // Calculate real-time available quantity
                     const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
@@ -1004,6 +1006,7 @@ export default function RetailOrders() {
   const [alertMessage, setAlertMessage] = useState(null);
   const [allPendingOrders, setAllPendingOrders] = useState([]);
   const [allPendingOrdersLoading, setAllPendingOrdersLoading] = useState(false);
+  const [pendingOrdersViewMode, setPendingOrdersViewMode] = useState('shop'); // 'shop' or 'aggregated'
   const [haircutPercentage, setHaircutPercentage] = useState(15); // Default to 15%
   
   // Check user role for conditional UI elements
@@ -1672,8 +1675,6 @@ export default function RetailOrders() {
                 shopDetails={selectedShopDetails} 
                 sx={{ 
                   mb: 3,
-                  border: '2px solid #e0e0e0',
-                  boxShadow: '0px 4px 12px rgba(0,0,0,0.15)',
                   borderRadius: '8px',
                 }}
               />
@@ -2309,13 +2310,43 @@ export default function RetailOrders() {
                 <IconlessAlert severity="info">No pending orders found across any shops</IconlessAlert>
               ) : (
                 <>
-                  <Typography variant="h6" gutterBottom>
-                    Summary of All Pending Orders Across Shops
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    This table summarizes all pending orders from all shops, grouped by coffee type.
-                  </Typography>
-                  <PendingOrdersSummary orders={allPendingOrders} showShopInfo={false} hideHeader={true} aggregateAcrossShops={true} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <div>
+                      <Typography variant="h6" gutterBottom>
+                        {pendingOrdersViewMode === 'shop' ? 'Summary by Shop' : 'Aggregated Summary'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {pendingOrdersViewMode === 'shop' 
+                          ? 'This table shows pending orders broken down by shop and coffee type.'
+                          : 'This table summarizes all pending orders across all shops, grouped by coffee type.'
+                        }
+                      </Typography>
+                    </div>
+                    <ToggleButtonGroup
+                      value={pendingOrdersViewMode}
+                      exclusive
+                      onChange={(event, newMode) => {
+                        if (newMode !== null) {
+                          setPendingOrdersViewMode(newMode);
+                        }
+                      }}
+                      size="small"
+                      sx={{ ml: 2 }}
+                    >
+                      <ToggleButton value="shop">
+                        By Shop
+                      </ToggleButton>
+                      <ToggleButton value="aggregated">
+                        Aggregated
+                      </ToggleButton>
+                    </ToggleButtonGroup>
+                  </Box>
+                  <PendingOrdersSummary 
+                    orders={allPendingOrders} 
+                    showShopInfo={pendingOrdersViewMode === 'shop'} 
+                    hideHeader={true} 
+                    aggregateAcrossShops={pendingOrdersViewMode === 'aggregated'} 
+                  />
                 </>
               )}
             </Box>

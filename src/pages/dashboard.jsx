@@ -89,13 +89,13 @@ function Dashboard() {
       </Head>
 
       <div className="py-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">
           Overview of your user management system
         </p>
 
         {error && (
-          <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-md">
+          <div className="mt-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md">
             {error}
           </div>
         )}
@@ -103,7 +103,7 @@ function Dashboard() {
         <div className="mt-6">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {/* Total Users Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
@@ -113,19 +113,19 @@ function Dashboard() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                         Total Users
                       </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
+                      <dd className="text-3xl font-semibold text-gray-900 dark:text-white dark:text-white">
                         {stats.totalUsers}
                       </dd>
                     </dl>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50 px-4 py-4 sm:px-6">
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-4 sm:px-6">
                 <div className="text-sm">
-                  <Link href="/users" className="font-medium text-blue-600 hover:text-blue-500">
+                  <Link href="/users" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300">
                     View all users
                   </Link>
                 </div>
@@ -133,7 +133,7 @@ function Dashboard() {
             </div>
 
             {/* Active Users Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-green-500 rounded-md p-3">
@@ -143,19 +143,19 @@ function Dashboard() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                         Active Users
                       </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
+                      <dd className="text-3xl font-semibold text-gray-900 dark:text-white">
                         {stats.activeUsers}
                       </dd>
                     </dl>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50 px-4 py-4 sm:px-6">
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-4 sm:px-6">
                 <div className="text-sm">
-                  <Link href="/users?status=ACTIVE" className="font-medium text-blue-600 hover:text-blue-500">
+                  <Link href="/users?status=ACTIVE" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300">
                     View active users
                   </Link>
                 </div>
@@ -163,7 +163,7 @@ function Dashboard() {
             </div>
 
             {/* Inactive Users Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-red-500 rounded-md p-3">
@@ -173,19 +173,19 @@ function Dashboard() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                         Inactive Users
                       </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
+                      <dd className="text-3xl font-semibold text-gray-900 dark:text-white">
                         {stats.inactiveUsers}
                       </dd>
                     </dl>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50 px-4 py-4 sm:px-6">
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-4 sm:px-6">
                 <div className="text-sm">
-                  <Link href="/users?status=INACTIVE" className="font-medium text-blue-600 hover:text-blue-500">
+                  <Link href="/users?status=INACTIVE" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300">
                     View inactive users
                   </Link>
                 </div>
@@ -193,7 +193,7 @@ function Dashboard() {
             </div>
 
             {/* Shops Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-purple-500 rounded-md p-3">
@@ -203,19 +203,19 @@ function Dashboard() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                         Total Shops
                       </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
+                      <dd className="text-3xl font-semibold text-gray-900 dark:text-white">
                         {stats.totalShops || 0}
                       </dd>
                     </dl>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50 px-4 py-4 sm:px-6">
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-4 sm:px-6">
                 <div className="text-sm">
-                  <Link href="/shops" className="font-medium text-blue-600 hover:text-blue-500">
+                  <Link href="/shops" className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300">
                     View all shops
                   </Link>
                 </div>
@@ -226,13 +226,13 @@ function Dashboard() {
 
         {/* Quick Actions */}
         <div className="mt-8">
-          <h2 className="text-lg font-medium text-gray-900">Quick Actions</h2>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white dark:text-white">Quick Actions</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {(user?.role === 'ADMIN' || user?.role === 'OWNER') && (
-              <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
                 <div className="p-5">
-                  <h3 className="text-lg font-medium text-gray-900">Create New User</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">Create New User</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Add a new user to the system with appropriate role
                   </p>
                   <div className="mt-4">
@@ -248,10 +248,10 @@ function Dashboard() {
             )}
 
             {(user?.role === 'ADMIN' || user?.role === 'OWNER') && (
-              <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
                 <div className="p-5">
-                  <h3 className="text-lg font-medium text-gray-900">Inventory Alerts</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">Inventory Alerts</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Manage inventory alert settings and view alert history
                   </p>
                   <div className="mt-4">
@@ -267,10 +267,10 @@ function Dashboard() {
             )}
 
             {(user?.role === 'ADMIN' || user?.role === 'OWNER' || user?.role === 'RETAILER') && (
-              <div className="bg-white shadow rounded-lg overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
                 <div className="p-5">
-                  <h3 className="text-lg font-medium text-gray-900">Create New Shop</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">Create New Shop</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Create a new coffee shop and set minimum coffee quantities
                   </p>
                   <div className="mt-4">
@@ -285,10 +285,10 @@ function Dashboard() {
               </div>
             )}
 
-            <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
               <div className="p-5">
-                <h3 className="text-lg font-medium text-gray-900">View Your Profile</h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">View Your Profile</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Check your profile information and activity history
                 </p>
                 <div className="mt-4">

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Typography, LinearProgress, Alert, Paper } from '@mui/material';
+import { Box, Typography, LinearProgress, Alert } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
+import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * Component to display a summary of shop stock levels with progress bars
@@ -11,6 +12,8 @@ import ErrorIcon from '@mui/icons-material/Error';
  * @param {Object} props.sx - Custom sx styling to be passed to the Paper component
  */
 export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
+  const { isDark } = useTheme();
+  
   console.log('ShopStockSummary RENDERING with:', {
     inventoryExists: !!inventory,
     inventoryArray: Array.isArray(inventory),
@@ -89,23 +92,18 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
   };
 
   return (
-    <Paper 
-      elevation={showCritical ? 8 : hasWarning ? 6 : 2} 
+    <Box 
       sx={{ 
         p: 3, 
-        borderLeft: showCritical ? '8px solid #ff1744' : hasWarning ? '8px solid #ff9100' : '1px solid #e0e0e0',
         borderRadius: '4px',
-        boxShadow: showCritical ? '0px 6px 16px rgba(255,23,68,0.3)' : 
-                   hasWarning ? '0px 4px 14px rgba(255,145,0,0.3)' : 
-                   '0px 2px 4px rgba(0,0,0,0.1)',
-        backgroundColor: '#ffffff',
+        backgroundColor: 'transparent',
         ...sx 
       }}
     >
       <Typography variant="subtitle1" sx={{ 
         fontWeight: 'bold', 
         mb: 2, 
-        color: '#333333',
+        color: isDark ? '#f3f4f6' : '#333333',
         fontSize: '0.9rem',
         textShadow: showCritical || hasWarning ? '0px 0px 1px rgba(0,0,0,0.1)' : 'none'
       }}>
@@ -129,7 +127,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
         <>
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem' }}>Small Bags</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Small Bags</Typography>
               <Typography variant="body2" sx={{ 
                 fontWeight: 'bold', 
                 color: getTextColor(totalSmallBags, minSmallBags, smallBagsPercentage),
@@ -164,7 +162,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
           
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem' }}>Large Bags</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Large Bags</Typography>
               <Typography variant="body2" sx={{ 
                 fontWeight: 'bold', 
                 color: getTextColor(totalLargeBags, minLargeBags, largeBagsPercentage),
@@ -198,6 +196,6 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
           </Box>
         </>
       )}
-    </Paper>
+    </Box>
   );
 } 

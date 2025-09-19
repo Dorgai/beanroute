@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Push Notifications Locally</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Push Notification Debug Tool</h1>
+    
+    <div id="status"></div>
+    
+    <button onclick="checkServiceWorker()">Check Service Worker</button>
+    <button onclick="checkPermissions()">Check Permissions</button>
+    <button onclick="subscribeToPush()">Subscribe to Push</button>
+    <button onclick="testNotification()">Test Local Notification</button>
+    <button onclick="testServerNotification()">Test Server Notification</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logsDiv.appendChild(logEntry);
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function checkServiceWorker() {
+            log('Checking service worker registration...');
+            
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        log(`Found ${registrations.length} service worker(s) registered`, 'success');
+                        registrations.forEach((reg, index) => {
+                            log(`SW ${index + 1}: ${reg.scope} (${reg.active ? 'active' : 'inactive'})`, 'info');
+                        });
+                    } else {
+                        log('No service workers registered', 'error');
+                    }
+                });
+            } else {
+                log('Service Worker not supported', 'error');
+            }
+        }
+        
+        function checkPermissions() {
+            log('Checking notification permissions...');
+            
+            if ('Notification' in window) {
+                const permission = Notification.permission;
+                log(`Notification permission: ${permission}`, permission === 'granted' ? 'success' : 'error');
+                
+                if (permission === 'default') {
+                    log('Requesting notification permission...', 'info');
+                    Notification.requestPermission().then(permission => {
+                        log(`Permission result: ${permission}`, permission === 'granted' ? 'success' : 'error');
+                    });
+                }
+            } else {
+                log('Notifications not supported', 'error');
+            }
+        }
+        
+        function subscribeToPush() {
+            log('Attempting to subscribe to push notifications...');
+            
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                log('Push messaging not supported', 'error');
+                return;
+            }
+            
+            // Get the public key from the server
+            fetch('/api/push/config')
+                .then(response => response.json())
+                .then(config => {
+                    if (!config.configured) {
+                        log('Push notifications not configured on server', 'error');
+                        return;
+                    }
+                    
+                    log(`Using public key: ${config.publicKey.substring(0, 20)}...`, 'info');
+                    
+                    // Subscribe to push notifications
+                    navigator.serviceWorker.ready.then(registration => {
+                        return registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(config.publicKey)
+                        });
+                    }).then(subscription => {
+                        log('Push subscription successful!', 'success');
+                        log(`Subscription endpoint: ${subscription.endpoint.substring(0, 50)}...`, 'info');
+                        
+                        // Send subscription to server
+                        return fetch('/api/push/subscribe', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                subscription: subscription,
+                                userAgent: navigator.userAgent
+                            })
+                        });
+                    }).then(response => response.json())
+                    .then(result => {
+                        log(`Server response: ${JSON.stringify(result)}`, 'success');
+                    }).catch(error => {
+                        log(`Push subscription failed: ${error.message}`, 'error');
+                    });
+                })
+                .catch(error => {
+                    log(`Failed to get push config: ${error.message}`, 'error');
+                });
+        }
+        
+        function testNotification() {
+            log('Testing local notification...');
+            
+            if (Notification.permission === 'granted') {
+                const notification = new Notification('Test Notification', {
+                    body: 'This is a test notification from the browser',
+                    icon: '/icons/icon-192x192.png',
+                    tag: 'test-local'
+                });
+                
+                notification.onclick = () => {
+                    log('Local notification clicked', 'info');
+                    notification.close();
+                };
+                
+                log('Local notification sent', 'success');
+            } else {
+                log('Notification permission not granted', 'error');
+            }
+        }
+        
+        function testServerNotification() {
+            log('Testing server notification...');
+            
+            fetch('/api/push/test-simple', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                log(`Server test result: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+            })
+            .catch(error => {
+                log(`Server test failed: ${error.message}`, 'error');
+            });
+        }
+        
+        // Utility function to convert VAPID key
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+            
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+        
+        // Auto-run checks on page load
+        window.addEventListener('load', () => {
+            log('Push notification debug tool loaded', 'info');
+            checkServiceWorker();
+            checkPermissions();
+        });
+        
+        // Listen for service worker messages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                log(`Service Worker message: ${JSON.stringify(event.data)}`, 'info');
+            });
+        }
+    </script>
+</body>
+</html>

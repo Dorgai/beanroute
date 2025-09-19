@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme Test - Simple</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .test-container {
+            padding: 20px;
+            border: 2px solid #ccc;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .light-theme {
+            background-color: white;
+            color: black;
+        }
+        .dark-theme {
+            background-color: #1f2937;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Theme Test Page</h1>
+    
+    <div class="test-container light-theme">
+        <h2>Light Theme (CSS Classes)</h2>
+        <p>This should be white background with black text</p>
+    </div>
+    
+    <div class="test-container dark-theme">
+        <h2>Dark Theme (CSS Classes)</h2>
+        <p>This should be dark background with white text</p>
+    </div>
+    
+    <div class="test-container bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+        <h2>Tailwind Dark Mode Test</h2>
+        <p>This should change based on the 'dark' class on html element</p>
+        <p>Current HTML classes: <span id="html-classes"></span></p>
+    </div>
+    
+    <div class="test-container">
+        <h2>Controls</h2>
+        <button onclick="toggleTheme()" style="padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Toggle Dark Mode
+        </button>
+        <button onclick="setLight()" style="padding: 10px 20px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Set Light
+        </button>
+        <button onclick="setDark()" style="padding: 10px 20px; margin: 5px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Set Dark
+        </button>
+    </div>
+    
+    <div class="test-container">
+        <h2>Debug Info</h2>
+        <p>HTML Element Classes: <span id="debug-classes"></span></p>
+        <p>LocalStorage Theme: <span id="debug-storage"></span></p>
+        <p>System Preference: <span id="debug-system"></span></p>
+    </div>
+
+    <script>
+        function updateDebugInfo() {
+            document.getElementById('html-classes').textContent = document.documentElement.className;
+            document.getElementById('debug-classes').textContent = document.documentElement.className;
+            document.getElementById('debug-storage').textContent = localStorage.getItem('theme') || 'none';
+            document.getElementById('debug-system').textContent = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            updateDebugInfo();
+        }
+        
+        function setLight() {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            updateDebugInfo();
+        }
+        
+        function setDark() {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            updateDebugInfo();
+        }
+        
+        // Initialize
+        updateDebugInfo();
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else if (savedTheme === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            // Use system preference
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            }
+        }
+        
+        updateDebugInfo();
+    </script>
+</body>
+</html>
+

@@ -253,7 +253,7 @@ export default function RetailOrderDialog({ open, onClose }) {
           <TabPanel key={grade} value={currentTab} index={index}>
             {availableCoffee[grade].map((coffee) => {
               const pendingData = pendingOrdersData[coffee.id];
-              const pendingSmallBags = pendingData ? pendingData.totalSmallBags : 0;
+              const pendingSmallBags = pendingData ? pendingData.smallBags : 0;
               
               return (
                 <Box key={coffee.id} sx={{ mb: 2, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>

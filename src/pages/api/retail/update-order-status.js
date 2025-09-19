@@ -3,6 +3,95 @@ import { getServerSession } from '@/lib/session';
 import { verifyRequestAndGetUser } from '@/lib/auth';
 import orderEmailService from '@/lib/order-email-service';
 import pushNotificationService from '@/lib/push-notification-service';
+import { getHaircutPercentage } from '@/lib/haircut-service';
+
+/**
+ * Handle green coffee stock adjustments when orders are cancelled
+ * When an order is cancelled, we need to restore the green coffee stock
+ * that was consumed when the order was created (including the haircut)
+ */
+async function handleGreenCoffeeStockAdjustments(tx, order, newStatus) {
+  const oldStatus = order.status;
+  
+  // Only adjust stock when cancelling an order
+  if (newStatus !== 'CANCELLED') {
+    console.log(`[green-coffee-stock] No stock adjustment needed for status change: ${oldStatus} -> ${newStatus}`);
+    return;
+  }
+  
+  console.log(`[green-coffee-stock] Order ${order.id} being cancelled - restoring green coffee stock`);
+  
+  try {
+    // Get current haircut percentage
+    const haircutPercentage = await getHaircutPercentage(tx);
+    const haircutMultiplier = 1 + (haircutPercentage / 100);
+    
+    console.log(`[green-coffee-stock] Using haircut percentage: ${haircutPercentage}% (multiplier: ${haircutMultiplier})`);
+    
+    // Process each item in the cancelled order
+    const stockAdjustmentPromises = order.items.map(async (item) => {
+      try {
+        // Calculate the total green coffee consumption that was originally deducted
+        const totalGreenConsumption = (item.totalQuantity || 0) * haircutMultiplier;
+        const haircutAmount = (item.totalQuantity || 0) * (haircutPercentage / 100);
+        
+        console.log(`[green-coffee-stock] Restoring coffee ${item.coffeeId}:`);
+        console.log(`  - Retail quantity: ${item.totalQuantity || 0}kg`);
+        console.log(`  - Haircut amount: ${haircutAmount.toFixed(2)}kg`);
+        console.log(`  - Total green consumption to restore: ${totalGreenConsumption.toFixed(2)}kg`);
+        
+        // Restore the green coffee stock (increment by the amount that was originally decremented)
+        await tx.greenCoffee.update({
+          where: { id: item.coffeeId },
+          data: {
+            quantity: {
+              increment: totalGreenConsumption
+            }
+          }
+        });
+        
+        console.log(`[green-coffee-stock] Successfully restored ${totalGreenConsumption.toFixed(2)}kg of green coffee for ${item.coffeeId}`);
+        
+        return { 
+          success: true, 
+          coffeeId: item.coffeeId, 
+          restoredAmount: totalGreenConsumption,
+          haircutAmount: haircutAmount
+        };
+      } catch (error) {
+        console.error(`[green-coffee-stock] Error restoring green coffee stock for ${item.coffeeId}:`, error);
+        return { 
+          success: false, 
+          coffeeId: item.coffeeId, 
+          error: error.message 
+        };
+      }
+    });
+    
+    // Execute all stock adjustments in parallel
+    const results = await Promise.allSettled(stockAdjustmentPromises);
+    
+    // Log results
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
+    
+    console.log(`[green-coffee-stock] Stock restoration completed: ${successful} successful, ${failed} failed`);
+    
+    // Log detailed results for debugging
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.success) {
+        console.log(`[green-coffee-stock] Item ${index + 1}: SUCCESS - Restored ${result.value.restoredAmount.toFixed(2)}kg for coffee ${result.value.coffeeId}`);
+      } else {
+        const error = result.status === 'rejected' ? result.reason : result.value.error;
+        console.error(`[green-coffee-stock] Item ${index + 1}: FAILED - ${error}`);
+      }
+    });
+    
+  } catch (error) {
+    console.error(`[green-coffee-stock] Error in green coffee stock adjustment:`, error);
+    // Don't throw - we don't want to fail the entire transaction if stock adjustment fails
+  }
+}
 
 /**
  * Handle label quantity updates based on order status changes
@@ -316,6 +405,12 @@ export default async function handler(req, res) {
         });
         
         console.log(`[update-order-status] Updated order ${orderId} status from ${existingOrder.status} to ${status}`);
+
+        // Handle green coffee stock adjustments when cancelling orders
+        const stockUpdateStart = Date.now();
+        await handleGreenCoffeeStockAdjustments(tx, existingOrder, status);
+        const stockUpdateTime = Date.now() - stockUpdateStart;
+        console.log(`[update-order-status] Green coffee stock adjustments completed in ${stockUpdateTime}ms`);
 
         // Handle label quantity updates based on status changes
         const labelUpdateStart = Date.now();

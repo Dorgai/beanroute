@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Order Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .input-test {
+            margin: 10px 0;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .mobile-optimized {
+            input-mode: numeric;
+            pattern: [0-9]*;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mobile Order Form Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Basic Number Input</h2>
+        <div class="input-test">
+            <label>Standard Number Input:</label>
+            <input type="number" id="standard" min="0" placeholder="0">
+        </div>
+        <div class="input-test">
+            <label>Mobile-Optimized Number Input:</label>
+            <input type="number" id="mobile" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+        </div>
+        <button onclick="testInputs()">Test Inputs</button>
+        <div id="input-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Order Form Simulation</h2>
+        <div class="input-test">
+            <label>Espresso Bags:</label>
+            <input type="number" id="espresso" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+        </div>
+        <div class="input-test">
+            <label>Filter Bags:</label>
+            <input type="number" id="filter" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+        </div>
+        <div class="input-test">
+            <label>Large Bags:</label>
+            <input type="number" id="large" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+        </div>
+        <button onclick="simulateOrder()">Simulate Order</button>
+        <div id="order-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Mobile Detection</h2>
+        <button onclick="detectMobile()">Detect Mobile</button>
+        <div id="mobile-result" class="result"></div>
+    </div>
+
+    <script>
+        function testInputs() {
+            const standard = document.getElementById('standard').value;
+            const mobile = document.getElementById('mobile').value;
+            
+            const result = document.getElementById('input-result');
+            result.innerHTML = `
+                <strong>Standard Input:</strong> "${standard}" (parsed: ${parseInt(standard) || 0})<br>
+                <strong>Mobile Input:</strong> "${mobile}" (parsed: ${parseInt(mobile) || 0})<br>
+                <strong>Both Valid:</strong> ${(parseInt(standard) || 0) > 0 || (parseInt(mobile) || 0) > 0}
+            `;
+        }
+
+        function simulateOrder() {
+            const espresso = document.getElementById('espresso').value;
+            const filter = document.getElementById('filter').value;
+            const large = document.getElementById('large').value;
+            
+            // Mobile-friendly parsing
+            const espressoValue = parseInt(String(espresso || '').replace(/[^0-9]/g, '')) || 0;
+            const filterValue = parseInt(String(filter || '').replace(/[^0-9]/g, '')) || 0;
+            const largeValue = parseInt(String(large || '').replace(/[^0-9]/g, '')) || 0;
+            
+            const totalQuantity = ((espressoValue + filterValue) * 0.2) + (largeValue * 1.0);
+            
+            const result = document.getElementById('order-result');
+            result.innerHTML = `
+                <strong>Parsed Values:</strong><br>
+                Espresso: ${espressoValue} bags (${(espressoValue * 0.2).toFixed(1)}kg)<br>
+                Filter: ${filterValue} bags (${(filterValue * 0.2).toFixed(1)}kg)<br>
+                Large: ${largeValue} bags (${(largeValue * 1.0).toFixed(1)}kg)<br>
+                <strong>Total Quantity:</strong> ${totalQuantity.toFixed(1)}kg<br>
+                <strong>Valid Order:</strong> ${totalQuantity > 0 ? 'Yes' : 'No'}
+            `;
+        }
+
+        function detectMobile() {
+            const userAgent = navigator.userAgent;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+            const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const screenWidth = window.innerWidth;
+            
+            const result = document.getElementById('mobile-result');
+            result.innerHTML = `
+                <strong>User Agent:</strong> ${userAgent}<br>
+                <strong>Is Mobile:</strong> ${isMobile}<br>
+                <strong>Has Touch:</strong> ${isTouch}<br>
+                <strong>Screen Width:</strong> ${screenWidth}px<br>
+                <strong>Device Type:</strong> ${screenWidth <= 768 ? 'Mobile/Tablet' : 'Desktop'}
+            `;
+        }
+
+        // Auto-detect mobile on page load
+        window.addEventListener('load', detectMobile);
+    </script>
+</body>
+</html>
+
+

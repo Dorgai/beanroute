@@ -86,3 +86,4 @@ echo "2. Check Activity Monitor for resource usage"
 echo "3. Restart your computer if issues persist"
 echo "4. Use the manual setup guide in PWA_QUICK_SETUP.md"
 
+

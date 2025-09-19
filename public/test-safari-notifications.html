@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safari Push Notification Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Safari Push Notification Test</h1>
+    
+    <div id="status"></div>
+    
+    <button onclick="checkBrowserSupport()">Check Browser Support</button>
+    <button onclick="testBasicNotification()">Test Basic Notification</button>
+    <button onclick="testServiceWorker()">Test Service Worker</button>
+    <button onclick="testPushSubscription()">Test Push Subscription</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logsDiv.appendChild(logEntry);
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function checkBrowserSupport() {
+            log('Checking browser support...');
+            
+            // Check browser
+            const userAgent = navigator.userAgent;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
+            const isChrome = /chrome/i.test(userAgent);
+            const isFirefox = /firefox/i.test(userAgent);
+            
+            log(`User Agent: ${userAgent}`, 'info');
+            log(`Browser: ${isSafari ? 'Safari' : isChrome ? 'Chrome' : isFirefox ? 'Firefox' : 'Other'}`, 'info');
+            
+            // Check notification support
+            if ('Notification' in window) {
+                log(`Notification API: Supported`, 'success');
+                log(`Notification permission: ${Notification.permission}`, 'info');
+            } else {
+                log(`Notification API: Not supported`, 'error');
+            }
+            
+            // Check service worker support
+            if ('serviceWorker' in navigator) {
+                log(`Service Worker: Supported`, 'success');
+            } else {
+                log(`Service Worker: Not supported`, 'error');
+            }
+            
+            // Check push manager support
+            if ('PushManager' in window) {
+                log(`Push Manager: Supported`, 'success');
+            } else {
+                log(`Push Manager: Not supported`, 'error');
+            }
+            
+            // Check if we're on HTTPS or localhost
+            const isSecure = location.protocol === 'https:' || location.hostname === 'localhost';
+            log(`Secure context: ${isSecure} (${location.protocol}//${location.hostname})`, isSecure ? 'success' : 'error');
+            
+            if (isSafari && !isSecure) {
+                log(`⚠️ Safari requires HTTPS for push notifications (except localhost)`, 'error');
+            }
+        }
+        
+        function testBasicNotification() {
+            log('Testing basic notification...');
+            
+            if (Notification.permission === 'default') {
+                log('Requesting notification permission...', 'info');
+                Notification.requestPermission().then(permission => {
+                    log(`Permission result: ${permission}`, permission === 'granted' ? 'success' : 'error');
+                    if (permission === 'granted') {
+                        showTestNotification();
+                    }
+                });
+            } else if (Notification.permission === 'granted') {
+                showTestNotification();
+            } else {
+                log('Notification permission denied', 'error');
+            }
+        }
+        
+        function showTestNotification() {
+            const notification = new Notification('Safari Test Notification', {
+                body: 'This is a test notification in Safari',
+                icon: '/icons/icon-192x192.png',
+                tag: 'safari-test'
+            });
+            
+            notification.onclick = () => {
+                log('Notification clicked', 'info');
+                notification.close();
+            };
+            
+            notification.onshow = () => {
+                log('Notification shown', 'success');
+            };
+            
+            notification.onerror = (error) => {
+                log(`Notification error: ${error}`, 'error');
+            };
+            
+            log('Basic notification created', 'success');
+        }
+        
+        function testServiceWorker() {
+            log('Testing service worker...');
+            
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        log(`Found ${registrations.length} service worker(s)`, 'success');
+                        registrations.forEach((reg, index) => {
+                            log(`SW ${index + 1}: ${reg.scope} (${reg.active ? 'active' : 'inactive'})`, 'info');
+                            
+                            // Test message to service worker
+                            if (reg.active) {
+                                reg.active.postMessage({type: 'TEST', data: 'Hello from Safari'});
+                                log('Sent test message to service worker', 'info');
+                            }
+                        });
+                    } else {
+                        log('No service workers registered', 'error');
+                    }
+                });
+            } else {
+                log('Service Worker not supported', 'error');
+            }
+        }
+        
+        function testPushSubscription() {
+            log('Testing push subscription...');
+            
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                log('Push messaging not supported', 'error');
+                return;
+            }
+            
+            // Get the public key from the server
+            fetch('/api/push/config')
+                .then(response => response.json())
+                .then(config => {
+                    if (!config.configured) {
+                        log('Push notifications not configured on server', 'error');
+                        return;
+                    }
+                    
+                    log(`Using public key: ${config.publicKey.substring(0, 20)}...`, 'info');
+                    
+                    // Subscribe to push notifications
+                    navigator.serviceWorker.ready.then(registration => {
+                        return registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(config.publicKey)
+                        });
+                    }).then(subscription => {
+                        log('Push subscription successful!', 'success');
+                        log(`Subscription endpoint: ${subscription.endpoint.substring(0, 50)}...`, 'info');
+                        
+                        // Send subscription to server
+                        return fetch('/api/push/subscribe', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                subscription: subscription,
+                                userAgent: navigator.userAgent
+                            })
+                        });
+                    }).then(response => response.json())
+                    .then(result => {
+                        log(`Server response: ${JSON.stringify(result)}`, 'success');
+                    }).catch(error => {
+                        log(`Push subscription failed: ${error.message}`, 'error');
+                    });
+                })
+                .catch(error => {
+                    log(`Failed to get push config: ${error.message}`, 'error');
+                });
+        }
+        
+        // Utility function to convert VAPID key
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+            
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+        
+        // Auto-run browser support check on page load
+        window.addEventListener('load', () => {
+            log('Safari push notification test loaded', 'info');
+            checkBrowserSupport();
+        });
+        
+        // Listen for service worker messages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                log(`Service Worker message: ${JSON.stringify(event.data)}`, 'info');
+            });
+        }
+    </script>
+</body>
+</html>
+
+

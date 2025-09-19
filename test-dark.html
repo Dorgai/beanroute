@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Theme Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+    <div class="p-8">
+        <h1 class="text-2xl font-bold mb-4">Dark Theme Test</h1>
+        <p class="mb-4">This should be white text on dark background when dark class is applied.</p>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="px-4 py-2 bg-blue-500 text-white rounded">
+            Toggle Theme
+        </button>
+    </div>
+</body>
+</html>
+

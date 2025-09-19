@@ -199,6 +199,60 @@ class PushNotificationService {
   }
 
   /**
+   * Get all subscriptions for a user (plural version for API compatibility)
+   */
+  async getUserSubscriptions(userId) {
+    const prisma = new PrismaClient();
+    
+    try {
+      // Get all subscriptions for the user
+      const subscriptions = await prisma.pushSubscription.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          userId: true,
+          endpoint: true,
+          p256dh: true,
+          auth: true,
+          isActive: true,
+          createdAt: true,
+          lastUsed: true,
+          userAgent: true
+        }
+      });
+      return subscriptions;
+    } catch (error) {
+      console.error('[Push] Error getting user subscriptions:', error);
+      // If it's a column doesn't exist error, try a simpler query
+      if (error.code === 'P2022') {
+        try {
+          console.log('[Push] Retrying with basic field selection due to missing columns...');
+          const subscriptions = await prisma.pushSubscription.findMany({
+            where: { userId },
+            select: {
+              id: true,
+              userId: true,
+              endpoint: true,
+              p256dh: true,
+              auth: true,
+              isActive: true,
+              createdAt: true
+              // Omit fields that don't exist in production DB yet
+            }
+          });
+          return subscriptions;
+        } catch (retryError) {
+          console.error('[Push] Retry also failed:', retryError);
+          throw retryError;
+        }
+      }
+      throw error;
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
+  /**
    * Unsubscribe a user from push notifications
    */
   async unsubscribeUser(userId, endpoint = null) {

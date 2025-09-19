@@ -5,8 +5,10 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { AuthProvider } from '../context/AuthContext';
 import ErrorBoundary from '../components/ErrorBoundary';
-import { ThemeProvider } from '@mui/material/styles';
-import theme from '../styles/theme';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import { createAppTheme } from '../styles/theme';
+import { ThemeProvider } from '../contexts/ThemeContext';
+import ThemeWrapper from '../components/ThemeWrapper';
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -100,8 +102,9 @@ export default function App({ Component, pageProps }) {
   // Wrap everything in AuthProvider again
   return (
     <ErrorBoundary>
-      <ThemeProvider theme={theme}>
-        <AuthProvider>
+      <ThemeProvider>
+        <ThemeWrapper>
+          <AuthProvider>
           {isRootPage || isLoginPage ? (
             // Direct render for root and login pages
             <>
@@ -114,6 +117,23 @@ export default function App({ Component, pageProps }) {
                 <meta name="apple-mobile-web-app-title" content="BeanRoute" />
                 <link rel="manifest" href="/manifest.json" />
                 <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+                <script
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                      (function() {
+                        try {
+                          const theme = localStorage.getItem('theme') || 'dark';
+                          document.documentElement.classList.toggle('dark', theme === 'dark');
+                          document.body.classList.toggle('dark', theme === 'dark');
+                          window.__INITIAL_THEME__ = theme;
+                          console.log('Theme initialized:', theme, 'Dark class applied:', document.documentElement.classList.contains('dark'));
+                        } catch (e) {
+                          console.error('Theme initialization error:', e);
+                        }
+                      })();
+                    `,
+                  }}
+                />
               </Head>
               {getLayout(<Component {...pageProps} />)}
             </>
@@ -131,6 +151,23 @@ export default function App({ Component, pageProps }) {
                 <link rel="manifest" href="/manifest.json" />
                 <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
                 <link rel="icon" href="/favicon.ico" />
+                <script
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                      (function() {
+                        try {
+                          const theme = localStorage.getItem('theme') || 'dark';
+                          document.documentElement.classList.toggle('dark', theme === 'dark');
+                          document.body.classList.toggle('dark', theme === 'dark');
+                          window.__INITIAL_THEME__ = theme;
+                          console.log('Theme initialized:', theme, 'Dark class applied:', document.documentElement.classList.contains('dark'));
+                        } catch (e) {
+                          console.error('Theme initialization error:', e);
+                        }
+                      })();
+                    `,
+                  }}
+                />
               </Head>
               <Layout>
                 {getLayout(<Component {...pageProps} />)}
@@ -138,6 +175,7 @@ export default function App({ Component, pageProps }) {
             </>
           )}
         </AuthProvider>
+        </ThemeWrapper>
       </ThemeProvider>
     </ErrorBoundary>
   );

@@ -9,8 +9,10 @@ import { getTokenFromRequestCookie } from './lib/auth';
 
 // Define public paths that don't require authentication
 export const publicPaths = [
+  '/', // Root path
   '/login',
   '/dashboard',
+  '/test-dark-theme', // Add dark theme test page
   '/api/auth/login',
   '/api/auth/logout',
   '/api/admin/test-db', // Allow db testing

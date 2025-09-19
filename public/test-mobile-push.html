@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Push Notification Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; width: 100%; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .mobile-info { background-color: #e7f3ff; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>📱 Mobile Push Notification Test</h1>
+    
+    <div id="status"></div>
+    
+    <button onclick="checkMobileSupport()">Check Mobile Support</button>
+    <button onclick="checkPWAStatus()">Check PWA Status</button>
+    <button onclick="testMobileNotification()">Test Mobile Notification</button>
+    <button onclick="testMobilePushSubscription()">Test Mobile Push Subscription</button>
+    <button onclick="testServerNotification()">Test Server Notification</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logsDiv.appendChild(logEntry);
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function checkMobileSupport() {
+            log('Checking mobile support...');
+            
+            // Detect mobile device
+            const userAgent = navigator.userAgent;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+            const isAndroid = /Android/.test(userAgent);
+            
+            log(`User Agent: ${userAgent}`, 'info');
+            log(`Mobile Device: ${isMobile ? 'Yes' : 'No'}`, isMobile ? 'success' : 'info');
+            log(`iOS: ${isIOS ? 'Yes' : 'No'}`, isIOS ? 'info' : 'info');
+            log(`Android: ${isAndroid ? 'Yes' : 'No'}`, isAndroid ? 'info' : 'info');
+            
+            // Check if running as PWA
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            const isIOSStandalone = window.navigator.standalone === true;
+            const isPWA = isStandalone || isIOSStandalone;
+            
+            log(`PWA Mode: ${isPWA ? 'Yes' : 'No'}`, isPWA ? 'success' : 'warning');
+            
+            if (isIOS && !isPWA) {
+                log(`⚠️ iOS requires PWA installation for push notifications!`, 'warning');
+                log(`📱 To install: Tap Share → Add to Home Screen`, 'info');
+            }
+            
+            // Check notification support
+            if ('Notification' in window) {
+                log(`Notification API: Supported`, 'success');
+                log(`Notification permission: ${Notification.permission}`, 'info');
+            } else {
+                log(`Notification API: Not supported`, 'error');
+            }
+            
+            // Check service worker support
+            if ('serviceWorker' in navigator) {
+                log(`Service Worker: Supported`, 'success');
+            } else {
+                log(`Service Worker: Not supported`, 'error');
+            }
+            
+            // Check push manager support
+            if ('PushManager' in window) {
+                log(`Push Manager: Supported`, 'success');
+            } else {
+                log(`Push Manager: Not supported`, 'error');
+            }
+            
+            // Check if we're on HTTPS or localhost
+            const isSecure = location.protocol === 'https:' || location.hostname === 'localhost';
+            log(`Secure context: ${isSecure} (${location.protocol}//${location.hostname})`, isSecure ? 'success' : 'error');
+            
+            // Mobile-specific warnings
+            if (isMobile && !isPWA) {
+                log(`⚠️ Mobile push notifications work best when the app is installed as PWA`, 'warning');
+            }
+            
+            if (isIOS && !isPWA) {
+                log(`❌ iOS push notifications require PWA installation`, 'error');
+            }
+        }
+        
+        function checkPWAStatus() {
+            log('Checking PWA installation status...');
+            
+            // Check display mode
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            const isIOSStandalone = window.navigator.standalone === true;
+            const isPWA = isStandalone || isIOSStandalone;
+            
+            log(`PWA Installed: ${isPWA ? 'Yes' : 'No'}`, isPWA ? 'success' : 'warning');
+            
+            if (isPWA) {
+                log(`✅ App is running as PWA - push notifications should work`, 'success');
+            } else {
+                log(`⚠️ App is not installed as PWA`, 'warning');
+                log(`📱 To install PWA:`, 'info');
+                log(`   • iOS: Tap Share → Add to Home Screen`, 'info');
+                log(`   • Android: Tap Menu → Add to Home Screen`, 'info');
+            }
+            
+            // Check service worker registration
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        log(`Service Workers: ${registrations.length} registered`, 'success');
+                        registrations.forEach((reg, index) => {
+                            log(`SW ${index + 1}: ${reg.scope} (${reg.active ? 'active' : 'inactive'})`, 'info');
+                        });
+                    } else {
+                        log(`Service Workers: None registered`, 'error');
+                    }
+                });
+            }
+        }
+        
+        function testMobileNotification() {
+            log('Testing mobile notification...');
+            
+            if (Notification.permission === 'default') {
+                log('Requesting notification permission...', 'info');
+                Notification.requestPermission().then(permission => {
+                    log(`Permission result: ${permission}`, permission === 'granted' ? 'success' : 'error');
+                    if (permission === 'granted') {
+                        showMobileNotification();
+                    }
+                });
+            } else if (Notification.permission === 'granted') {
+                showMobileNotification();
+            } else {
+                log('Notification permission denied', 'error');
+                log('📱 Check device notification settings for this browser', 'info');
+            }
+        }
+        
+        function showMobileNotification() {
+            const notification = new Notification('📱 Mobile Test Notification', {
+                body: 'This is a test notification on mobile',
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-72x72.png',
+                tag: 'mobile-test'
+            });
+            
+            notification.onclick = () => {
+                log('Mobile notification clicked', 'info');
+                notification.close();
+            };
+            
+            notification.onshow = () => {
+                log('Mobile notification shown', 'success');
+            };
+            
+            notification.onerror = (error) => {
+                log(`Mobile notification error: ${error}`, 'error');
+            };
+            
+            log('Mobile notification created', 'success');
+        }
+        
+        function testMobilePushSubscription() {
+            log('Testing mobile push subscription...');
+            
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                log('Push messaging not supported on this device', 'error');
+                return;
+            }
+            
+            // Get the public key from the server
+            fetch('/api/push/config')
+                .then(response => response.json())
+                .then(config => {
+                    if (!config.configured) {
+                        log('Push notifications not configured on server', 'error');
+                        return;
+                    }
+                    
+                    log(`Using public key: ${config.publicKey.substring(0, 20)}...`, 'info');
+                    
+                    // Subscribe to push notifications
+                    navigator.serviceWorker.ready.then(registration => {
+                        return registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(config.publicKey)
+                        });
+                    }).then(subscription => {
+                        log('Mobile push subscription successful!', 'success');
+                        log(`Subscription endpoint: ${subscription.endpoint.substring(0, 50)}...`, 'info');
+                        
+                        // Send subscription to server
+                        return fetch('/api/push/subscribe', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                subscription: subscription,
+                                userAgent: navigator.userAgent
+                            })
+                        });
+                    }).then(response => response.json())
+                    .then(result => {
+                        log(`Server response: ${JSON.stringify(result)}`, 'success');
+                    }).catch(error => {
+                        log(`Mobile push subscription failed: ${error.message}`, 'error');
+                    });
+                })
+                .catch(error => {
+                    log(`Failed to get push config: ${error.message}`, 'error');
+                });
+        }
+        
+        function testServerNotification() {
+            log('Testing server notification on mobile...');
+            
+            fetch('/api/push/test-simple', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                log(`Server test result: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+                
+                if (result.success) {
+                    log('✅ Server sent notification successfully', 'success');
+                    log('📱 Check if you received the notification', 'info');
+                    log('💡 Make sure the app is not in foreground for notifications to appear', 'info');
+                }
+            })
+            .catch(error => {
+                log(`Server test failed: ${error.message}`, 'error');
+            });
+        }
+        
+        // Utility function to convert VAPID key
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+            
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+        
+        // Auto-run mobile support check on page load
+        window.addEventListener('load', () => {
+            log('Mobile push notification test loaded', 'info');
+            checkMobileSupport();
+        });
+        
+        // Listen for service worker messages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', event => {
+                log(`Service Worker message: ${JSON.stringify(event.data)}`, 'info');
+            });
+        }
+    </script>
+</body>
+</html>
+
+

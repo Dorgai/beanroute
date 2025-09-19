@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext.js';
+import { useTheme } from '../contexts/ThemeContext';
 import MessageBoard from './MessageBoard';
 import InstallPWA from './ui/InstallPWA';
 import BackgroundSyncManager from './ui/BackgroundSyncManager';
 import WakeLockManager from './ui/WakeLockManager';
 import BottomNavigation from './ui/BottomNavigation';
+import ThemeToggle from './ThemeToggle';
 // import { NotificationBanner } from './ui/NotificationBanner';
 
 
@@ -109,15 +111,15 @@ function CoffeeInventory() {
   const inventoryValue = totalInventory || FALLBACK_INVENTORY;
 
   // Determine color based on inventory level
-  let bgColor = "bg-green-50";
-  let textColor = "text-green-600";
+  let bgColor = "bg-green-50 dark:bg-green-900";
+  let textColor = "text-green-600 dark:text-green-300";
   
   if (inventoryValue < 150) {
-    bgColor = "bg-red-50";
-    textColor = "text-red-600";
+    bgColor = "bg-red-50 dark:bg-red-900";
+    textColor = "text-red-600 dark:text-red-300";
   } else if (inventoryValue < 300) {
-    bgColor = "bg-orange-50";
-    textColor = "text-orange-600";
+    bgColor = "bg-orange-50 dark:bg-orange-900";
+    textColor = "text-orange-600 dark:text-orange-300";
   }
 
   return (
@@ -132,6 +134,7 @@ function CoffeeInventory() {
 
 export default function Layout({ children }) {
   const { user, loading, logout } = useAuth();
+  const { isDark } = useTheme();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
@@ -160,8 +163,8 @@ export default function Layout({ children }) {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-white">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-900"></div>
+      <div className={`flex justify-center items-center h-screen ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+        <div className={`animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 ${isDark ? 'border-white' : 'border-gray-900'}`}></div>
       </div>
     );
   }
@@ -195,9 +198,9 @@ export default function Layout({ children }) {
   ];
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
       {/* Minimal Header */}
-      <header className="border-b border-gray-200 pwa-header">
+      <header className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} pwa-header`}>
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Logo and Nav */}
@@ -223,7 +226,7 @@ export default function Layout({ children }) {
                       <Link 
                         key={link.href}
                         href={link.href}
-                        className={`text-sm ${router.pathname === link.href || router.pathname.startsWith(link.href + '/') ? 'font-medium' : 'font-normal text-gray-500 hover:text-gray-900'}`}
+                        className={`text-sm ${router.pathname === link.href || router.pathname.startsWith(link.href + '/') ? 'font-medium' : `font-normal ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}`}
                       >
                         {link.label}
                       </Link>
@@ -237,7 +240,7 @@ export default function Layout({ children }) {
                   <div className="relative admin-dropdown">
                     <button
                       onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
-                      className={`text-sm font-normal text-gray-500 hover:text-gray-900 flex items-center ${router.pathname.startsWith('/admin') ? 'font-medium text-gray-900' : ''}`}
+                      className={`text-sm font-normal ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} flex items-center ${router.pathname.startsWith('/admin') ? `font-medium ${isDark ? 'text-white' : 'text-gray-900'}` : ''}`}
                     >
                       Admin
                       <svg 
@@ -251,13 +254,13 @@ export default function Layout({ children }) {
                     </button>
                     
                     {adminDropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                      <div className={`absolute right-0 mt-2 w-56 ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50`}>
                         <div className="py-1">
                           {adminLinks.map((adminLink) => (
                             <Link 
                               key={adminLink.href}
                               href={adminLink.href}
-                              className={`block px-4 py-2 text-sm hover:bg-gray-100 ${router.pathname === adminLink.href ? 'font-medium text-gray-900 bg-gray-50' : 'text-gray-700'}`}
+                              className={`block px-4 py-2 text-sm ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${router.pathname === adminLink.href ? `font-medium ${isDark ? 'text-white bg-gray-700' : 'text-gray-900 bg-gray-50'}` : `${isDark ? 'text-gray-300' : 'text-gray-700'}`}`}
                               onClick={() => setAdminDropdownOpen(false)}
                             >
                               {adminLink.label}
@@ -273,7 +276,7 @@ export default function Layout({ children }) {
             
             {/* Mobile Menu Button */}
             <button 
-              className="md:hidden flex items-center p-3 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none touch-manipulation"
+              className={`md:hidden flex items-center p-3 rounded-md ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'} focus:outline-none touch-manipulation`}
               onClick={toggleMobileMenu}
               aria-label="Menu"
             >
@@ -284,29 +287,30 @@ export default function Layout({ children }) {
             
             {/* User Info / Logout */}
             <div className="hidden md:flex items-center space-x-4">
+              <ThemeToggle />
               {canViewCoffeeInventory && <CoffeeInventory />}
               
               {user ? (
                 <>
-                  <span className="text-sm text-gray-500 hidden sm:inline">
+                  <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} hidden sm:inline`}>
                     {user?.username}
                   </span>
                   <button
                     onClick={handleLogout}
-                    className="text-sm font-normal text-gray-500 hover:text-gray-900 focus:outline-none"
+                    className={`text-sm font-normal ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} focus:outline-none`}
                   >
                     Logout
                   </button>
                 </>
               ) : (
-                <Link href="/login" className="text-sm font-normal">Login</Link>
+                <Link href="/login" className={`text-sm font-normal ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>Login</Link>
               )}
             </div>
           </div>
           
           {/* Mobile Navigation Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden bg-white border-t border-gray-200 py-2 transition-all ios-safe-area">
+            <div className={`md:hidden ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t py-2 transition-all ios-safe-area`}>
               <nav className="flex flex-col space-y-3 px-2 pb-3 pt-2">
                 {navLinks.map((link) => {
                   // Only show links if user has permission
@@ -317,8 +321,8 @@ export default function Layout({ children }) {
                         href={link.href}
                         className={`px-4 py-3 rounded-md text-sm touch-manipulation ${
                           router.pathname === link.href || router.pathname.startsWith(link.href + '/') 
-                            ? 'font-medium bg-gray-100' 
-                            : 'font-normal text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                            ? `font-medium ${isDark ? 'bg-gray-700' : 'bg-gray-100'}` 
+                            : `font-normal ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`
                         }`}
                         onClick={() => setMobileMenuOpen(false)}
                       >
@@ -332,8 +336,8 @@ export default function Layout({ children }) {
                 {/* Admin Section for Mobile */}
                 {user && ['ADMIN', 'OWNER'].includes(user.role) && (
                   <>
-                    <div className="border-t border-gray-200 pt-2 mt-2">
-                      <div className="px-3 py-1 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} pt-2 mt-2`}>
+                      <div className={`px-3 py-1 text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>
                         Admin
                       </div>
                       {adminLinks.map((adminLink) => (
@@ -342,8 +346,8 @@ export default function Layout({ children }) {
                           href={adminLink.href}
                           className={`block px-4 py-3 rounded-md text-sm touch-manipulation ${
                             router.pathname === adminLink.href 
-                              ? 'font-medium bg-gray-100' 
-                              : 'font-normal text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                              ? `font-medium ${isDark ? 'bg-gray-700' : 'bg-gray-100'}` 
+                              : `font-normal ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`
                           }`}
                           onClick={() => setMobileMenuOpen(false)}
                         >
@@ -355,7 +359,11 @@ export default function Layout({ children }) {
                 )}
                 
                 {/* Mobile user info and logout */}
-                <div className="border-t border-gray-200 pt-3 mt-2">
+                <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} pt-3 mt-2`}>
+                  <div className="px-3 py-2 flex items-center justify-between">
+                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Theme</span>
+                    <ThemeToggle />
+                  </div>
                   {canViewCoffeeInventory && (
                     <div className="px-3 py-2">
                       <CoffeeInventory />
@@ -364,7 +372,7 @@ export default function Layout({ children }) {
                   
                   {user && (
                     <>
-                      <div className="px-3 py-2 text-sm text-gray-500">
+                      <div className={`px-3 py-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                         {user.username}
                       </div>
                       <button
@@ -372,7 +380,7 @@ export default function Layout({ children }) {
                           handleLogout();
                           setMobileMenuOpen(false);
                         }}
-                        className="w-full text-left px-4 py-3 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 touch-manipulation"
+                        className={`w-full text-left px-4 py-3 rounded-md text-sm ${isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'} touch-manipulation`}
                       >
                         Logout
                       </button>

@@ -150,6 +150,37 @@ export default function PendingOrdersSummary({
     }, { smallBags: 0, smallBagsEspresso: 0, smallBagsFilter: 0, largeBags: 0, totalKg: 0, espressoKg: 0, filterKg: 0 });
   }, [summaryData]);
 
+  // Calculate shop subtotals for shop breakdown view
+  const shopSubtotals = useMemo(() => {
+    if (!showShopInfo || aggregateAcrossShops) return {};
+    
+    const subtotals = {};
+    summaryData.forEach(item => {
+      const shopKey = item.shopName;
+      if (!subtotals[shopKey]) {
+        subtotals[shopKey] = {
+          smallBags: 0,
+          smallBagsEspresso: 0,
+          smallBagsFilter: 0,
+          largeBags: 0,
+          totalKg: 0,
+          espressoKg: 0,
+          filterKg: 0
+        };
+      }
+      
+      subtotals[shopKey].smallBags += item.smallBags;
+      subtotals[shopKey].smallBagsEspresso += item.smallBagsEspresso;
+      subtotals[shopKey].smallBagsFilter += item.smallBagsFilter;
+      subtotals[shopKey].largeBags += item.largeBags;
+      subtotals[shopKey].totalKg += item.totalKg;
+      subtotals[shopKey].espressoKg += item.espressoKg;
+      subtotals[shopKey].filterKg += item.filterKg;
+    });
+    
+    return subtotals;
+  }, [summaryData, showShopInfo, aggregateAcrossShops]);
+
   // Function to handle Excel export
   const handleExport = () => {
     // Prepare data for export
@@ -228,101 +259,90 @@ export default function PendingOrdersSummary({
               <TableCell>Coffee</TableCell>
               <TableCell>Grade</TableCell>
               {showShopInfo && !aggregateAcrossShops && <TableCell>Shop</TableCell>}
-              <TableCell 
-                align="right" 
-                sx={{ 
-                  backgroundColor: '#f0f0f0 !important',
-                  '&.MuiTableCell-root': {
-                    backgroundColor: '#f0f0f0 !important'
-                  }
-                }}
-              >
-                Large Bags (1kg)
-              </TableCell>
+              <TableCell align="right">Large Bags (1kg)</TableCell>
               <TableCell align="right">Small Bags (200g)</TableCell>
-              <TableCell 
-                align="right" 
-                sx={{ 
-                  backgroundColor: '#f0f0f0 !important',
-                  '&.MuiTableCell-root': {
-                    backgroundColor: '#f0f0f0 !important'
-                  }
-                }}
-              >
-                Espresso (kg)
-              </TableCell>
-              <TableCell 
-                align="right" 
-                sx={{ 
-                  backgroundColor: '#f0f0f0 !important',
-                  '&.MuiTableCell-root': {
-                    backgroundColor: '#f0f0f0 !important'
-                  }
-                }}
-              >
-                Filter (kg)
-              </TableCell>
+              <TableCell align="right">Espresso (kg)</TableCell>
+              <TableCell align="right">Filter (kg)</TableCell>
               <TableCell align="right">Total Quantity (kg)</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {summaryData.map((item, index) => (
-              <TableRow 
-                key={`${item.name}_${item.grade}_${item.shopId || 'default'}_${index}`} 
-                hover
-                sx={{
-                  backgroundColor: showShopInfo && !aggregateAcrossShops && index > 0 && 
-                    summaryData[index-1].shopName !== item.shopName ? 
-                    '#fafafa' : 'inherit'
-                }}
-              >
-                <TableCell><strong>{item.name}</strong></TableCell>
-                <TableCell>{item.grade}</TableCell>
-                {showShopInfo && !aggregateAcrossShops && <TableCell>{item.shopName}</TableCell>}
-                <TableCell 
-                  align="right" 
-                  sx={{ 
-                    backgroundColor: '#f0f0f0 !important',
-                    '&.MuiTableCell-root': {
-                      backgroundColor: '#f0f0f0 !important'
-                    }
-                  }}
-                >
-                  {item.largeBags}
-                </TableCell>
-                <TableCell align="right">
-                  {item.smallBags}
-                  {item.smallBags > 0 && (
-                    <Typography variant="caption" display="block" color="text.secondary">
-                      (E: {item.smallBagsEspresso}, F: {item.smallBagsFilter})
-                    </Typography>
+            {summaryData.map((item, index) => {
+              const isNewShop = showShopInfo && !aggregateAcrossShops && index > 0 && 
+                summaryData[index-1].shopName !== item.shopName;
+              const isLastItemForShop = showShopInfo && !aggregateAcrossShops && 
+                (index === summaryData.length - 1 || summaryData[index + 1].shopName !== item.shopName);
+              
+              return (
+                <React.Fragment key={`${item.name}_${item.grade}_${item.shopId || 'default'}_${index}`}>
+                  <TableRow 
+                    hover
+                    sx={{
+                      backgroundColor: isNewShop ? '#fafafa' : 'inherit',
+                      borderTop: isNewShop ? '2px solid #e0e0e0' : 'none'
+                    }}
+                  >
+                    <TableCell><strong>{item.name}</strong></TableCell>
+                    <TableCell>{item.grade}</TableCell>
+                    {showShopInfo && !aggregateAcrossShops && <TableCell>{item.shopName}</TableCell>}
+                    <TableCell align="right">
+                      {item.largeBags}
+                    </TableCell>
+                    <TableCell align="right">
+                      {item.smallBags}
+                      {item.smallBags > 0 && (
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          (E: {item.smallBagsEspresso}, F: {item.smallBagsFilter})
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {item.espressoKg.toFixed(2)}
+                    </TableCell>
+                    <TableCell align="right">
+                      {item.filterKg.toFixed(2)}
+                    </TableCell>
+                    <TableCell align="right">{item.totalKg.toFixed(2)} kg</TableCell>
+                  </TableRow>
+                  
+                  {/* Shop subtotal row */}
+                  {isLastItemForShop && showShopInfo && !aggregateAcrossShops && (
+                    <TableRow sx={{ 
+                      backgroundColor: '#f8f9fa', 
+                      '& .MuiTableCell-root': { 
+                        fontWeight: 'bold',
+                        borderTop: '1px solid #dee2e6',
+                        fontStyle: 'italic'
+                      }
+                    }}>
+                      <TableCell colSpan={3}>
+                        <Typography variant="subtitle2" color="primary">
+                          {item.shopName} Subtotal
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        {shopSubtotals[item.shopName]?.largeBags || 0}
+                      </TableCell>
+                      <TableCell align="right">
+                        {shopSubtotals[item.shopName]?.smallBags || 0}
+                        {(shopSubtotals[item.shopName]?.smallBags || 0) > 0 && (
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            (E: {shopSubtotals[item.shopName]?.smallBagsEspresso || 0}, F: {shopSubtotals[item.shopName]?.smallBagsFilter || 0})
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        {(shopSubtotals[item.shopName]?.espressoKg || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {(shopSubtotals[item.shopName]?.filterKg || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell align="right">{(shopSubtotals[item.shopName]?.totalKg || 0).toFixed(2)} kg</TableCell>
+                    </TableRow>
                   )}
-                </TableCell>
-                <TableCell 
-                  align="right" 
-                  sx={{ 
-                    backgroundColor: '#f0f0f0 !important',
-                    '&.MuiTableCell-root': {
-                      backgroundColor: '#f0f0f0 !important'
-                    }
-                  }}
-                >
-                  {item.espressoKg.toFixed(2)}
-                </TableCell>
-                <TableCell 
-                  align="right" 
-                  sx={{ 
-                    backgroundColor: '#f0f0f0 !important',
-                    '&.MuiTableCell-root': {
-                      backgroundColor: '#f0f0f0 !important'
-                    }
-                  }}
-                >
-                  {item.filterKg.toFixed(2)}
-                </TableCell>
-                <TableCell align="right">{item.totalKg.toFixed(2)} kg</TableCell>
-              </TableRow>
-            ))}
+                </React.Fragment>
+              );
+            })}
             
             {/* Totals row */}
             <TableRow sx={{ 
@@ -335,15 +355,7 @@ export default function PendingOrdersSummary({
               <TableCell colSpan={showShopInfo && !aggregateAcrossShops ? 3 : 2}>
                 <Typography variant="subtitle2">TOTAL</Typography>
               </TableCell>
-              <TableCell 
-                align="right" 
-                sx={{ 
-                  backgroundColor: '#f0f0f0 !important',
-                  '&.MuiTableCell-root': {
-                    backgroundColor: '#f0f0f0 !important'
-                  }
-                }}
-              >
+              <TableCell align="right">
                 {totals.largeBags}
               </TableCell>
               <TableCell align="right">
@@ -354,26 +366,10 @@ export default function PendingOrdersSummary({
                   </Typography>
                 )}
               </TableCell>
-              <TableCell 
-                align="right" 
-                sx={{ 
-                  backgroundColor: '#f0f0f0 !important',
-                  '&.MuiTableCell-root': {
-                    backgroundColor: '#f0f0f0 !important'
-                  }
-                }}
-              >
+              <TableCell align="right">
                 {totals.espressoKg.toFixed(2)}
               </TableCell>
-              <TableCell 
-                align="right" 
-                sx={{ 
-                  backgroundColor: '#f0f0f0 !important',
-                  '&.MuiTableCell-root': {
-                    backgroundColor: '#f0f0f0 !important'
-                  }
-                }}
-              >
+              <TableCell align="right">
                 {totals.filterKg.toFixed(2)}
               </TableCell>
               <TableCell align="right">{totals.totalKg.toFixed(2)} kg</TableCell>

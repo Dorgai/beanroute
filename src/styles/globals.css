@@ -9,12 +9,23 @@
   --mobile-optimized: false;
 }
 
+.dark {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 17, 24, 39;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure dark mode is applied to body as well */
+.dark body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
 }
 
 /* Mobile-specific optimizations */
@@ -50,6 +61,11 @@ body {
     z-index: 50;
   }
   
+  .dark .mobile-nav {
+    background: #1f2937;
+    border-top: 1px solid #374151;
+  }
+  
   /* Bottom navigation for mobile PWA */
   .bottom-nav {
     position: fixed;
@@ -60,6 +76,12 @@ body {
     border-top: 1px solid #e5e7eb;
     z-index: 50;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .bottom-nav {
+    background: #1f2937;
+    border-top: 1px solid #374151;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
   }
   
   /* Ensure content doesn't get hidden behind bottom navigation on mobile */
@@ -111,6 +133,10 @@ body {
   body {
     /* Styles for when app is installed as PWA */
     background-color: #f9fafb;
+  }
+  
+  .dark body {
+    background-color: #111827;
   }
   
   .pwa-header {

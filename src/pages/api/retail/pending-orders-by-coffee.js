@@ -41,39 +41,69 @@ export default async function handler(req, res) {
       }
     });
 
+    // Constants for bag sizes in kg (matching frontend)
+    const SMALL_BAG_SIZE = 0.2; // 200g
+    const LARGE_BAG_SIZE = 1.0; // 1kg
+    
     // Group by coffee and sum small bags (espresso and filter separately)
     const coffeePendingTotals = {};
     
     pendingOrders.forEach(order => {
       order.items.forEach(item => {
-        const coffeeId = item.coffeeId;
-        const coffeeName = item.coffee?.name || 'Unknown';
-        const coffeeGrade = item.coffee?.grade || 'UNKNOWN';
+        if (!item.coffee || !item.coffee.name) return;
         
-        // Handle both old and new data structure
+        const coffeeId = item.coffeeId;
+        const coffeeName = item.coffee.name;
+        const coffeeGrade = item.coffee.grade?.replace('_', ' ') || 'Unknown';
+        
+        // Handle both old and new data structure for backward compatibility
         const smallBags = item.smallBags || 0;
         const espressoBags = item.smallBagsEspresso || 0;
         const filterBags = item.smallBagsFilter || 0;
+        const largeBags = item.largeBags || 0;
         
-        // For backward compatibility: if no espresso/filter data, use smallBags as espresso
-        const totalEspressoBags = espressoBags || (smallBags && !filterBags ? smallBags : 0);
-        const totalFilterBags = filterBags || 0;
+        // For backward compatibility: if no espresso/filter data, treat smallBags as espresso
+        let actualEspressoBags = espressoBags;
+        let actualFilterBags = filterBags;
+        let totalSmallBags = espressoBags + filterBags;
+        
+        if (smallBags > 0 && espressoBags === 0 && filterBags === 0) {
+          // Old data structure - treat all smallBags as espresso for backward compatibility
+          actualEspressoBags = smallBags;
+          actualFilterBags = 0;
+          totalSmallBags = smallBags;
+        }
         
         if (!coffeePendingTotals[coffeeId]) {
           coffeePendingTotals[coffeeId] = {
             coffeeId,
             coffeeName,
             coffeeGrade,
-            totalSmallBags: 0,
-            totalEspressoBags: 0,
-            totalFilterBags: 0,
+            smallBags: 0,
+            smallBagsEspresso: 0,
+            smallBagsFilter: 0,
+            largeBags: 0,
+            totalKg: 0,
+            espressoKg: 0,
+            filterKg: 0,
             orderCount: 0
           };
         }
         
-        coffeePendingTotals[coffeeId].totalSmallBags += smallBags;
-        coffeePendingTotals[coffeeId].totalEspressoBags += totalEspressoBags;
-        coffeePendingTotals[coffeeId].totalFilterBags += totalFilterBags;
+        // Add to the aggregated data (matching frontend logic exactly)
+        coffeePendingTotals[coffeeId].smallBags += totalSmallBags;
+        coffeePendingTotals[coffeeId].smallBagsEspresso += actualEspressoBags;
+        coffeePendingTotals[coffeeId].smallBagsFilter += actualFilterBags;
+        coffeePendingTotals[coffeeId].largeBags += largeBags;
+        
+        // Calculate total in kg (using the correct small bag size of 200g)
+        const totalKg = (totalSmallBags * SMALL_BAG_SIZE) + (largeBags * LARGE_BAG_SIZE);
+        const espressoKg = actualEspressoBags * SMALL_BAG_SIZE;
+        const filterKg = actualFilterBags * SMALL_BAG_SIZE;
+        
+        coffeePendingTotals[coffeeId].totalKg += totalKg;
+        coffeePendingTotals[coffeeId].espressoKg += espressoKg;
+        coffeePendingTotals[coffeeId].filterKg += filterKg;
         coffeePendingTotals[coffeeId].orderCount += 1;
       });
     });
