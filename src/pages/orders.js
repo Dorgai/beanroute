@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from '@/lib/session';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   Box,
   Button,
@@ -815,11 +816,18 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
             </Typography>
             
             {order.comment && (
-              <Box sx={{ mt: 1, mb: 2, p: 1.5, bgcolor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                <Typography variant="body2" fontWeight="medium" gutterBottom>
+              <Box sx={{ 
+                mt: 1, 
+                mb: 2, 
+                p: 1.5, 
+                bgcolor: isDark ? '#374151' : '#f5f5f5', 
+                borderRadius: 1, 
+                border: isDark ? '1px solid #4b5563' : '1px solid #e0e0e0' 
+              }}>
+                <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: isDark ? '#f3f4f6' : 'inherit' }}>
                   Comment:
                 </Typography>
-                <Typography variant="body2">
+                <Typography variant="body2" sx={{ color: isDark ? '#d1d5db' : 'inherit' }}>
                   {order.comment}
                 </Typography>
               </Box>
@@ -982,6 +990,8 @@ function StockLevelAlert({ inventory, shopMinQuantities, coffeeCount }) {
 
 export default function RetailOrders() {
   const { session } = useSession();
+  const themeContext = useTheme();
+  const isDark = themeContext?.isDark ?? false;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [shops, setShops] = useState([]);
@@ -1006,7 +1016,7 @@ export default function RetailOrders() {
   const [alertMessage, setAlertMessage] = useState(null);
   const [allPendingOrders, setAllPendingOrders] = useState([]);
   const [allPendingOrdersLoading, setAllPendingOrdersLoading] = useState(false);
-  const [pendingOrdersViewMode, setPendingOrdersViewMode] = useState('shop'); // 'shop' or 'aggregated'
+  const [pendingOrdersViewMode, setPendingOrdersViewMode] = useState('aggregated'); // 'shop' or 'aggregated'
   const [haircutPercentage, setHaircutPercentage] = useState(15); // Default to 15%
   
   // Check user role for conditional UI elements
@@ -1541,8 +1551,19 @@ export default function RetailOrders() {
   };
   
   const handleOpenStatusDialog = (order) => {
-    setSelectedOrder(order);
-    setStatusDialogOpen(true);
+    try {
+      console.log('Opening status dialog for order:', order?.id);
+      console.log('Current theme context:', themeContext);
+      console.log('isDark value:', isDark);
+      if (!order) {
+        console.error('No order provided to handleOpenStatusDialog');
+        return;
+      }
+      setSelectedOrder(order);
+      setStatusDialogOpen(true);
+    } catch (error) {
+      console.error('Error in handleOpenStatusDialog:', error);
+    }
   };
   
   const handleCloseStatusDialog = (success, newStatus) => {
@@ -2181,11 +2202,29 @@ export default function RetailOrders() {
                         <TableBody>
                           {orders.map((order) => (
                             <React.Fragment key={order.id}>
-                              <TableRow hover>
+                              <TableRow 
+                                hover 
+                                onClick={() => {
+                                  try {
+                                    handleOpenStatusDialog(order);
+                                  } catch (error) {
+                                    console.error('Error opening status dialog:', error);
+                                  }
+                                }}
+                                sx={{ 
+                                  cursor: 'pointer',
+                                  '&:hover': {
+                                    backgroundColor: (isDark ?? false) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
+                                  }
+                                }}
+                              >
                                 <TableCell padding="checkbox">
                                   <IconButton
                                     size="small"
-                                    onClick={() => toggleRowExpanded(order.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleRowExpanded(order.id);
+                                    }}
                                     aria-label="expand row"
                                   >
                                     {expandedRows[order.id] ? (
@@ -2199,7 +2238,10 @@ export default function RetailOrders() {
                                   <Tooltip title="Update Status">
                                     <IconButton 
                                       size="small" 
-                                      onClick={() => handleOpenStatusDialog(order)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenStatusDialog(order);
+                                      }}
                                     >
                                       <EditIcon fontSize="small" />
                                     </IconButton>
@@ -2237,15 +2279,15 @@ export default function RetailOrders() {
                                           sx={{ 
                                             mb: 2, 
                                             p: 1.5, 
-                                            bgcolor: '#f5f5f5', 
+                                            bgcolor: isDark ? '#374151' : '#f5f5f5', 
                                             borderRadius: 1,
-                                            border: '1px solid #e0e0e0'
+                                            border: isDark ? '1px solid #4b5563' : '1px solid #e0e0e0'
                                           }}
                                         >
-                                          <Typography variant="body2" fontWeight="medium" gutterBottom>
+                                          <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: isDark ? '#f3f4f6' : 'inherit' }}>
                                             Comment:
                                           </Typography>
-                                          <Typography variant="body2">
+                                          <Typography variant="body2" sx={{ color: isDark ? '#d1d5db' : 'inherit' }}>
                                             {order.comment}
                                           </Typography>
                                         </Box>

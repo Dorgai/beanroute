@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { FiSearch, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
 
 export default function CoffeeListPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const [coffeeList, setCoffeeList] = useState([]);
   const [groupedCoffee, setGroupedCoffee] = useState({});
   const [zeroStockCoffee, setZeroStockCoffee] = useState([]);
@@ -171,17 +173,41 @@ export default function CoffeeListPage() {
     return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
   };
 
+  // Get styling for grade name vs table name
+  const getGradeNameStyle = () => {
+    return 'text-lg font-semibold text-gray-900 dark:text-gray-100';
+  };
+
+  const getTableNameStyle = () => {
+    return 'text-sm text-gray-600 dark:text-gray-300';
+  };
+
   // Render coffee table rows
   const renderCoffeeRow = (coffee, isLastInSection = false) => (
-    <tr key={coffee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+    <tr 
+      key={coffee.id} 
+      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+      onClick={() => {
+        if (canManageCoffee) {
+          router.push(`/coffee/${coffee.id}`);
+        }
+      }}
+    >
       {canManageCoffee && (
         <td className="px-4 py-3 whitespace-nowrap">
           <div className="flex space-x-1">
-            <Link href={`/coffee/${coffee.id}`} className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300">
+            <Link 
+              href={`/coffee/${coffee.id}`} 
+              className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300"
+              onClick={(e) => e.stopPropagation()}
+            >
               <FiEdit2 className="w-4 h-4" />
             </Link>
             <button
-              onClick={() => handleDeleteCoffee(coffee.id, coffee.name)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteCoffee(coffee.id, coffee.name);
+              }}
               className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
             >
               <FiTrash2 className="w-4 h-4" />
@@ -278,10 +304,15 @@ export default function CoffeeListPage() {
           {/* Grade header */}
           <div className={`${getGradeHeaderColor(grade)} px-4 py-3 rounded-t-md`}>
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">
-                {formatGrade(grade)} Grade Coffee
-              </h3>
-              <div className="text-sm">
+              <div>
+                <h3 className={getGradeNameStyle()}>
+                  {formatGrade(grade)} Grade
+                </h3>
+                <p className={getTableNameStyle()}>
+                  Coffee
+                </p>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
                 <span className="font-medium">{summary?.count || coffees.length} coffees</span>
                 <span className="ml-4">Total Stock: {summary?.totalStock || '0.00'} kg</span>
               </div>

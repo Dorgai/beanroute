@@ -163,7 +163,7 @@ export default function Layout({ children }) {
 
   if (loading) {
     return (
-      <div className={`flex justify-center items-center h-screen ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+        <div className={`flex justify-center items-center h-screen ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <div className={`animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 ${isDark ? 'border-white' : 'border-gray-900'}`}></div>
       </div>
     );
@@ -198,7 +198,7 @@ export default function Layout({ children }) {
   ];
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
+        <div className={`min-h-screen ${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
       {/* Minimal Header */}
       <header className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} pwa-header`}>
         <div className="mx-auto max-w-6xl px-4">

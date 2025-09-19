@@ -249,12 +249,12 @@ export default function BottomNavigation() {
   try {
     return (
       <nav 
-        className={`fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 transition-opacity duration-300 ${
+        className={`fixed bottom-0 left-0 right-0 bg-gray-800 dark:bg-gray-800 border-t border-gray-600 dark:border-gray-600 z-50 transition-opacity duration-300 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
-          boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.3)'
         }}
         role="tablist"
         aria-label="Main navigation"
@@ -284,8 +284,8 @@ export default function BottomNavigation() {
                 tabIndex={0}
                 className={`flex flex-col items-center justify-center flex-1 h-full min-w-0 transition-all duration-200 touch-manipulation focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                   active 
-                    ? 'text-blue-600 bg-blue-50' 
-                    : 'text-gray-600 hover:text-blue-500 hover:bg-gray-50'
+                    ? 'text-blue-400 bg-gray-700 dark:bg-gray-700' 
+                    : 'text-gray-300 dark:text-gray-300 hover:text-blue-400 hover:bg-gray-700 dark:hover:bg-gray-700'
                 }`}
                 style={{ minHeight: '44px' }} // Ensure touch target size
               >
@@ -293,7 +293,7 @@ export default function BottomNavigation() {
                   {getIcon(item.label)}
                 </span>
                 <span className={`text-xs font-medium truncate max-w-full px-1 ${
-                  active ? 'text-blue-600' : 'text-gray-600'
+                  active ? 'text-blue-400' : 'text-gray-300'
                 }`}>
                   {item.label}
                 </span>

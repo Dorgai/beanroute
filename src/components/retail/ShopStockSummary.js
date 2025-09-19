@@ -145,7 +145,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               sx={{ 
                 height: 10, 
                 borderRadius: 5,
-                bgcolor: '#e0e0e0',
+                bgcolor: isDark ? '#374151' : '#e0e0e0',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 5,
                   bgcolor: smallBagsPercentage < 30 ? '#ff0000' :
@@ -180,7 +180,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               sx={{ 
                 height: 10, 
                 borderRadius: 5,
-                bgcolor: '#e0e0e0',
+                bgcolor: isDark ? '#374151' : '#e0e0e0',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 5,
                   bgcolor: largeBagsPercentage < 30 ? '#ff0000' :

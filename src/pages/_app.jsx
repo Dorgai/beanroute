@@ -125,6 +125,10 @@ export default function App({ Component, pageProps }) {
                           const theme = localStorage.getItem('theme') || 'dark';
                           document.documentElement.classList.toggle('dark', theme === 'dark');
                           document.body.classList.toggle('dark', theme === 'dark');
+                          // Apply lighter dark background
+                          if (theme === 'dark') {
+                            document.body.style.backgroundColor = '#1a1a1a';
+                          }
                           window.__INITIAL_THEME__ = theme;
                           console.log('Theme initialized:', theme, 'Dark class applied:', document.documentElement.classList.contains('dark'));
                         } catch (e) {
@@ -159,6 +163,10 @@ export default function App({ Component, pageProps }) {
                           const theme = localStorage.getItem('theme') || 'dark';
                           document.documentElement.classList.toggle('dark', theme === 'dark');
                           document.body.classList.toggle('dark', theme === 'dark');
+                          // Apply lighter dark background
+                          if (theme === 'dark') {
+                            document.body.style.backgroundColor = '#1a1a1a';
+                          }
                           window.__INITIAL_THEME__ = theme;
                           console.log('Theme initialized:', theme, 'Dark class applied:', document.documentElement.classList.contains('dark'));
                         } catch (e) {
