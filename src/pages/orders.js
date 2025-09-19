@@ -1609,7 +1609,9 @@ export default function RetailOrders() {
   // Fetch all pending orders across all shops
   useEffect(() => {
     const fetchAllPendingOrders = async () => {
-      if (tabIndex !== getTabsForUserRole().length - 1) return; // Only fetch when on the Pending Orders tab
+      // Check if we're on the Pending Orders Summary tab
+      const isPendingOrdersTab = isRoaster ? tabIndex === 1 : tabIndex === 3;
+      if (!isPendingOrdersTab) return;
       
       try {
         setAllPendingOrdersLoading(true);
@@ -1629,7 +1631,7 @@ export default function RetailOrders() {
     };
     
     fetchAllPendingOrders();
-  }, [tabIndex]);
+  }, [tabIndex, isRoaster]);
 
   // Tabs for different users
   const getTabsForUserRole = () => {
@@ -2181,7 +2183,10 @@ export default function RetailOrders() {
                 <>
                   {/* Add the PendingOrdersSummary component for Owner, Retailer and Roaster users */}
                   {(isOwner || isRetailer || isRoaster) && (
-                    <PendingOrdersSummary orders={orders} showShopInfo={true} />
+                    <PendingOrdersSummary 
+                      orders={orders.filter(order => order.status === 'PENDING')} 
+                      showShopInfo={true} 
+                    />
                   )}
                   
                   <Paper elevation={1}>
@@ -2204,15 +2209,7 @@ export default function RetailOrders() {
                             <React.Fragment key={order.id}>
                               <TableRow 
                                 hover 
-                                onClick={() => {
-                                  try {
-                                    handleOpenStatusDialog(order);
-                                  } catch (error) {
-                                    console.error('Error opening status dialog:', error);
-                                  }
-                                }}
                                 sx={{ 
-                                  cursor: 'pointer',
                                   '&:hover': {
                                     backgroundColor: (isDark ?? false) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
                                   }
@@ -2247,24 +2244,82 @@ export default function RetailOrders() {
                                     </IconButton>
                                   </Tooltip>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      handleOpenStatusDialog(order);
+                                    } catch (error) {
+                                      console.error('Error opening status dialog:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
                                   {order.createdAt 
                                     ? format(new Date(order.createdAt), 'MMM d, yyyy') 
                                     : 'Unknown'}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      handleOpenStatusDialog(order);
+                                    } catch (error) {
+                                      console.error('Error opening status dialog:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
                                   <StatusChip status={order.status} />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      handleOpenStatusDialog(order);
+                                    } catch (error) {
+                                      console.error('Error opening status dialog:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
                                   {order.orderedBy?.firstName 
                                     ? `${order.orderedBy.firstName} ${order.orderedBy.lastName || ''}` 
                                     : order.orderedBy?.username || 'Unknown'}
                                 </TableCell>
-                                <TableCell>{order.items?.length || 0}</TableCell>
-                                <TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      handleOpenStatusDialog(order);
+                                    } catch (error) {
+                                      console.error('Error opening status dialog:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
+                                  {order.items?.length || 0}
+                                </TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      handleOpenStatusDialog(order);
+                                    } catch (error) {
+                                      console.error('Error opening status dialog:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
                                   {order.items?.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
                                 </TableCell>
-                                <TableCell>{order.id.substring(0, 8)}</TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      handleOpenStatusDialog(order);
+                                    } catch (error) {
+                                      console.error('Error opening status dialog:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
+                                  {order.id.substring(0, 8)}
+                                </TableCell>
                               </TableRow>
                               {expandedRows[order.id] && Array.isArray(order.items) && order.items.length > 0 && (
                                 <TableRow>
