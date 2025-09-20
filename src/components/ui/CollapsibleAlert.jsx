@@ -40,27 +40,28 @@ export default function CollapsibleAlert({
           alignItems: 'center', 
           justifyContent: 'space-between',
           p: 1.5,
-          backgroundColor: '#d0d0d0',
-          border: `1px solid #b0b0b0`,
+          backgroundColor: '#a0a0a0',
+          border: `1px solid #808080`,
           borderRadius: 1,
           cursor: 'pointer',
           '&:hover': {
-            backgroundColor: '#c0c0c0'
+            backgroundColor: '#909090'
           }
         }}
         onClick={handleToggle}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
           <InfoIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-          <Typography 
-            variant="subtitle2" 
-            sx={{ 
-              fontWeight: 'bold',
-              color: '#333333'
-            }}
-          >
-            {title}
-          </Typography>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontWeight: 'bold',
+            color: '#333333',
+            fontSize: '0.875rem'
+          }}
+        >
+          {title}
+        </Typography>
         </Box>
         <IconButton
           size="small"
@@ -83,9 +84,10 @@ export default function CollapsibleAlert({
         <Box sx={{ 
           mt: 1,
           p: 1.5,
-          backgroundColor: 'transparent',
-          border: 'none',
-          borderRadius: 1
+          backgroundColor: '#a0a0a0',
+          border: `1px solid #808080`,
+          borderRadius: 1,
+          borderTop: 'none'
         }}>
           {children}
         </Box>

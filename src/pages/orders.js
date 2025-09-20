@@ -324,7 +324,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>Create Order</DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
         <CollapsibleAlert title="Order Information" sx={{ mb: 3 }}>
-          <ul style={{ paddingLeft: '20px', margin: '0' }}>
+          <ul style={{ paddingLeft: '20px', margin: '0', fontSize: '0.875rem' }}>
             <li>Espresso bags = 200g each (0.2kg)</li>
             <li>Filter bags = 200g each (0.2kg)</li>
             <li>Large bags = 1kg each</li>
