@@ -631,6 +631,107 @@ class PushNotificationService {
       userId: data.userId
     });
   }
+
+  /**
+   * Send message-related push notifications
+   */
+  async sendMessageNotification(eventType, data, userIds) {
+    if (!this.isConfigured()) {
+      console.log('[Push] Push notifications not configured, skipping message notification');
+      return { success: false, error: 'Push notifications not configured' };
+    }
+
+    try {
+      let notification;
+
+      switch (eventType) {
+        case 'NEW_MESSAGE':
+          notification = {
+            title: `New Message`,
+            body: `${data.senderName}: ${data.messagePreview}`,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: 'message-new',
+            data: {
+              type: 'MESSAGE',
+              messageId: data.messageId,
+              action: 'view'
+            },
+            actions: [
+              {
+                action: 'view',
+                title: 'View Message',
+                icon: '/icons/icon-72x72.png'
+              }
+            ],
+            requireInteraction: false,
+            vibrate: [200, 100, 200]
+          };
+          break;
+
+        case 'MENTION':
+          notification = {
+            title: `You were mentioned`,
+            body: `${data.senderName} mentioned you: ${data.messagePreview}`,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: `message-mention-${data.messageId}`,
+            data: {
+              type: 'MESSAGE',
+              messageId: data.messageId,
+              action: 'view'
+            },
+            actions: [
+              {
+                action: 'view',
+                title: 'View Message',
+                icon: '/icons/icon-72x72.png'
+              },
+              {
+                action: 'reply',
+                title: 'Reply'
+              }
+            ],
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 200]
+          };
+          break;
+
+        default:
+          return { success: false, error: 'Unknown message event type' };
+      }
+
+      // Send to specified users
+      const results = [];
+      let totalSuccessful = 0;
+      let totalAttempted = 0;
+
+      for (const userId of userIds) {
+        try {
+          const result = await this.sendNotificationToUser(userId, notification);
+          results.push({ userId, success: true, result });
+          totalSuccessful += result.sent;
+          totalAttempted += result.total;
+        } catch (error) {
+          console.error(`[Push] Error sending message notification to user ${userId}:`, error);
+          results.push({ userId, success: false, error: error.message });
+          totalAttempted += 1;
+        }
+      }
+
+      return {
+        success: true,
+        message: `Message notification sent to ${totalSuccessful}/${totalAttempted} recipients`,
+        successful: totalSuccessful,
+        total: totalAttempted,
+        results
+      };
+
+    } catch (error) {
+      console.error('[Push] Error sending message notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 export default new PushNotificationService();
