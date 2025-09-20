@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function CoffeeDetailPage() {
   const router = useRouter();
   const { coffeeId } = router.query;
   const { user } = useAuth();
+  const { isDark } = useTheme();
   
   const [coffee, setCoffee] = useState(null);
   const [inventoryLogs, setInventoryLogs] = useState([]);
@@ -150,20 +152,20 @@ export default function CoffeeDetailPage() {
 
   if (loading && !coffee) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-8">Loading coffee details...</div>
+      <div className={`container mx-auto px-4 py-8 ${isDark ? 'bg-gray-800 min-h-screen' : 'bg-white'}`}>
+        <div className={`text-center py-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>Loading coffee details...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div className={`container mx-auto px-4 py-8 ${isDark ? 'bg-gray-800 min-h-screen' : 'bg-white'}`}>
+        <div className={`${isDark ? 'bg-red-900 border-red-600 text-red-200' : 'bg-red-100 border-red-400 text-red-700'} border px-4 py-3 rounded mb-4`}>
           {error}
         </div>
         <div className="mt-4">
-          <Link href="/coffee" className="text-blue-600 hover:underline">
+          <Link href="/coffee" className={`${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:underline'}`}>
             Back to Coffee List
           </Link>
         </div>
@@ -172,17 +174,17 @@ export default function CoffeeDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className={`container mx-auto px-4 py-8 ${isDark ? 'bg-gray-800 min-h-screen' : 'bg-white'}`}>
       {/* Header with navigation */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{coffee?.name || 'Coffee Details'}</h1>
-          <p className="text-gray-600">
+          <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.name || 'Coffee Details'}</h1>
+          <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
             {coffee?.grade} • {coffee?.quantity ? `${parseFloat(coffee.quantity).toFixed(2)} kg in stock` : 'Out of stock'}
           </p>
         </div>
         <div className="space-x-2">
-          <Link href="/coffee" className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+          <Link href="/coffee" className={`${isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} py-2 px-4 rounded`}>
             Back to List
           </Link>
           {canManageCoffee && (
@@ -197,60 +199,60 @@ export default function CoffeeDetailPage() {
       </div>
 
       {/* Coffee details */}
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Coffee Details</h2>
+      <div className={`${isDark ? 'bg-gray-700' : 'bg-white'} shadow rounded-lg p-6 mb-6`}>
+        <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Coffee Details</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-gray-500">Name</p>
-            <p className="font-medium">{coffee?.name || '-'}</p>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Name</p>
+            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.name || '-'}</p>
           </div>
           
           <div>
-            <p className="text-sm text-gray-500">Current Stock</p>
-            <p className="font-medium">{coffee?.quantity ? `${parseFloat(coffee.quantity).toFixed(2)} kg` : 'None'}</p>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Current Stock</p>
+            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.quantity ? `${parseFloat(coffee.quantity).toFixed(2)} kg` : 'None'}</p>
           </div>
           
           <div>
-            <p className="text-sm text-gray-500">Origin</p>
-            <p className="font-medium">{coffee?.country || '-'}</p>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Origin</p>
+            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.country || '-'}</p>
           </div>
           
           <div>
-            <p className="text-sm text-gray-500">Roaster/Producer</p>
-            <p className="font-medium">{coffee?.producer || '-'}</p>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Roaster/Producer</p>
+            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.producer || '-'}</p>
           </div>
           
           <div>
-            <p className="text-sm text-gray-500">Grade</p>
-            <p className="font-medium">{coffee?.grade || '-'}</p>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Grade</p>
+            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.grade || '-'}</p>
           </div>
           
           <div>
-            <p className="text-sm text-gray-500">Added By</p>
-            <p className="font-medium">{coffee?.createdBy?.username || '-'}</p>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Added By</p>
+            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.createdBy?.username || '-'}</p>
           </div>
           
           <div className="md:col-span-2">
-            <p className="text-sm text-gray-500">Notes</p>
-            <p className="font-medium">{coffee?.notes || 'No notes available'}</p>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Notes</p>
+            <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{coffee?.notes || 'No notes available'}</p>
           </div>
         </div>
       </div>
 
       {/* Inventory management section (for authorized users) */}
       {canManageCoffee && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Update Inventory</h2>
+        <div className={`${isDark ? 'bg-gray-700' : 'bg-white'} shadow rounded-lg p-6 mb-6`}>
+          <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Update Inventory</h2>
           
           {updateSuccess && (
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            <div className={`${isDark ? 'bg-green-900 border-green-600 text-green-200' : 'bg-green-100 border-green-400 text-green-700'} border px-4 py-3 rounded mb-4`}>
               {updateSuccess}
             </div>
           )}
           
           {updateError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className={`${isDark ? 'bg-red-900 border-red-600 text-red-200' : 'bg-red-100 border-red-400 text-red-700'} border px-4 py-3 rounded mb-4`}>
               {updateError}
             </div>
           )}
@@ -258,7 +260,7 @@ export default function CoffeeDetailPage() {
           <form onSubmit={handleUpdateInventory} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="amount" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                   Amount (kg)
                 </label>
                 <input
@@ -268,16 +270,16 @@ export default function CoffeeDetailPage() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="Enter positive or negative value"
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                   Use positive numbers to add, negative to remove
                 </p>
               </div>
               
               <div className="md:col-span-2">
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="notes" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                   Notes
                 </label>
                 <input
@@ -286,7 +288,7 @@ export default function CoffeeDetailPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Optional notes about this inventory change"
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
                 />
               </div>
             </div>
@@ -305,30 +307,30 @@ export default function CoffeeDetailPage() {
       )}
 
       {/* Inventory logs */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Inventory History</h2>
+      <div className={`${isDark ? 'bg-gray-700' : 'bg-white'} shadow rounded-lg p-6`}>
+        <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Inventory History</h2>
         
         {inventoryLogs.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No inventory changes recorded yet.</p>
+          <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-center py-4`}>No inventory changes recorded yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className={`${isDark ? 'bg-gray-600' : 'bg-gray-50'}`}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Change</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Date</th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>User</th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Change</th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>New Total</th>
+                  <th className={`px-6 py-3 text-left text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>Notes</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className={`${isDark ? 'bg-gray-700' : 'bg-white'} divide-y divide-gray-200`}>
                 {inventoryLogs.map((log) => (
                   <tr key={log.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {new Date(log.createdAt).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {log.user?.username || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -336,10 +338,10 @@ export default function CoffeeDetailPage() {
                         {log.changeAmount > 0 ? '+' : ''}{parseFloat(log.changeAmount).toFixed(2)} kg
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {parseFloat(log.quantity).toFixed(2)} kg
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className={`px-6 py-4 whitespace-nowrap ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {log.notes || '-'}
                     </td>
                   </tr>
@@ -358,8 +360,12 @@ export default function CoffeeDetailPage() {
                 disabled={currentPage === 1}
                 className={`mx-1 px-3 py-1 rounded ${
                   currentPage === 1
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? isDark 
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : isDark
+                      ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
                 Previous
@@ -371,7 +377,9 @@ export default function CoffeeDetailPage() {
                   className={`mx-1 px-3 py-1 rounded ${
                     currentPage === page + 1
                       ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      : isDark
+                        ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
                   {page + 1}
@@ -382,8 +390,12 @@ export default function CoffeeDetailPage() {
                 disabled={currentPage === totalPages}
                 className={`mx-1 px-3 py-1 rounded ${
                   currentPage === totalPages
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? isDark
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : isDark
+                      ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
                 Next
