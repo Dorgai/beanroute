@@ -203,19 +203,8 @@ export default function Layout({ children }) {
       <header className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} pwa-header`}>
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex h-16 items-center justify-between">
-            {/* Logo and Nav */}
-            <div className="flex items-center space-x-8">
-              <Link href="/dashboard" className="flex items-center">
-                <img 
-                  src="/images/sonic-beans-logo.jpg"
-                  alt="Sonic Beans"
-                  className="h-8"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "/images/sonic-beans-logo.svg";
-                  }}
-                />
-              </Link>
+                {/* Nav */}
+                <div className="flex items-center space-x-8">
               
               {/* Desktop Navigation */}
               <nav className="hidden md:flex space-x-8">

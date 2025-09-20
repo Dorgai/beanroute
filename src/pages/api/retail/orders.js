@@ -1,12 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 
-// Create a dedicated connection for this API route
-const prisma = new PrismaClient();
+// Use singleton pattern to avoid connection issues
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.prisma || new PrismaClient();
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    await prisma.$disconnect();
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -20,13 +21,11 @@ export default async function handler(req, res) {
       try {
         session = await getServerSession(req, res);
         if (!session) {
-          await prisma.$disconnect();
           return res.status(401).json({ error: 'Unauthorized' });
         }
         console.log('Fetch orders - session user role:', session.user.role);
       } catch (sessionError) {
         console.error('Session error:', sessionError);
-        await prisma.$disconnect();
         return res.status(401).json({ error: 'Session validation failed' });
       }
     } else {
@@ -62,7 +61,6 @@ export default async function handler(req, res) {
         
         if (!shop) {
           console.log(`Shop with ID ${shopId} not found`);
-          await prisma.$disconnect();
           return res.status(200).json([]); // Return empty array instead of error
         }
       } catch (shopError) {
@@ -96,7 +94,6 @@ export default async function handler(req, res) {
       console.log(`Found ${orders.length} retail orders`);
       
       if (orders.length === 0) {
-        await prisma.$disconnect();
         return res.status(200).json([]);
       }
       
@@ -165,7 +162,6 @@ export default async function handler(req, res) {
         };
       });
       
-      await prisma.$disconnect();
       return res.status(200).json(enrichedOrders);
     } catch (dbError) {
       console.error('Database error fetching retail orders:', dbError);
@@ -187,19 +183,14 @@ export default async function handler(req, res) {
           }
         });
         
-        await prisma.$disconnect();
         return res.status(200).json(orders);
       } catch (fallbackError) {
         console.error('Even minimal orders query failed:', fallbackError);
-        await prisma.$disconnect();
         return res.status(200).json([]); // Return empty array instead of error
       }
     }
   } catch (error) {
     console.error('Unhandled error in retail orders API:', error);
-    // Make sure to disconnect prisma in case of unhandled errors
-    await prisma.$disconnect().catch(console.error);
-    
     return res.status(200).json([]); // Return empty array instead of error
   }
 } 

@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function EditCoffeePage() {
   const router = useRouter();
   const { coffeeId } = router.query;
   const { user } = useAuth();
+  const { isDark } = useTheme();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -88,10 +90,10 @@ export default function EditCoffeePage() {
       router.push('/coffee');
     }
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className={`container mx-auto px-4 py-8 ${isDark ? 'bg-gray-800 min-h-screen' : 'bg-white'}`}>
         <div className="text-center py-8">
-          <p className="text-red-600">You do not have permission to edit coffee entries.</p>
-          <Link href="/coffee" className="text-blue-600 hover:underline mt-4 inline-block">
+          <p className={`${isDark ? 'text-red-400' : 'text-red-600'}`}>You do not have permission to edit coffee entries.</p>
+          <Link href="/coffee" className={`${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:underline'} mt-4 inline-block`}>
             Back to Coffee List
           </Link>
         </div>
@@ -169,20 +171,20 @@ export default function EditCoffeePage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-8">Loading coffee data...</div>
+      <div className={`container mx-auto px-4 py-8 ${isDark ? 'bg-gray-800 min-h-screen' : 'bg-white'}`}>
+        <div className={`text-center py-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>Loading coffee data...</div>
       </div>
     );
   }
 
   if (fetchError) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div className={`container mx-auto px-4 py-8 ${isDark ? 'bg-gray-800 min-h-screen' : 'bg-white'}`}>
+        <div className={`${isDark ? 'bg-red-900 border-red-600 text-red-200' : 'bg-red-100 border-red-400 text-red-700'} border px-4 py-3 rounded mb-4`}>
           {fetchError}
         </div>
         <div className="mt-4">
-          <Link href="/coffee" className="text-blue-600 hover:underline">
+          <Link href="/coffee" className={`${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:underline'}`}>
             Back to Coffee List
           </Link>
         </div>
@@ -191,34 +193,34 @@ export default function EditCoffeePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className={`container mx-auto px-4 py-8 ${isDark ? 'bg-gray-800 min-h-screen' : 'bg-white'}`}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Edit Coffee</h1>
+        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Edit Coffee</h1>
         <div className="space-x-2">
-          <Link href={`/coffee/${coffeeId}`} className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+          <Link href={`/coffee/${coffeeId}`} className={`${isDark ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} py-2 px-4 rounded`}>
             Cancel
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className={`${isDark ? 'bg-red-900 border-red-600 text-red-200' : 'bg-red-100 border-red-400 text-red-700'} border px-4 py-3 rounded mb-4`}>
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <div className={`${isDark ? 'bg-green-900 border-green-600 text-green-200' : 'bg-green-100 border-green-400 text-green-700'} border px-4 py-3 rounded mb-4`}>
           {success}
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className={`${isDark ? 'bg-gray-700' : 'bg-white'} shadow rounded-lg p-6`}>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Coffee Name */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                 Coffee Name *
               </label>
               <input
@@ -227,14 +229,14 @@ export default function EditCoffeePage() {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded"
+                className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
                 required
               />
             </div>
 
             {/* Coffee Grade */}
             <div>
-              <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="grade" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
                 Grade
               </label>
               <select
@@ -242,7 +244,7 @@ export default function EditCoffeePage() {
                 name="grade"
                 value={formData.grade}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded"
+                className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
               >
                 <option value="SPECIALTY">Specialty</option>
                 <option value="PREMIUM">Premium</option>
@@ -252,7 +254,7 @@ export default function EditCoffeePage() {
 
             {/* Producer */}
             <div>
-              <label htmlFor="producer" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="producer" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
                 Roaster/Producer
               </label>
               <input
@@ -261,13 +263,13 @@ export default function EditCoffeePage() {
                 name="producer"
                 value={formData.producer}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded"
+                className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
               />
             </div>
 
             {/* Country */}
             <div>
-              <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="country" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
                 Country of Origin
               </label>
               <input
@@ -276,13 +278,13 @@ export default function EditCoffeePage() {
                 name="country"
                 value={formData.country}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded"
+                className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
               />
             </div>
 
             {/* Process */}
             <div>
-              <label htmlFor="process" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="process" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
                 Process
               </label>
               <input
@@ -291,14 +293,14 @@ export default function EditCoffeePage() {
                 name="process"
                 value={formData.process}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded"
+                className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
                 placeholder="e.g., Washed, Natural, Honey"
               />
             </div>
 
             {/* Label Quantity */}
             <div>
-              <label htmlFor="labelQuantity" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="labelQuantity" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
                 Label Quantity
               </label>
               <input
@@ -308,10 +310,10 @@ export default function EditCoffeePage() {
                 value={formData.labelQuantity}
                 onChange={handleChange}
                 min="0"
-                className="w-full p-2 border border-gray-300 rounded"
+                className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
                 placeholder="Number of labels for this coffee"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1">
                 1 label is needed per bag (regardless of bag size or type)
               </p>
             </div>
@@ -319,7 +321,7 @@ export default function EditCoffeePage() {
             {/* Price - Only visible to admin and owner */}
             {canSeePrice && (
               <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="price" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
                   Price ($/kg)
                 </label>
                 <input
@@ -330,7 +332,7 @@ export default function EditCoffeePage() {
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
                   placeholder="0.00"
                 />
               </div>
@@ -339,7 +341,7 @@ export default function EditCoffeePage() {
 
           {/* Brewing Methods */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2">
               Brewing Methods *
             </label>
             <div className="flex flex-wrap gap-4">
@@ -351,7 +353,7 @@ export default function EditCoffeePage() {
                   onChange={handleChange}
                   className="mr-2"
                 />
-                <span className="text-sm">Espresso (E)</span>
+                <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Espresso (E)</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -361,7 +363,7 @@ export default function EditCoffeePage() {
                   onChange={handleChange}
                   className="mr-2"
                 />
-                <span className="text-sm">Filter (F)</span>
+                <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Filter (F)</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -371,17 +373,17 @@ export default function EditCoffeePage() {
                   onChange={handleChange}
                   className="mr-2"
                 />
-                <span className="text-sm">Signature (S)</span>
+                <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Signature (S)</span>
               </label>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1">
               At least one brewing method (Espresso or Filter) is required. Signature is optional.
             </p>
           </div>
 
           {/* Notes */}
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="notes" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
               Additional Notes
             </label>
             <textarea
@@ -390,7 +392,7 @@ export default function EditCoffeePage() {
               value={formData.notes}
               onChange={handleChange}
               rows="4"
-              className="w-full p-2 border border-gray-300 rounded"
+              className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
             ></textarea>
           </div>
 
