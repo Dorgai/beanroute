@@ -2251,13 +2251,13 @@ export default function RetailOrders() {
                         <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                           <TableRow>
                             <TableCell padding="checkbox" />
-                            <TableCell align="right">Actions</TableCell>
                             <TableCell>Date</TableCell>
-                            <TableCell>Status</TableCell>
                             <TableCell>Ordered By</TableCell>
                             <TableCell>Items</TableCell>
                             <TableCell>Total Quantity</TableCell>
                             <TableCell>Order ID</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Actions</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2271,6 +2271,7 @@ export default function RetailOrders() {
                                   }
                                 }}
                               >
+                                {/* Expand/Collapse Button */}
                                 <TableCell padding="checkbox">
                                   <IconButton
                                     size="small"
@@ -2287,25 +2288,14 @@ export default function RetailOrders() {
                                     )}
                                   </IconButton>
                                 </TableCell>
-                                <TableCell align="right">
-                                  <Tooltip title="Update Status">
-                                    <IconButton 
-                                      size="small" 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenStatusDialog(order);
-                                      }}
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </TableCell>
+                                
+                                {/* Details Columns - Click to expand/collapse */}
                                 <TableCell 
                                   onClick={() => {
                                     try {
-                                      handleOpenStatusDialog(order);
+                                      toggleRowExpanded(order.id);
                                     } catch (error) {
-                                      console.error('Error opening status dialog:', error);
+                                      console.error('Error toggling row expansion:', error);
                                     }
                                   }}
                                   sx={{ cursor: 'pointer' }}
@@ -2314,6 +2304,58 @@ export default function RetailOrders() {
                                     ? format(new Date(order.createdAt), 'MMM d, yyyy') 
                                     : 'Unknown'}
                                 </TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      toggleRowExpanded(order.id);
+                                    } catch (error) {
+                                      console.error('Error toggling row expansion:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
+                                  {order.orderedBy?.firstName 
+                                    ? `${order.orderedBy.firstName} ${order.orderedBy.lastName || ''}` 
+                                    : order.orderedBy?.username || 'Unknown'}
+                                </TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      toggleRowExpanded(order.id);
+                                    } catch (error) {
+                                      console.error('Error toggling row expansion:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
+                                  {order.items?.length || 0}
+                                </TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      toggleRowExpanded(order.id);
+                                    } catch (error) {
+                                      console.error('Error toggling row expansion:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
+                                  {order.items?.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
+                                </TableCell>
+                                <TableCell 
+                                  onClick={() => {
+                                    try {
+                                      toggleRowExpanded(order.id);
+                                    } catch (error) {
+                                      console.error('Error toggling row expansion:', error);
+                                    }
+                                  }}
+                                  sx={{ cursor: 'pointer' }}
+                                >
+                                  {order.id.substring(0, 8)}
+                                </TableCell>
+                                
+                                {/* Status Column - Click to open status dialog */}
                                 <TableCell 
                                   onClick={() => {
                                     try {
@@ -2326,55 +2368,21 @@ export default function RetailOrders() {
                                 >
                                   <StatusChip status={order.status} />
                                 </TableCell>
-                                <TableCell 
-                                  onClick={() => {
-                                    try {
-                                      handleOpenStatusDialog(order);
-                                    } catch (error) {
-                                      console.error('Error opening status dialog:', error);
-                                    }
-                                  }}
-                                  sx={{ cursor: 'pointer' }}
-                                >
-                                  {order.orderedBy?.firstName 
-                                    ? `${order.orderedBy.firstName} ${order.orderedBy.lastName || ''}` 
-                                    : order.orderedBy?.username || 'Unknown'}
-                                </TableCell>
-                                <TableCell 
-                                  onClick={() => {
-                                    try {
-                                      handleOpenStatusDialog(order);
-                                    } catch (error) {
-                                      console.error('Error opening status dialog:', error);
-                                    }
-                                  }}
-                                  sx={{ cursor: 'pointer' }}
-                                >
-                                  {order.items?.length || 0}
-                                </TableCell>
-                                <TableCell 
-                                  onClick={() => {
-                                    try {
-                                      handleOpenStatusDialog(order);
-                                    } catch (error) {
-                                      console.error('Error opening status dialog:', error);
-                                    }
-                                  }}
-                                  sx={{ cursor: 'pointer' }}
-                                >
-                                  {order.items?.reduce((sum, item) => sum + (item.totalQuantity || 0), 0).toFixed(2)} kg
-                                </TableCell>
-                                <TableCell 
-                                  onClick={() => {
-                                    try {
-                                      handleOpenStatusDialog(order);
-                                    } catch (error) {
-                                      console.error('Error opening status dialog:', error);
-                                    }
-                                  }}
-                                  sx={{ cursor: 'pointer' }}
-                                >
-                                  {order.id.substring(0, 8)}
+                                
+                                {/* Actions Column - Click to open status dialog */}
+                                <TableCell align="right">
+                                  <Tooltip title="Update Status">
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenStatusDialog(order);
+                                      }}
+                                      sx={{ cursor: 'pointer' }}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
                                 </TableCell>
                               </TableRow>
                               {expandedRows[order.id] && Array.isArray(order.items) && order.items.length > 0 && (
