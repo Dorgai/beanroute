@@ -1956,14 +1956,22 @@ export default function RetailOrders() {
                               <TableRow 
                                 key={item.id} 
                                 hover
+                                onClick={() => {
+                                  if (canUpdateInventory) {
+                                    handleOpenInventoryDialog(item);
+                                  }
+                                }}
                                 sx={{ 
                                   backgroundColor: rowBgColor,
+                                  cursor: canUpdateInventory ? 'pointer' : 'default',
                                   '&:hover': {
                                     backgroundColor: isCritical 
                                       ? '#fff0f0' 
                                       : isWarning 
                                         ? '#fff5e6' 
-                                        : undefined
+                                        : canUpdateInventory
+                                          ? 'rgba(0, 0, 0, 0.04)'
+                                          : undefined
                                   }
                                 }}
                               >
@@ -1972,7 +1980,10 @@ export default function RetailOrders() {
                                     <Tooltip title="Update Inventory">
                                       <IconButton 
                                         size="small" 
-                                        onClick={() => handleOpenInventoryDialog(item)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenInventoryDialog(item);
+                                        }}
                                         aria-label="update inventory"
                                       >
                                         <EditIcon fontSize="small" />
