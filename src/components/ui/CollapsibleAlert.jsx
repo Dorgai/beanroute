@@ -40,18 +40,12 @@ export default function CollapsibleAlert({
           alignItems: 'center', 
           justifyContent: 'space-between',
           p: 1.5,
-          backgroundColor: severity === 'info' ? '#e3f2fd' : 
-                          severity === 'warning' ? '#fff3e0' :
-                          severity === 'error' ? '#ffebee' : '#e8f5e8',
-          border: `1px solid ${severity === 'info' ? '#2196f3' : 
-                               severity === 'warning' ? '#ff9800' :
-                               severity === 'error' ? '#f44336' : '#4caf50'}`,
+          backgroundColor: '#f5f5f5',
+          border: `1px solid #e0e0e0`,
           borderRadius: 1,
           cursor: 'pointer',
           '&:hover': {
-            backgroundColor: severity === 'info' ? '#bbdefb' : 
-                            severity === 'warning' ? '#ffe0b2' :
-                            severity === 'error' ? '#ffcdd2' : '#c8e6c9'
+            backgroundColor: '#eeeeee'
           }
         }}
         onClick={handleToggle}
@@ -62,9 +56,7 @@ export default function CollapsibleAlert({
             variant="subtitle2" 
             sx={{ 
               fontWeight: 'bold',
-              color: severity === 'info' ? '#1565c0' : 
-                     severity === 'warning' ? '#e65100' :
-                     severity === 'error' ? '#c62828' : '#2e7d32'
+              color: '#333333'
             }}
           >
             {title}
@@ -91,12 +83,8 @@ export default function CollapsibleAlert({
         <Box sx={{ 
           mt: 1,
           p: 1.5,
-          backgroundColor: severity === 'info' ? '#f3f9ff' : 
-                          severity === 'warning' ? '#fffbf5' :
-                          severity === 'error' ? '#fff5f5' : '#f1f8e9',
-          border: `1px solid ${severity === 'info' ? '#90caf9' : 
-                               severity === 'warning' ? '#ffcc02' :
-                               severity === 'error' ? '#ef9a9a' : '#a5d6a7'}`,
+          backgroundColor: '#f5f5f5',
+          border: `1px solid #e0e0e0`,
           borderRadius: 1,
           borderTop: 'none'
         }}>

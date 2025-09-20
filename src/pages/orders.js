@@ -1899,180 +1899,231 @@ export default function RetailOrders() {
                       </CollapsibleAlert>
                     )}
                     
-                    <TableContainer component={Paper}>
-                      <Table size="small">
-                        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                          <TableRow>
-                            {canUpdateInventory && (
-                              <TableCell align="center">Actions</TableCell>
-                            )}
-                            <TableCell>Coffee</TableCell>
-                            <TableCell>Grade</TableCell>
-                            <TableCell align="right">Espresso Bags (200g)</TableCell>
-                            <TableCell align="right">Filter Bags (200g)</TableCell>
-                            <TableCell align="right">Large Bags (1kg)</TableCell>
-                            <TableCell>Last Order Date</TableCell>
-                            <TableCell>Stock Status</TableCell>
-                            <TableCell>Availability</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {inventory.map((item) => {
-                            // Calculate stock status for row styling based only on small bags
-                            // Get the actual number of available coffees instead of hardcoding to 2
-                            const numberOfCoffees = availableCoffee.length || 1; // Use actual coffee count with fallback to 1
-                            
-                            // Calculate per-coffee minimums for small bags only
-                            const perCoffeeMinEspresso = selectedShopDetails?.minCoffeeQuantityEspresso > 0 ?
-                                                     selectedShopDetails.minCoffeeQuantityEspresso / numberOfCoffees : 0;
-                            
-                            const perCoffeeMinFilter = selectedShopDetails?.minCoffeeQuantityFilter > 0 ?
-                                                     selectedShopDetails.minCoffeeQuantityFilter / numberOfCoffees : 0;
-                            
-                            // Calculate percentage thresholds for small bags only
-                            const espressoBagsPercentage = perCoffeeMinEspresso > 0 ? 
-                                                       (item.smallBagsEspresso / perCoffeeMinEspresso) * 100 : 100;
-                            
-                            const filterBagsPercentage = perCoffeeMinFilter > 0 ? 
-                                                       (item.smallBagsFilter / perCoffeeMinFilter) * 100 : 100;
-                            
-                            // Determine if small bags stock is low (below 75%) or critical (below 50%)
-                            const isEspressoBagsLow = perCoffeeMinEspresso > 0 && espressoBagsPercentage < 75 && espressoBagsPercentage >= 50;
-                            const isEspressoBagsCritical = perCoffeeMinEspresso > 0 && espressoBagsPercentage < 50;
-                            
-                            const isFilterBagsLow = perCoffeeMinFilter > 0 && filterBagsPercentage < 75 && filterBagsPercentage >= 50;
-                            const isFilterBagsCritical = perCoffeeMinFilter > 0 && filterBagsPercentage < 50;
-                            
-                            // Determine row background color based only on small bags status
-                            const isCritical = isEspressoBagsCritical || isFilterBagsCritical;
-                            const isWarning = (isEspressoBagsLow || isFilterBagsLow) && !isCritical;
-                            const rowBgColor = isCritical 
-                              ? '#fff8f8' // light red for critical bags
-                              : isWarning 
-                                ? '#fffaf0' // light orange/yellow for warning bags
-                                : 'inherit'; // default for normal stock
-                            
-                            return (
-                              <TableRow 
-                                key={item.id} 
-                                hover
-                                onClick={() => {
-                                  if (canUpdateInventory) {
-                                    handleOpenInventoryDialog(item);
-                                  }
-                                }}
-                                sx={{ 
-                                  backgroundColor: rowBgColor,
-                                  cursor: canUpdateInventory ? 'pointer' : 'default',
-                                  '&:hover': {
-                                    backgroundColor: isCritical 
-                                      ? '#fff0f0' 
-                                      : isWarning 
-                                        ? '#fff5e6' 
-                                        : canUpdateInventory
-                                          ? 'rgba(0, 0, 0, 0.04)'
-                                          : undefined
-                                  }
-                                }}
-                              >
-                                {canUpdateInventory && (
-                                  <TableCell align="center">
-                                    <Tooltip title="Update Inventory">
-                                      <IconButton 
-                                        size="small" 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenInventoryDialog(item);
-                                        }}
-                                        aria-label="update inventory"
-                                      >
-                                        <EditIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </TableCell>
-                                )}
-                                <TableCell>
-                                  <strong>{item.coffee?.name || 'Unknown'}</strong>
-                                </TableCell>
-                                <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
-                                <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
-                                <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
-                                <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
-                                <TableCell>
-                                  {item.lastOrderDate
-                                    ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
-                                    : 'Never'}
-                                </TableCell>
-                                <TableCell>
-                                  {(canUpdateInventory || isAdmin || isOwner) && selectedShopDetails && (
-                                    <StockLevelAlert
-                                      inventory={item}
-                                      shopMinQuantities={selectedShopDetails}
-                                      coffeeCount={availableCoffee.length || 1}
-                                    />
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {/* Show basic availability information */}
-                                  <div className="text-sm">
-                                    {item.id ? (
-                                      <>
-                                        <div className="text-green-600 font-medium">In Stock</div>
-                                        {item.greenStockAvailable > 0 && (
-                                          <div className="text-gray-500 text-xs">
-                                            Green stock: {parseFloat(item.greenStockAvailable).toFixed(2)}kg
-                                          </div>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <div className="text-blue-600 font-medium">Available for Order</div>
-                                        {item.greenStockAvailable > 0 ? (
-                                          <div className="text-gray-500 text-xs">
-                                            Green stock: {parseFloat(item.greenStockAvailable).toFixed(2)}kg
-                                          </div>
-                                        ) : (
-                                          <div className="text-gray-400 text-xs">
-                                            Out of stock
-                                          </div>
-                                        )}
-                                      </>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
+                    {(() => {
+                      // Group inventory by coffee grade
+                      const groupedInventory = {
+                        specialty: [],
+                        premium: [],
+                        rarity: [],
+                        decaf: [],
+                        other: []
+                      };
+                      
+                      inventory.forEach(item => {
+                        const grade = item.coffee?.grade?.toLowerCase() || '';
+                        if (grade.includes('decaf')) {
+                          groupedInventory.decaf.push(item);
+                        } else if (grade.includes('rarity')) {
+                          groupedInventory.rarity.push(item);
+                        } else if (grade.includes('specialty')) {
+                          groupedInventory.specialty.push(item);
+                        } else if (grade.includes('premium')) {
+                          groupedInventory.premium.push(item);
+                        } else {
+                          groupedInventory.other.push(item);
+                        }
+                      });
+                      
+                      // Helper function to render inventory rows
+                      const renderInventoryRows = (items) => {
+                        return items.map((item) => {
+                          // Calculate stock status for row styling based only on small bags
+                          const numberOfCoffees = availableCoffee.length || 1;
                           
-                          {/* Summary row with totals */}
-                          {inventory.length > 0 && (
-                            <TableRow sx={{ 
-                              backgroundColor: '#f5f5f5', 
-                              fontWeight: 'bold',
-                              '& .MuiTableCell-root': { 
-                                fontWeight: 'bold',
-                                borderTop: '2px solid #e0e0e0' 
-                              }
-                            }}>
-                              {canUpdateInventory && <TableCell />}
-                              <TableCell colSpan={2}>
-                                <Typography variant="subtitle2">TOTAL</Typography>
+                          const perCoffeeMinEspresso = selectedShopDetails?.minCoffeeQuantityEspresso > 0 ?
+                                                       selectedShopDetails.minCoffeeQuantityEspresso / numberOfCoffees : 0;
+                          
+                          const perCoffeeMinFilter = selectedShopDetails?.minCoffeeQuantityFilter > 0 ?
+                                                       selectedShopDetails.minCoffeeQuantityFilter / numberOfCoffees : 0;
+                          
+                          const espressoBagsPercentage = perCoffeeMinEspresso > 0 ? 
+                                                         (item.smallBagsEspresso / perCoffeeMinEspresso) * 100 : 100;
+                          
+                          const filterBagsPercentage = perCoffeeMinFilter > 0 ? 
+                                                         (item.smallBagsFilter / perCoffeeMinFilter) * 100 : 100;
+                          
+                          const isEspressoBagsLow = perCoffeeMinEspresso > 0 && espressoBagsPercentage < 75 && espressoBagsPercentage >= 50;
+                          const isEspressoBagsCritical = perCoffeeMinEspresso > 0 && espressoBagsPercentage < 50;
+                          
+                          const isFilterBagsLow = perCoffeeMinFilter > 0 && filterBagsPercentage < 75 && filterBagsPercentage >= 50;
+                          const isFilterBagsCritical = perCoffeeMinFilter > 0 && filterBagsPercentage < 50;
+                          
+                          const isCritical = isEspressoBagsCritical || isFilterBagsCritical;
+                          const isWarning = (isEspressoBagsLow || isFilterBagsLow) && !isCritical;
+                          const rowBgColor = isCritical 
+                            ? '#fff8f8'
+                            : isWarning 
+                              ? '#fffaf0'
+                              : 'inherit';
+                          
+                          return (
+                            <TableRow 
+                              key={item.id} 
+                              hover
+                              onClick={() => {
+                                if (canUpdateInventory) {
+                                  handleOpenInventoryDialog(item);
+                                }
+                              }}
+                              sx={{ 
+                                backgroundColor: rowBgColor,
+                                cursor: canUpdateInventory ? 'pointer' : 'default',
+                                '&:hover': {
+                                  backgroundColor: isCritical 
+                                    ? '#fff0f0' 
+                                    : isWarning 
+                                      ? '#fff5e6' 
+                                      : canUpdateInventory
+                                        ? 'rgba(0, 0, 0, 0.04)'
+                                        : undefined
+                                }
+                              }}
+                            >
+                              {canUpdateInventory && (
+                                <TableCell align="center">
+                                  <Tooltip title="Update Inventory">
+                                    <IconButton 
+                                      size="small" 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenInventoryDialog(item);
+                                      }}
+                                      aria-label="update inventory"
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </TableCell>
+                              )}
+                              <TableCell>
+                                <strong>{item.coffee?.name || 'Unknown'}</strong>
                               </TableCell>
-                              <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.smallBagsEspresso || 0), 0).toFixed(2)}
+                              <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
+                              <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell>
+                                {item.lastOrderDate
+                                  ? format(new Date(item.lastOrderDate), 'MMM d, yyyy')
+                                  : 'Never'}
                               </TableCell>
-                              <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.smallBagsFilter || 0), 0).toFixed(2)}
+                              <TableCell>
+                                {(canUpdateInventory || isAdmin || isOwner) && selectedShopDetails && (
+                                  <StockLevelAlert
+                                    inventory={item}
+                                    shopMinQuantities={selectedShopDetails}
+                                    coffeeCount={availableCoffee.length || 1}
+                                  />
+                                )}
                               </TableCell>
-                              <TableCell align="right">
-                                {inventory.reduce((sum, item) => sum + (item.largeBags || 0), 0).toFixed(2)}
+                              <TableCell>
+                                <div className="text-sm">
+                                  {item.id ? (
+                                    <>
+                                      <div className="text-green-600 font-medium">In Stock</div>
+                                      {item.greenStockAvailable > 0 && (
+                                        <div className="text-gray-500 text-xs">
+                                          Green stock: {parseFloat(item.greenStockAvailable).toFixed(2)}kg
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="text-blue-600 font-medium">Available for Order</div>
+                                      {item.greenStockAvailable > 0 ? (
+                                        <div className="text-gray-500 text-xs">
+                                          Green stock: {parseFloat(item.greenStockAvailable).toFixed(2)}kg
+                                        </div>
+                                      ) : (
+                                        <div className="text-gray-400 text-xs">
+                                          Out of stock
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
                               </TableCell>
-                              <TableCell colSpan={3} />
                             </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
+                          );
+                        });
+                      };
+                      
+                      // Helper function to render summary row
+                      const renderSummaryRow = (items) => {
+                        if (items.length === 0) return null;
+                        
+                        return (
+                          <TableRow sx={{ 
+                            backgroundColor: '#f5f5f5', 
+                            fontWeight: 'bold',
+                            '& .MuiTableCell-root': { 
+                              fontWeight: 'bold',
+                              borderTop: '2px solid #e0e0e0' 
+                            }
+                          }}>
+                            {canUpdateInventory && <TableCell />}
+                            <TableCell colSpan={2}>
+                              <Typography variant="subtitle2">TOTAL</Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              {items.reduce((sum, item) => sum + (item.smallBagsEspresso || 0), 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {items.reduce((sum, item) => sum + (item.smallBagsFilter || 0), 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {items.reduce((sum, item) => sum + (item.largeBags || 0), 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell colSpan={3} />
+                          </TableRow>
+                        );
+                      };
+                      
+                      // Render sections
+                      const sections = [
+                        { key: 'specialty', title: 'Specialty Grade', items: groupedInventory.specialty },
+                        { key: 'premium', title: 'Premium Grade', items: groupedInventory.premium },
+                        { key: 'rarity', title: 'Rarity Grade', items: groupedInventory.rarity },
+                        { key: 'decaf', title: 'Decaf', items: groupedInventory.decaf },
+                        { key: 'other', title: 'Other', items: groupedInventory.other }
+                      ];
+                      
+                      return sections.map(section => {
+                        if (section.items.length === 0) return null;
+                        
+                        return (
+                          <Box key={section.key} sx={{ mb: 3 }}>
+                            <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+                              {section.title} ({section.items.length} coffee{section.items.length !== 1 ? 's' : ''})
+                            </Typography>
+                            
+                            <TableContainer component={Paper}>
+                              <Table size="small">
+                                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                                  <TableRow>
+                                    {canUpdateInventory && (
+                                      <TableCell align="center">Actions</TableCell>
+                                    )}
+                                    <TableCell>Coffee</TableCell>
+                                    <TableCell>Grade</TableCell>
+                                    <TableCell align="right">Espresso Bags (200g)</TableCell>
+                                    <TableCell align="right">Filter Bags (200g)</TableCell>
+                                    <TableCell align="right">Large Bags (1kg)</TableCell>
+                                    <TableCell>Last Order Date</TableCell>
+                                    <TableCell>Stock Status</TableCell>
+                                    <TableCell>Availability</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {renderInventoryRows(section.items)}
+                                  {renderSummaryRow(section.items)}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </Box>
+                        );
+                      });
+                    })()}
                     
                     {/* Recent inventory alerts section for admin and owner - moved to bottom */}
                     {(isAdmin || isOwner) && (
