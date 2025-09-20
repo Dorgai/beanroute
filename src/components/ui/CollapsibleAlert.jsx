@@ -40,12 +40,12 @@ export default function CollapsibleAlert({
           alignItems: 'center', 
           justifyContent: 'space-between',
           p: 1.5,
-          backgroundColor: '#808080',
-          border: `1px solid #606060`,
+          backgroundColor: '#374151',
+          border: `1px solid #4b5563`,
           borderRadius: 1,
           cursor: 'pointer',
           '&:hover': {
-            backgroundColor: '#707070'
+            backgroundColor: '#4b5563'
           }
         }}
         onClick={handleToggle}
@@ -84,8 +84,8 @@ export default function CollapsibleAlert({
         <Box sx={{ 
           mt: 1,
           p: 1.5,
-          backgroundColor: '#a0a0a0',
-          border: `1px solid #808080`,
+          backgroundColor: '#374151',
+          border: `1px solid #4b5563`,
           borderRadius: 1,
           borderTop: 'none'
         }}>
