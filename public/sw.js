@@ -231,23 +231,23 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     console.log('[SW] Push notification data:', data);
     
-    // Check if we're on iOS PWA (which has limited push support)
+    // Check if we're on mobile PWA (which has limited push support)
     // Note: navigator.userAgent and window are not available in service worker context
     // We'll use a simpler approach based on the data received
-    const isIOS = data.platform === 'ios-pwa' || data.mobile === true;
+    const isMobile = data.mobile === true || data.platform === 'mobile-pwa' || data.platform === 'ios-pwa';
     const isPWA = data.pwa === true;
     
-    if (isIOS && isPWA) {
-      console.log('[SW] iOS PWA detected - using enhanced notification options');
+    if (isMobile && isPWA) {
+      console.log('[SW] Mobile PWA detected - using enhanced notification options');
       
-      // For iOS PWA, we need to ensure notifications are visible
+      // For mobile PWA, we need to ensure notifications are visible
       const notificationOptions = {
         body: data.body || 'You have a new notification',
         icon: data.icon || '/icons/icon-192x192.png',
         badge: data.badge || '/icons/icon-72x72.png',
         data: data.data || {},
-        tag: data.tag || 'ios-pwa-notification',
-        requireInteraction: true, // iOS PWA needs this to ensure visibility
+        tag: data.tag || 'mobile-pwa-notification',
+        requireInteraction: true, // Mobile PWA needs this to ensure visibility
         silent: false,
         actions: [
           {
@@ -260,24 +260,24 @@ self.addEventListener('push', (event) => {
             title: 'Dismiss'
           }
         ],
-        vibrate: [200, 100, 200, 100, 200], // Enhanced vibration for iOS
+        vibrate: [200, 100, 200, 100, 200], // Enhanced vibration for mobile
         timestamp: Date.now(),
-        // iOS-specific optimizations
+        // Mobile-specific optimizations
         dir: 'auto',
         lang: 'en',
         renotify: true,
-        sticky: true, // Make it harder to dismiss on iOS
-        // Ensure notification appears in iOS notification center
+        sticky: true, // Make it harder to dismiss on mobile
+        // Ensure notification appears in mobile notification center
         requireInteraction: true,
-        // iOS-specific vibration patterns
+        // Mobile-specific vibration patterns
         vibrate: [200, 100, 200, 100, 200]
       };
       
-      // Show the notification with iOS-specific handling
+      // Show the notification with mobile-specific handling
       event.waitUntil(
         self.registration.showNotification(data.title || 'BeanRoute', notificationOptions)
           .then(() => {
-            console.log('[SW] iOS PWA notification displayed successfully');
+            console.log('[SW] Mobile PWA notification displayed successfully');
             
             // Log notification display for analytics
             if (data.notificationId) {
@@ -287,21 +287,21 @@ self.addEventListener('push', (event) => {
                 body: JSON.stringify({ 
                   notificationId: data.notificationId,
                   timestamp: Date.now(),
-                  platform: 'ios-pwa'
+                  platform: 'mobile-pwa'
                 })
               }).catch(error => {
-                console.error('[SW] Error logging iOS PWA notification display:', error);
+                console.error('[SW] Error logging mobile PWA notification display:', error);
               });
             }
           })
           .catch((error) => {
-            console.error('[SW] Error showing iOS PWA notification:', error);
+            console.error('[SW] Error showing mobile PWA notification:', error);
             
-            // Fallback notification for iOS PWA
+            // Fallback notification for mobile PWA
             return self.registration.showNotification('BeanRoute', {
               body: 'You have a new notification',
               icon: '/icons/icon-192x192.png',
-              tag: 'ios-pwa-fallback',
+              tag: 'mobile-pwa-fallback',
               requireInteraction: true,
               vibrate: [200, 100, 200]
             });

@@ -48,15 +48,8 @@ class PushNotificationService {
     const prisma = new PrismaClient();
     
     try {
-      // Handle mobile basic subscriptions (limited push support)
-      const isMobileBasic = options.mobile && options.limited;
-      
-      if (isMobileBasic) {
-        console.log(`[Push] Mobile basic subscription for user ${userId} - limited push support`);
-        
-        // For mobile basic subscriptions, we don't need VAPID keys
-        // Just store the subscription for status tracking
-      } else if (!this.isConfigured()) {
+      // Check if push notifications are configured
+      if (!this.isConfigured()) {
         throw new Error('Push notifications not configured');
       }
 
@@ -311,6 +304,12 @@ class PushNotificationService {
       // Send to all user's devices
       for (const subscription of subscriptions) {
         try {
+          // Skip mobile basic subscriptions (fake endpoints)
+          if (subscription.endpoint && subscription.endpoint.startsWith('mobile://')) {
+            console.log(`[Push] Skipping mobile basic subscription for device ${subscription.id}`);
+            continue;
+          }
+          
           // Enhanced notification payload with mobile-specific options
           const enhancedNotification = {
             ...notification,
@@ -328,7 +327,11 @@ class PushNotificationService {
             renotify: true,
             sticky: false,
             // Add timestamp for mobile notification centers
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            // Mobile detection flags for service worker
+            mobile: true,
+            pwa: true,
+            platform: 'mobile-pwa'
           };
           
           const payload = JSON.stringify(enhancedNotification);

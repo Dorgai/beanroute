@@ -477,17 +477,18 @@ export const usePushNotifications = () => {
               });
               console.log('[Push Hook] Push subscription created on mobile:', pushSubscription);
             } catch (pushError) {
-              console.warn('[Push Hook] Push subscription failed on mobile, will use basic notifications:', pushError);
-              // For mobile, we'll still mark as subscribed even if push fails
-              pushSubscription = { mobile: true, pushFailed: true };
+              console.warn('[Push Hook] Push subscription failed on mobile:', pushError);
+              // For mobile, if push subscription fails, we can't send push notifications
+              // But we can still show local notifications
+              throw new Error(`Mobile push subscription failed: ${pushError.message}`);
             }
           } else {
-            console.log('[Push Hook] No service worker on mobile, will use basic notifications');
-            pushSubscription = { mobile: true, noServiceWorker: true };
+            console.log('[Push Hook] No service worker on mobile');
+            throw new Error('Service worker not available on mobile device');
           }
         } catch (swError) {
           console.warn('[Push Hook] Service worker error on mobile:', swError);
-          pushSubscription = { mobile: true, serviceWorkerError: true };
+          throw new Error(`Mobile service worker error: ${swError.message}`);
         }
       } else {
         // Desktop: ensure full service worker control
@@ -512,31 +513,12 @@ export const usePushNotifications = () => {
       console.log('[Push Hook] Subscription endpoint:', pushSubscription.endpoint);
 
       // Send subscription to server
-      let subscriptionData;
-      if (pushSubscription.mobile && (pushSubscription.pushFailed || pushSubscription.noServiceWorker)) {
-        // For mobile devices with limited support, send a basic subscription
-        subscriptionData = {
-          subscription: {
-            endpoint: `mobile://${navigator.userAgent}`,
-            keys: {
-              p256dh: 'mobile-basic',
-              auth: 'mobile-basic'
-            }
-          },
-          userAgent: navigator.userAgent,
-          mobile: true,
-          limited: true,
-          pwa: isPWA
-        };
-      } else {
-        // Normal push subscription
-        subscriptionData = {
-          subscription: pushSubscription.toJSON(),
-          userAgent: navigator.userAgent,
-          mobile: isMobile,
-          pwa: isPWA
-        };
-      }
+      const subscriptionData = {
+        subscription: pushSubscription.toJSON(),
+        userAgent: navigator.userAgent,
+        mobile: isMobile,
+        pwa: isPWA
+      };
       
       console.log('[Push Hook] Sending subscription data to server:', subscriptionData);
       
