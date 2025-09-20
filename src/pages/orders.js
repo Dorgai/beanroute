@@ -2367,8 +2367,10 @@ export default function RetailOrders() {
                                 
                                 {/* Status Column - Click to open status dialog */}
                                 <TableCell 
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     try {
+                                      console.log('Status column clicked for order:', order?.id);
                                       handleOpenStatusDialog(order);
                                     } catch (error) {
                                       console.error('Error opening status dialog:', error);
@@ -2386,6 +2388,7 @@ export default function RetailOrders() {
                                       size="small" 
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        console.log('Actions column clicked for order:', order?.id);
                                         handleOpenStatusDialog(order);
                                       }}
                                       sx={{ cursor: 'pointer' }}
