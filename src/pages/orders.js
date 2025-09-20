@@ -657,6 +657,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
 // Order Status Update Dialog Component
 function StatusUpdateDialog({ open, onClose, order, refreshData }) {
   const { session } = useSession();
+  const themeContext = useTheme();
+  const isDark = themeContext?.isDark ?? false;
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
