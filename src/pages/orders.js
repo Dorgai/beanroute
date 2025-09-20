@@ -388,12 +388,64 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {coffeeItems
-                    .filter(coffee => {
-                      // Only show coffees with available stock after haircut (using dynamic haircut percentage)
+                  {(() => {
+                    // Group coffees by grade
+                    const filteredCoffees = coffeeItems.filter(coffee => {
                       return coffee && coffee.quantity > 0;
-                    })
-                    .map((coffee) => {
+                    });
+                    
+                    const groupedCoffees = {
+                      premium: [],
+                      specialty: [],
+                      rarity: [],
+                      decaf: [],
+                      other: []
+                    };
+                    
+                    filteredCoffees.forEach(coffee => {
+                      const grade = coffee.grade?.toLowerCase() || '';
+                      if (grade.includes('decaf')) {
+                        groupedCoffees.decaf.push(coffee);
+                      } else if (grade.includes('rarity')) {
+                        groupedCoffees.rarity.push(coffee);
+                      } else if (grade.includes('specialty')) {
+                        groupedCoffees.specialty.push(coffee);
+                      } else if (grade.includes('premium')) {
+                        groupedCoffees.premium.push(coffee);
+                      } else {
+                        groupedCoffees.other.push(coffee);
+                      }
+                    });
+                    
+                    // Render sections
+                    const sections = [
+                      { key: 'premium', title: 'Premium Grade', coffees: groupedCoffees.premium },
+                      { key: 'specialty', title: 'Specialty Grade', coffees: groupedCoffees.specialty },
+                      { key: 'rarity', title: 'Rarity Grade', coffees: groupedCoffees.rarity },
+                      { key: 'decaf', title: 'Decaf', coffees: groupedCoffees.decaf },
+                      { key: 'other', title: 'Other', coffees: groupedCoffees.other }
+                    ];
+                    
+                    return sections.map(section => {
+                      if (section.coffees.length === 0) return null;
+                      
+                      return (
+                        <React.Fragment key={section.key}>
+                          {/* Section Header */}
+                          <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                            <TableCell colSpan={7} sx={{ 
+                              fontWeight: 'bold', 
+                              fontSize: '0.9rem',
+                              color: 'primary.main',
+                              borderBottom: '2px solid #e0e0e0',
+                              py: 1
+                            }}>
+                              {section.title} ({section.coffees.length} coffee{section.coffees.length !== 1 ? 's' : ''})
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* Section Coffees */}
+                          {section.coffees.map((coffee) => {
                     if (!coffee || !coffee.id) return null;
                     
                     const pendingData = pendingOrdersData[coffee.id];
@@ -572,7 +624,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                         </TableCell>
                       </TableRow>
                     );
-                  })}
+                          })}
+                        </React.Fragment>
+                      );
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </TableContainer>
