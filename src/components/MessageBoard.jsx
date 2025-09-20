@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.js';
-import { useTheme } from '../context/ThemeContext.js';
+import { useTheme } from '../contexts/ThemeContext.js';
 import { FiMessageSquare, FiX, FiSend, FiEye } from 'react-icons/fi';
 
 export default function MessageBoard() {
