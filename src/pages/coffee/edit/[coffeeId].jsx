@@ -236,7 +236,7 @@ export default function EditCoffeePage() {
 
             {/* Coffee Grade */}
             <div>
-              <label htmlFor="grade" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
+              <label htmlFor="grade" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                 Grade
               </label>
               <select
@@ -254,7 +254,7 @@ export default function EditCoffeePage() {
 
             {/* Producer */}
             <div>
-              <label htmlFor="producer" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
+              <label htmlFor="producer" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                 Roaster/Producer
               </label>
               <input
@@ -269,7 +269,7 @@ export default function EditCoffeePage() {
 
             {/* Country */}
             <div>
-              <label htmlFor="country" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
+              <label htmlFor="country" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                 Country of Origin
               </label>
               <input
@@ -284,7 +284,7 @@ export default function EditCoffeePage() {
 
             {/* Process */}
             <div>
-              <label htmlFor="process" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
+              <label htmlFor="process" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                 Process
               </label>
               <input
@@ -300,7 +300,7 @@ export default function EditCoffeePage() {
 
             {/* Label Quantity */}
             <div>
-              <label htmlFor="labelQuantity" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
+              <label htmlFor="labelQuantity" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                 Label Quantity
               </label>
               <input
@@ -313,7 +313,7 @@ export default function EditCoffeePage() {
                 className={`w-full p-2 border ${isDark ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded`}
                 placeholder="Number of labels for this coffee"
               />
-              <p className="text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1">
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                 1 label is needed per bag (regardless of bag size or type)
               </p>
             </div>
@@ -321,7 +321,7 @@ export default function EditCoffeePage() {
             {/* Price - Only visible to admin and owner */}
             {canSeePrice && (
               <div>
-                <label htmlFor="price" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
+                <label htmlFor="price" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                   Price ($/kg)
                 </label>
                 <input
@@ -341,7 +341,7 @@ export default function EditCoffeePage() {
 
           {/* Brewing Methods */}
           <div>
-            <label className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2">
+            <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
               Brewing Methods *
             </label>
             <div className="flex flex-wrap gap-4">
@@ -376,14 +376,14 @@ export default function EditCoffeePage() {
                 <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Signature (S)</span>
               </label>
             </div>
-            <p className="text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1">
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
               At least one brewing method (Espresso or Filter) is required. Signature is optional.
             </p>
           </div>
 
           {/* Notes */}
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1">
+            <label htmlFor="notes" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
               Additional Notes
             </label>
             <textarea
