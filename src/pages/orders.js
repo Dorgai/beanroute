@@ -44,6 +44,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import { format } from 'date-fns';
 import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
 import IconlessAlert from '../components/ui/IconlessAlert';
+import CollapsibleAlert from '../components/ui/CollapsibleAlert';
 import ShopStockSummary from '../components/retail/ShopStockSummary';
 import PendingOrdersSummary from '../components/retail/PendingOrdersSummary';
 
@@ -322,8 +323,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     }} maxWidth="md">
       <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>Create Order</DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
-        <IconlessAlert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" gutterBottom>Order Information</Typography>
+        <CollapsibleAlert title="Order Information" sx={{ mb: 3 }}>
           <ul style={{ paddingLeft: '20px', margin: '0' }}>
             <li>Espresso bags = 200g each (0.2kg)</li>
             <li>Filter bags = 200g each (0.2kg)</li>
@@ -331,7 +331,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
             <li>Orders cannot exceed available coffee quantity</li>
             <li>Enter the number of bags you want to order</li>
           </ul>
-        </IconlessAlert>
+        </CollapsibleAlert>
         
         {error && (
           <IconlessAlert 
@@ -366,13 +366,12 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           <IconlessAlert severity="info">No coffee available for ordering</IconlessAlert>
         ) : (
           <>
-            <IconlessAlert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>Available Quantities</Typography>
+            <CollapsibleAlert title="Available Quantities" sx={{ mb: 2 }}>
               <Typography variant="body2">
                 Available quantities shown are after applying a {haircutPercentage}% haircut for processing losses. 
                 The actual green stock is higher than what's available for ordering.
               </Typography>
-            </IconlessAlert>
+            </CollapsibleAlert>
             
             <TableContainer component={Paper} sx={{ mt: 2 }}>
               <Table size="small">
@@ -672,6 +671,8 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
   const isOwner = userRole === 'OWNER';
   
   console.log('StatusUpdateDialog - Current user role:', userRole, 'isAdmin:', isAdmin, 'isOwner:', isOwner);
+  console.log('StatusUpdateDialog - Order received:', order);
+  console.log('StatusUpdateDialog - Dialog open:', open);
 
   useEffect(() => {
     // Reset status when dialog opens with defensive check
@@ -830,6 +831,12 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
 
   // Get valid next statuses
   const validNextStatuses = getValidNextStatuses();
+
+  // Safety check - don't render if no order
+  if (!order) {
+    console.warn('StatusUpdateDialog: No order provided, not rendering');
+    return null;
+  }
 
   return (
     <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm">
@@ -1609,14 +1616,20 @@ export default function RetailOrders() {
   const handleOpenStatusDialog = (order) => {
     try {
       console.log('Opening status dialog for order:', order?.id);
+      console.log('Order object:', order);
       console.log('Current theme context:', themeContext);
       console.log('isDark value:', isDark);
       if (!order) {
         console.error('No order provided to handleOpenStatusDialog');
         return;
       }
+      if (!order.id) {
+        console.error('Order missing ID:', order);
+        return;
+      }
       setSelectedOrder(order);
       setStatusDialogOpen(true);
+      console.log('Status dialog should now be open');
     } catch (error) {
       console.error('Error in handleOpenStatusDialog:', error);
     }
@@ -1875,16 +1888,13 @@ export default function RetailOrders() {
                   <>
                     {/* Shop minimum quantities info alert */}
                     {selectedShopDetails && (canUpdateInventory || isAdmin || isOwner) && (
-                      <IconlessAlert severity="info" sx={{ mb: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          Shop Minimum Inventory Requirements
-                        </Typography>
+                      <CollapsibleAlert title="Shop Minimum Inventory Requirements" sx={{ mb: 2 }}>
                         <Typography variant="body2">
                           Espresso bags: {selectedShopDetails.minCoffeeQuantityEspresso} |
                           Filter bags: {selectedShopDetails.minCoffeeQuantityFilter} |
                           Large bags: {selectedShopDetails.minCoffeeQuantityLarge} 
                         </Typography>
-                      </IconlessAlert>
+                      </CollapsibleAlert>
                     )}
                     
                     <TableContainer component={Paper}>
