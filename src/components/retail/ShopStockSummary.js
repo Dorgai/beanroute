@@ -34,7 +34,16 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
   const safeInventory = Array.isArray(inventory) ? inventory : [];
   
   // Calculate total quantities
-  const totalSmallBags = safeInventory.reduce((sum, item) => sum + (item?.smallBags || 0), 0);
+  // Handle both old format (smallBags) and new format (smallBagsEspresso + smallBagsFilter)
+  const totalSmallBags = safeInventory.reduce((sum, item) => {
+    // If the item has the old smallBags property, use it
+    if (item?.smallBags !== undefined) {
+      return sum + (item.smallBags || 0);
+    }
+    // Otherwise, sum the espresso and filter bags
+    return sum + (item?.smallBagsEspresso || 0) + (item?.smallBagsFilter || 0);
+  }, 0);
+  
   const totalLargeBags = safeInventory.reduce((sum, item) => sum + (item?.largeBags || 0), 0);
   
   // Get minimum requirements
@@ -74,7 +83,16 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
     hasCritical,
     hasWarning,
     isEmpty,
-    showCritical
+    showCritical,
+    // Debug inventory data structure
+    inventoryDataStructure: safeInventory.map(item => ({
+      id: item?.id,
+      smallBags: item?.smallBags,
+      smallBagsEspresso: item?.smallBagsEspresso,
+      smallBagsFilter: item?.smallBagsFilter,
+      largeBags: item?.largeBags,
+      coffeeName: item?.coffee?.name
+    }))
   });
   
   // Get progress bar colors
