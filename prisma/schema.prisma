@@ -38,6 +38,7 @@ model User {
   shops                         UserShop[]
   teams                         UserTeam[]
   receivedAlertNotifications    InventoryAlertLog[]          @relation("AlertNotifications")
+  createdOrderTemplates         OrderTemplate[]              @relation("OrderTemplateCreator")
 }
 
 model Shop {
@@ -62,6 +63,7 @@ model Shop {
   emailNotifications          OrderEmailNotification[]
   retailInventory             RetailInventory[]
   retailOrders                RetailOrder[]
+  orderTemplates              OrderTemplate[]
   createdBy                   User                         @relation(fields: [createdById], references: [id])
   users                       UserShop[]
 }
@@ -162,6 +164,7 @@ model GreenCoffee {
   inventoryLogs   GreenCoffeeInventoryLog[]
   retailInventory RetailInventory[]
   retailOrders    RetailOrderItem[]
+  templateItems   OrderTemplateItem[]
 
   @@unique([name, country, producer])
 }
@@ -211,6 +214,43 @@ model RetailOrderItem {
   order             RetailOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+  @@index([coffeeId])
+}
+
+model OrderTemplate {
+  id          String                @id @default(uuid())
+  name        String
+  description String?
+  shopId      String?
+  createdById String
+  isPublic    Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  createdBy   User                  @relation("OrderTemplateCreator", fields: [createdById], references: [id])
+  shop        Shop?                 @relation(fields: [shopId], references: [id])
+  items       OrderTemplateItem[]
+
+  @@unique([createdById, name])
+  @@index([createdById])
+  @@index([shopId])
+  @@index([isPublic])
+}
+
+model OrderTemplateItem {
+  id                String        @id @default(uuid())
+  templateId        String
+  coffeeId          String
+  smallBags         Int           @default(0)
+  smallBagsEspresso Int           @default(0)
+  smallBagsFilter   Int           @default(0)
+  largeBags         Int           @default(0)
+  totalQuantity     Float
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  coffee            GreenCoffee   @relation(fields: [coffeeId], references: [id])
+  template          OrderTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
   @@index([coffeeId])
 }
 
