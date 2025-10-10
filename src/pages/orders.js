@@ -2048,9 +2048,14 @@ export default function RetailOrders() {
           </div>
         )}
         
-        <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+        <Paper elevation={2} sx={{ 
+          p: 3, 
+          mb: 4,
+          backgroundColor: isDark ? '#374151' : '#ffffff',
+          color: isDark ? '#ffffff' : 'inherit'
+        }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" component="h1">
+            <Typography variant="h5" component="h1" sx={{ color: isDark ? '#ffffff' : 'inherit' }}>
               {isRoaster ? "Orders Management" : "Retail Management"}
             </Typography>
             <Box>
@@ -2106,12 +2111,27 @@ export default function RetailOrders() {
           )}
 
           <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>Shop</InputLabel>
+            <InputLabel sx={{ color: isDark ? '#d1d5db' : 'inherit' }}>Shop</InputLabel>
             <Select
               value={selectedShop}
               onChange={(e) => setSelectedShop(e.target.value)}
               label="Shop"
               size="small"
+              sx={{
+                color: isDark ? '#ffffff' : 'inherit',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: isDark ? '#6b7280' : 'inherit',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: isDark ? '#9ca3af' : 'inherit',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: isDark ? '#3b82f6' : 'inherit',
+                },
+                '& .MuiSvgIcon-root': {
+                  color: isDark ? '#d1d5db' : 'inherit',
+                }
+              }}
             >
               {Array.isArray(shops) && shops.length > 0 ? (
                 shops.map((shop) => (

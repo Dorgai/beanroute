@@ -159,6 +159,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               percentage={espressoBagsPercentage}
               label="Espresso"
               value={totalEspressoBags}
+              minimum={minEspressoBags}
               isDark={isDark}
               isCritical={isEspressoBagsCritical}
               isWarning={isEspressoBagsWarning}
@@ -169,6 +170,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               percentage={filterBagsPercentage}
               label="Filter"
               value={totalFilterBags}
+              minimum={minFilterBags}
               isDark={isDark}
               isCritical={isFilterBagsCritical}
               isWarning={isFilterBagsWarning}
@@ -179,32 +181,12 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
               percentage={largeBagsPercentage}
               label="Large"
               value={totalLargeBags}
+              minimum={minLargeBags}
               isDark={isDark}
               isCritical={isLargeBagsCritical}
               isWarning={isLargeBagsWarning}
             />
           </Box>
-          
-          {/* Critical Warnings */}
-          {(isEspressoBagsCritical || isFilterBagsCritical || isLargeBagsCritical) && (
-            <Box sx={{ mt: 1 }}>
-              {isEspressoBagsCritical && (
-                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', fontSize: '0.75rem' }}>
-                  Espresso: Critical - Minimum requirement is {minEspressoBags} bags
-                </Typography>
-              )}
-              {isFilterBagsCritical && (
-                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', fontSize: '0.75rem' }}>
-                  Filter: Critical - Minimum requirement is {minFilterBags} bags
-                </Typography>
-              )}
-              {isLargeBagsCritical && (
-                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', fontSize: '0.75rem' }}>
-                  Large: Critical - Minimum requirement is {minLargeBags} bags
-                </Typography>
-              )}
-            </Box>
-          )}
         </>
       )}
     </Box>
