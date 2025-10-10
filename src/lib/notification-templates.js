@@ -351,3 +351,4 @@ export const getNotificationPreview = (templateCategory, templateType, sampleDat
 export default NotificationTemplates;
 
 
+

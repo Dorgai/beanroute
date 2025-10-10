@@ -33,42 +33,53 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
   // Ensure inventory is at least an empty array
   const safeInventory = Array.isArray(inventory) ? inventory : [];
   
-  // Calculate total quantities
-  const totalSmallBags = safeInventory.reduce((sum, item) => sum + (item?.smallBags || 0), 0);
+  // Calculate total quantities - separate espresso and filter bags
+  const totalEspressoBags = safeInventory.reduce((sum, item) => sum + (item?.smallBagsEspresso || 0), 0);
+  const totalFilterBags = safeInventory.reduce((sum, item) => sum + (item?.smallBagsFilter || 0), 0);
   const totalLargeBags = safeInventory.reduce((sum, item) => sum + (item?.largeBags || 0), 0);
   
-  // Get minimum requirements
-  const minSmallBags = shopDetails.minCoffeeQuantitySmall || 10;
+  // Get minimum requirements - use separate espresso/filter minimums if available
+  const minEspressoBags = shopDetails.minCoffeeQuantityEspresso || shopDetails.minCoffeeQuantitySmall || 10;
+  const minFilterBags = shopDetails.minCoffeeQuantityFilter || shopDetails.minCoffeeQuantitySmall || 10;
   const minLargeBags = shopDetails.minCoffeeQuantityLarge || 5;
   
   // Calculate percentages (with max 100%)
-  const smallBagsPercentage = Math.min(100, (totalSmallBags / minSmallBags) * 100);
+  const espressoBagsPercentage = Math.min(100, (totalEspressoBags / minEspressoBags) * 100);
+  const filterBagsPercentage = Math.min(100, (totalFilterBags / minFilterBags) * 100);
   const largeBagsPercentage = Math.min(100, (totalLargeBags / minLargeBags) * 100);
   
   // Determine alert levels
-  const isSmallBagsCritical = totalSmallBags < minSmallBags * 0.3;
-  const isSmallBagsWarning = totalSmallBags < minSmallBags * 0.7 && !isSmallBagsCritical;
+  const isEspressoBagsCritical = totalEspressoBags < minEspressoBags * 0.3;
+  const isEspressoBagsWarning = totalEspressoBags < minEspressoBags * 0.7 && !isEspressoBagsCritical;
+  
+  const isFilterBagsCritical = totalFilterBags < minFilterBags * 0.3;
+  const isFilterBagsWarning = totalFilterBags < minFilterBags * 0.7 && !isFilterBagsCritical;
   
   const isLargeBagsCritical = totalLargeBags < minLargeBags * 0.3;
   const isLargeBagsWarning = totalLargeBags < minLargeBags * 0.7 && !isLargeBagsCritical;
   
   // Determine overall status
-  const hasCritical = isSmallBagsCritical || isLargeBagsCritical;
-  const hasWarning = (isSmallBagsWarning || isLargeBagsWarning) && !hasCritical;
+  const hasCritical = isEspressoBagsCritical || isFilterBagsCritical || isLargeBagsCritical;
+  const hasWarning = (isEspressoBagsWarning || isFilterBagsWarning || isLargeBagsWarning) && !hasCritical;
   
   // If inventory is empty, always show critical alert
   const isEmpty = safeInventory.length === 0;
   const showCritical = hasCritical || isEmpty;
   
   console.log('ShopStockSummary STATUS:', {
-    totalSmallBags,
+    totalEspressoBags,
+    totalFilterBags,
     totalLargeBags,
-    minSmallBags,
+    minEspressoBags,
+    minFilterBags,
     minLargeBags,
-    smallBagsPercentage,
+    espressoBagsPercentage,
+    filterBagsPercentage,
     largeBagsPercentage,
-    isSmallBagsCritical,
-    isSmallBagsWarning,
+    isEspressoBagsCritical,
+    isEspressoBagsWarning,
+    isFilterBagsCritical,
+    isFilterBagsWarning,
     isLargeBagsCritical,
     isLargeBagsWarning,
     hasCritical,
@@ -126,38 +137,77 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
       ) : (
         <>
           <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Small Bags</Typography>
-              <Typography variant="body2" sx={{ 
-                fontWeight: 'bold', 
-                color: getTextColor(totalSmallBags, minSmallBags, smallBagsPercentage),
-                fontSize: isSmallBagsCritical || isSmallBagsWarning ? '0.85rem' : '0.8rem',
-                textShadow: isSmallBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
-                           isSmallBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
-              }}>
-                {totalSmallBags} in stock
-              </Typography>
-            </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={smallBagsPercentage} 
-              color={getProgressColor(smallBagsPercentage)}
-              sx={{ 
-                height: 10, 
-                borderRadius: 5,
-                bgcolor: isDark ? '#374151' : '#e0e0e0',
-                '& .MuiLinearProgress-bar': {
+            {/* Espresso Bags Progress Bar */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Espresso Bags</Typography>
+                <Typography variant="body2" sx={{ 
+                  fontWeight: 'bold', 
+                  color: getTextColor(totalEspressoBags, minEspressoBags, espressoBagsPercentage),
+                  fontSize: isEspressoBagsCritical || isEspressoBagsWarning ? '0.85rem' : '0.8rem',
+                  textShadow: isEspressoBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
+                             isEspressoBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
+                }}>
+                  {totalEspressoBags} in stock
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={espressoBagsPercentage} 
+                color={getProgressColor(espressoBagsPercentage)}
+                sx={{ 
+                  height: 10, 
                   borderRadius: 5,
-                  bgcolor: smallBagsPercentage < 30 ? '#ff0000' :
-                          smallBagsPercentage < 70 ? '#ff8000' : undefined
-                }
-              }}
-            />
-            {isSmallBagsCritical && (
-              <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
-                Critical: Minimum requirement is {minSmallBags} bags
-              </Typography>
-            )}
+                  bgcolor: isDark ? '#374151' : '#e0e0e0',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 5,
+                    bgcolor: espressoBagsPercentage < 30 ? '#ff0000' :
+                            espressoBagsPercentage < 70 ? '#ff8000' : undefined
+                  }
+                }}
+              />
+              {isEspressoBagsCritical && (
+                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
+                  Critical: Minimum requirement is {minEspressoBags} bags
+                </Typography>
+              )}
+            </Box>
+
+            {/* Filter Bags Progress Bar */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Filter Bags</Typography>
+                <Typography variant="body2" sx={{ 
+                  fontWeight: 'bold', 
+                  color: getTextColor(totalFilterBags, minFilterBags, filterBagsPercentage),
+                  fontSize: isFilterBagsCritical || isFilterBagsWarning ? '0.85rem' : '0.8rem',
+                  textShadow: isFilterBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
+                             isFilterBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
+                }}>
+                  {totalFilterBags} in stock
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={filterBagsPercentage} 
+                color={getProgressColor(filterBagsPercentage)}
+                sx={{ 
+                  height: 10, 
+                  borderRadius: 5,
+                  bgcolor: isDark ? '#374151' : '#e0e0e0',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 5,
+                    bgcolor: filterBagsPercentage < 30 ? '#ff0000' :
+                            filterBagsPercentage < 70 ? '#ff8000' : undefined
+                  }
+                }}
+              />
+              {isFilterBagsCritical && (
+                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
+                  Critical: Minimum requirement is {minFilterBags} bags
+                </Typography>
+              )}
+            </Box>
           </Box>
           
           <Box>
