@@ -85,7 +85,16 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
     hasCritical,
     hasWarning,
     isEmpty,
-    showCritical
+    showCritical,
+    // Debug inventory data structure
+    inventoryDataStructure: safeInventory.map(item => ({
+      id: item?.id,
+      smallBags: item?.smallBags,
+      smallBagsEspresso: item?.smallBagsEspresso,
+      smallBagsFilter: item?.smallBagsFilter,
+      largeBags: item?.largeBags,
+      coffeeName: item?.coffee?.name
+    }))
   });
   
   // Get progress bar colors

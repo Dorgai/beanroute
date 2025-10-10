@@ -41,6 +41,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
+import SaveIcon from '@mui/icons-material/Save';
 import { format } from 'date-fns';
 import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
 import IconlessAlert from '../components/ui/IconlessAlert';
@@ -56,6 +57,12 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
   const [validationErrors, setValidationErrors] = useState({});
   const [comment, setComment] = useState('');
   const [pendingOrdersData, setPendingOrdersData] = useState({});
+  
+  // Template functionality
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [availableTemplates, setAvailableTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
 
   useEffect(() => {
     // Reset order items when dialog opens with defensive checks
@@ -74,6 +81,10 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       setValidationErrors({});
       setComment('');
       setError(null); // Clear any previous errors when dialog opens
+      setSelectedTemplate(''); // Reset template selection
+      
+      // Fetch available templates
+      fetchAvailableTemplates();
     } else if (open) {
       // If coffeeItems is not a valid array or is empty
       console.warn('No valid coffee items available for ordering');
@@ -314,6 +325,138 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     }
   };
 
+  // Save template function
+  // Fetch available templates
+  const fetchAvailableTemplates = async () => {
+    try {
+      const response = await fetch('/api/retail/order-templates');
+      if (response.ok) {
+        const templates = await response.json();
+        setAvailableTemplates(templates);
+      } else {
+        console.error('Failed to fetch templates');
+      }
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    }
+  };
+
+  // Load selected template
+  const handleLoadTemplate = async (templateId) => {
+    if (!templateId) return;
+
+    try {
+      const template = availableTemplates.find(t => t.id === templateId);
+      if (!template) return;
+
+      // Create new order items based on template
+      const newOrderItems = {};
+      
+      // Initialize all coffee items to empty
+      if (Array.isArray(coffeeItems)) {
+        coffeeItems.forEach(coffee => {
+          if (coffee && coffee.id) {
+            newOrderItems[coffee.id] = { 
+              smallBagsEspresso: '', 
+              smallBagsFilter: '', 
+              largeBags: '' 
+            };
+          }
+        });
+      }
+
+      // Fill in quantities from template for available coffees
+      template.items.forEach(templateItem => {
+        if (newOrderItems[templateItem.coffeeId]) {
+          newOrderItems[templateItem.coffeeId] = {
+            smallBagsEspresso: templateItem.smallBagsEspresso.toString(),
+            smallBagsFilter: templateItem.smallBagsFilter.toString(),
+            largeBags: templateItem.largeBags.toString()
+          };
+        }
+      });
+
+      setOrderItems(newOrderItems);
+      setError(null);
+      
+      // Show info about loaded template
+      const loadedItems = template.items.filter(item => 
+        coffeeItems.some(coffee => coffee.id === item.coffeeId)
+      );
+      const unavailableItems = template.items.filter(item => 
+        !coffeeItems.some(coffee => coffee.id === item.coffeeId)
+      );
+      
+      let message = `Template "${template.name}" loaded with ${loadedItems.length} items.`;
+      if (unavailableItems.length > 0) {
+        message += ` ${unavailableItems.length} items were skipped (coffee not available).`;
+      }
+      
+      // Use a temporary success message instead of alert
+      setError(`✅ ${message}`);
+      setTimeout(() => setError(null), 5000);
+      
+    } catch (error) {
+      setError('Error loading template: ' + error.message);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim()) {
+      setError('Please enter a template name');
+      return;
+    }
+
+    try {
+      const templateItems = Object.entries(orderItems)
+        .filter(([coffeeId, quantities]) => {
+          const total = (parseInt(quantities.smallBagsEspresso) || 0) +
+                        (parseInt(quantities.smallBagsFilter) || 0) +
+                        (parseInt(quantities.largeBags) || 0);
+          return total > 0;
+        })
+        .map(([coffeeId, quantities]) => ({
+          coffeeId,
+          smallBagsEspresso: parseInt(quantities.smallBagsEspresso) || 0,
+          smallBagsFilter: parseInt(quantities.smallBagsFilter) || 0,
+          largeBags: parseInt(quantities.largeBags) || 0,
+          totalQuantity: ((parseInt(quantities.smallBagsEspresso) || 0) +
+                          (parseInt(quantities.smallBagsFilter) || 0)) * 0.2 +
+                          (parseInt(quantities.largeBags) || 0) * 1.0
+        }));
+
+      if (templateItems.length === 0) {
+        setError('Please add some quantities before saving as template');
+        return;
+      }
+
+      const response = await fetch('/api/retail/order-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: templateName.trim(),
+          description: `Template created from order with ${templateItems.length} items`,
+          shopId: selectedShop,
+          items: templateItems
+        })
+      });
+
+      if (response.ok) {
+        setShowSaveTemplate(false);
+        setTemplateName('');
+        setError(null);
+        // Refresh templates list
+        fetchAvailableTemplates();
+        alert('Template saved successfully!');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to save template');
+      }
+    } catch (error) {
+      setError('Error saving template: ' + error.message);
+    }
+  };
+
   return (
     <Dialog open={open} onClose={(event, reason) => {
       // Only close if user clicks outside or presses escape
@@ -323,6 +466,79 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     }} maxWidth="md">
       <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>Create Order</DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
+        
+        {/* Template Selection Section */}
+        {availableTemplates.length > 0 && (
+          <Box sx={{ 
+            mb: 3, 
+            p: 2, 
+            bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5', 
+            borderRadius: 1,
+            border: theme => theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
+          }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              📋 Load from Template
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <Select
+                  value={selectedTemplate}
+                  onChange={(e) => {
+                    setSelectedTemplate(e.target.value);
+                    handleLoadTemplate(e.target.value);
+                  }}
+                  displayEmpty
+                  sx={{ 
+                    bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'white',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.23)'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.87)'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme => theme.palette.primary.main
+                    },
+                    '& .MuiSelect-icon': {
+                      color: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.54)'
+                    }
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        bgcolor: theme => theme.palette.mode === 'dark' ? '#2d2d2d' : 'white',
+                        '& .MuiMenuItem-root': {
+                          color: theme => theme.palette.mode === 'dark' ? 'white' : 'black',
+                          '&:hover': {
+                            bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)'
+                          },
+                          '&.Mui-selected': {
+                            bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.2)' : 'rgba(25, 118, 210, 0.12)',
+                            '&:hover': {
+                              bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.3)' : 'rgba(25, 118, 210, 0.2)'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Select a template...</em>
+                  </MenuItem>
+                  {availableTemplates.map((template) => (
+                    <MenuItem key={template.id} value={template.id}>
+                      {template.name} ({template.items?.length || 0} items)
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Typography variant="caption" color="text.secondary">
+                Templates will populate quantities for available coffees
+              </Typography>
+            </Box>
+          </Box>
+        )}
         <CollapsibleAlert title="Order Information" sx={{ mb: 3 }}>
           <ul style={{ paddingLeft: '20px', margin: '0', fontSize: '0.875rem' }}>
             <li>Espresso bags = 200g each (0.2kg)</li>
@@ -636,6 +852,43 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       </DialogContent>
       <DialogActions sx={{ borderTop: '1px solid #eee', pt: 2, pb: 2 }}>
         <Button onClick={() => onClose(false)}>Cancel</Button>
+        
+        {/* Debug info */}
+        {console.log('OrderDialog render - selectedShop:', selectedShop, 'coffeeItems:', coffeeItems, 'showSaveTemplate:', showSaveTemplate)}
+        
+        {showSaveTemplate ? (
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <TextField
+              size="small"
+              placeholder="Template name"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              sx={{ minWidth: 150 }}
+            />
+            <Button onClick={handleSaveTemplate} variant="outlined" size="small">
+              Save
+            </Button>
+            <Button onClick={() => setShowSaveTemplate(false)} size="small">
+              Cancel
+            </Button>
+          </Box>
+        ) : (
+          <Button 
+            onClick={() => {
+              console.log('Save as Template clicked - selectedShop:', selectedShop, 'coffeeItems:', coffeeItems);
+              setShowSaveTemplate(true);
+            }}
+            startIcon={<SaveIcon />}
+            disabled={
+              !selectedShop || 
+              !Array.isArray(coffeeItems) || 
+              coffeeItems.length === 0
+            }
+          >
+            Save as Template
+          </Button>
+        )}
+        
         <Button 
           onClick={handleSubmit} 
           variant="contained" 
@@ -1119,7 +1372,9 @@ export default function RetailOrders() {
   // Check for stored shop preference
   useEffect(() => {
     const storedShopId = localStorage.getItem('selectedShopId');
+    console.log('Checking stored shop preference:', storedShopId);
     if (storedShopId) {
+      console.log('Setting selectedShop from localStorage:', storedShopId);
       setSelectedShop(storedShopId);
     }
   }, []);
@@ -1204,6 +1459,7 @@ export default function RetailOrders() {
         // If we have shop data and no selected shop, select the first one
         if (shopArray.length > 0 && !selectedShop) {
           const shopId = shopArray[0].id;
+          console.log('Auto-selecting first shop:', shopId, shopArray[0].name);
           setSelectedShop(shopId);
           localStorage.setItem('selectedShopId', shopId);
         } else if (shopArray.length === 0) {
@@ -1264,7 +1520,7 @@ export default function RetailOrders() {
     };
 
     fetchShops();
-  }, [selectedShop]);
+  }, []); // Remove selectedShop dependency to prevent circular updates
 
   // Fetch shop details when the selected shop changes
   useEffect(() => {
@@ -1434,8 +1690,15 @@ export default function RetailOrders() {
   // Fetch available coffee separately
   useEffect(() => {
     const fetchAvailableCoffee = async () => {
+        console.log('🔥 FRESH CODE 2025-09-30 fetchAvailableCoffee called with selectedShop:', selectedShop, typeof selectedShop);
+      if (!selectedShop || selectedShop === '' || selectedShop === null || selectedShop === undefined) {
+        console.log('No selectedShop (empty/null/undefined), skipping coffee fetch');
+        setAvailableCoffee([]);
+        return;
+      }
+      
       try {
-        console.log('Fetching available coffee');
+        console.log('Fetching available coffee for shop:', selectedShop);
         const coffeeResponse = await fetch(`/api/retail/available-coffee?shopId=${selectedShop}`);
         if (!coffeeResponse.ok) {
           throw new Error(`Failed to fetch available coffee (${coffeeResponse.status})`);
@@ -1462,6 +1725,7 @@ export default function RetailOrders() {
       }
     };
     
+    console.log('🔥 FRESH CODE 2025-09-30 useEffect for fetchAvailableCoffee triggered, selectedShop:', selectedShop);
     fetchAvailableCoffee();
   }, [selectedShop]);
 

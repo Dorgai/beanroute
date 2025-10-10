@@ -50,11 +50,13 @@ function CoffeeInventory() {
       const data = await response.json();
       
       if (data.error) {
-        setApiAttempts(prev => prev + 1);
-        if (apiAttempts > 2) {
+        const newAttempts = apiAttempts + 1;
+        setApiAttempts(newAttempts);
+        if (newAttempts > 2) {
           // After 3 failed attempts, use the fallback value
           console.log('Using fallback inventory value after repeated failures');
           setTotalInventory(FALLBACK_INVENTORY);
+          setError(false); // Clear error state when using fallback
         } else {
           throw new Error(data.error);
         }
@@ -65,13 +67,16 @@ function CoffeeInventory() {
       }
     } catch (error) {
       console.error('Error fetching coffee inventory:', error);
-      setError(true);
-      setApiAttempts(prev => prev + 1);
+      const newAttempts = apiAttempts + 1;
+      setApiAttempts(newAttempts);
       
       // After 3 failed attempts, use the fallback value
-      if (apiAttempts > 2) {
+      if (newAttempts > 2) {
         console.log('Using fallback inventory value after repeated failures');
         setTotalInventory(FALLBACK_INVENTORY);
+        setError(false); // Clear error state when using fallback
+      } else {
+        setError(true);
       }
     } finally {
       setLoading(false);
@@ -96,7 +101,7 @@ function CoffeeInventory() {
       clearInterval(intervalId);
       window.removeEventListener('coffeeInventoryUpdated', handleInventoryUpdate);
     };
-  }, [apiAttempts]);
+  }, []); // Remove apiAttempts dependency to prevent infinite loop
 
   if (loading && !totalInventory) {
     return <span className="text-sm text-green-600">Loading...</span>;
