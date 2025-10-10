@@ -252,18 +252,47 @@ export default function PendingOrdersSummary({
         </>
       )}
       
-      <TableContainer component={Paper} variant="outlined">
+      <TableContainer component={Paper} variant="outlined" sx={{
+        bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+        border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+      }}>
         <Table>
-          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+          <TableHead sx={{ 
+            backgroundColor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5'
+          }}>
             <TableRow>
-              <TableCell>Coffee</TableCell>
-              <TableCell>Grade</TableCell>
-              {showShopInfo && !aggregateAcrossShops && <TableCell>Shop</TableCell>}
-              <TableCell align="right">Large Bags (1kg)</TableCell>
-              <TableCell align="right">Small Bags (200g)</TableCell>
-              <TableCell align="right">Espresso (kg)</TableCell>
-              <TableCell align="right">Filter (kg)</TableCell>
-              <TableCell align="right">Total Quantity (kg)</TableCell>
+              <TableCell sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Coffee</TableCell>
+              <TableCell sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Grade</TableCell>
+              {showShopInfo && !aggregateAcrossShops && <TableCell sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Shop</TableCell>}
+              <TableCell align="right" sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Large Bags (1kg)</TableCell>
+              <TableCell align="right" sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Small Bags (200g)</TableCell>
+              <TableCell align="right" sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Espresso (kg)</TableCell>
+              <TableCell align="right" sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Filter (kg)</TableCell>
+              <TableCell align="right" sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
+              }}>Total Quantity (kg)</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -308,11 +337,12 @@ export default function PendingOrdersSummary({
                   {/* Shop subtotal row */}
                   {isLastItemForShop && showShopInfo && !aggregateAcrossShops && (
                     <TableRow sx={{ 
-                      backgroundColor: '#f8f9fa', 
+                      backgroundColor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f8f9fa', 
                       '& .MuiTableCell-root': { 
                         fontWeight: 'bold',
-                        borderTop: '1px solid #dee2e6',
-                        fontStyle: 'italic'
+                        borderTop: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #dee2e6',
+                        fontStyle: 'italic',
+                        color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit'
                       }
                     }}>
                       <TableCell colSpan={3}>
@@ -346,10 +376,11 @@ export default function PendingOrdersSummary({
             
             {/* Totals row */}
             <TableRow sx={{ 
-              backgroundColor: '#f5f5f5', 
+              backgroundColor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5', 
               '& .MuiTableCell-root': { 
                 fontWeight: 'bold',
-                borderTop: '2px solid #e0e0e0' 
+                borderTop: theme => theme.palette.mode === 'dark' ? '2px solid #6b7280' : '2px solid #e0e0e0',
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit'
               }
             }}>
               <TableCell colSpan={showShopInfo && !aggregateAcrossShops ? 3 : 2}>

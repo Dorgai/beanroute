@@ -58,8 +58,8 @@ export const createAppTheme = (mode = 'light') => {
       A700: '#616161',
     },
     background: {
-      default: mode === 'dark' ? '#1a1a1a' : '#ffffff',
-      paper: mode === 'dark' ? '#2d2d2d' : '#ffffff',
+      default: mode === 'dark' ? '#1f2937' : '#ffffff',
+      paper: mode === 'dark' ? '#374151' : '#ffffff',
     },
   },
   typography: {

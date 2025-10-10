@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from '@/lib/session';
@@ -464,19 +464,33 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
         onClose(false);
       }
     }} maxWidth="md">
-      <DialogTitle sx={{ borderBottom: '1px solid #eee', pb: 2 }}>Create Order</DialogTitle>
-      <DialogContent sx={{ pt: 3 }}>
+      <DialogTitle sx={{ 
+        borderBottom: '1px solid #eee', 
+        pb: 2,
+        bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+        color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+      }}>
+        Create Order
+      </DialogTitle>
+      <DialogContent sx={{ 
+        pt: 3,
+        bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white'
+      }}>
         
         {/* Template Selection Section */}
         {availableTemplates.length > 0 && (
           <Box sx={{ 
             mb: 3, 
             p: 2, 
-            bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5', 
+            bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5', 
             borderRadius: 1,
-            border: theme => theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
+            border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
           }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            <Typography variant="subtitle2" sx={{ 
+              mb: 1, 
+              fontWeight: 600,
+              color: theme => theme.palette.mode === 'dark' ? '#f3f4f6' : 'inherit'
+            }}>
               📋 Load from Template
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -489,12 +503,12 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                   }}
                   displayEmpty
                   sx={{ 
-                    bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'white',
+                    bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.23)'
+                      borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.87)'
+                      borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                       borderColor: theme => theme.palette.primary.main
@@ -506,7 +520,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                   MenuProps={{
                     PaperProps: {
                       sx: {
-                        bgcolor: theme => theme.palette.mode === 'dark' ? '#2d2d2d' : 'white',
+                        bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
                         '& .MuiMenuItem-root': {
                           color: theme => theme.palette.mode === 'dark' ? 'white' : 'black',
                           '&:hover': {
@@ -575,6 +589,26 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
             fullWidth
             inputProps={{ maxLength: 200 }}
             helperText={`${comment.length}/200 characters`}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: theme => theme.palette.primary.main
+                }
+              },
+              '& .MuiInputLabel-root': {
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)'
+              },
+              '& .MuiInputBase-input': {
+                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+              }
+            }}
           />
         </Box>
         
@@ -589,20 +623,45 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
               </Typography>
             </CollapsibleAlert>
             
-            <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <TableContainer component={Paper} sx={{ 
+              mt: 2,
+              bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+              border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+            }}>
               <Table size="small">
-                <TableHead>
+                <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                   <TableRow>
-                    <TableCell>Coffee</TableCell>
-                    <TableCell>Available (After {haircutPercentage}% Haircut)</TableCell>
-                    <TableCell>Pending Espresso Bags (All Shops)</TableCell>
-                    <TableCell>Pending Filter Bags (All Shops)</TableCell>
-                    <TableCell>Espresso Bags (200g)</TableCell>
-                    <TableCell>Filter Bags (200g)</TableCell>
-                    <TableCell>Large Bags (1kg)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Coffee</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Available (After {haircutPercentage}% Haircut)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Pending Espresso Bags (All Shops)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Pending Filter Bags (All Shops)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Espresso Bags (200g)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Filter Bags (200g)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Large Bags (1kg)</TableCell>
                   </TableRow>
                 </TableHead>
-                <TableBody>
+                <TableBody sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white' }}>
                   {(() => {
                     // Group coffees by grade
                     const filteredCoffees = coffeeItems.filter(coffee => {
@@ -647,12 +706,14 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                       return (
                         <React.Fragment key={section.key}>
                           {/* Section Header */}
-                          <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                          <TableRow sx={{ 
+                            bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5',
+                            borderBottom: theme => theme.palette.mode === 'dark' ? '2px solid #6b7280' : '2px solid #e0e0e0'
+                          }}>
                             <TableCell colSpan={7} sx={{ 
                               fontWeight: 'bold', 
                               fontSize: '0.9rem',
-                              color: 'primary.main',
-                              borderBottom: '2px solid #e0e0e0',
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'primary.main',
                               py: 1
                             }}>
                               {section.title} ({section.coffees.length} coffee{section.coffees.length !== 1 ? 's' : ''})
@@ -784,8 +845,23 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.primary.main
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+                              },
                               '& .MuiInputBase-input::placeholder': {
-                                color: '#bbb',
+                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
                                 opacity: 1
                               }
                             }}
@@ -802,8 +878,23 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.primary.main
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+                              },
                               '& .MuiInputBase-input::placeholder': {
-                                color: '#bbb',
+                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
                                 opacity: 1
                               }
                             }}
@@ -825,8 +916,23 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.primary.main
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+                              },
                               '& .MuiInputBase-input::placeholder': {
-                                color: '#bbb',
+                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
                                 opacity: 1
                               }
                             }}
@@ -850,8 +956,23 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ borderTop: '1px solid #eee', pt: 2, pb: 2 }}>
-        <Button onClick={() => onClose(false)}>Cancel</Button>
+      <DialogActions sx={{ 
+        borderTop: '1px solid #eee', 
+        pt: 2, 
+        pb: 2,
+        bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white'
+      }}>
+        <Button 
+          onClick={() => onClose(false)}
+          sx={{
+            color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit',
+            '&:hover': {
+              bgcolor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)'
+            }
+          }}
+        >
+          Cancel
+        </Button>
         
         {/* Debug info */}
         {console.log('OrderDialog render - selectedShop:', selectedShop, 'coffeeItems:', coffeeItems, 'showSaveTemplate:', showSaveTemplate)}
@@ -899,6 +1020,16 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
             coffeeItems.length === 0 ||
             Object.values(validationErrors).some(error => error !== null)
           }
+          sx={{
+            bgcolor: '#6b7280',
+            '&:hover': {
+              bgcolor: '#4b5563'
+            },
+            '&:disabled': {
+              bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : '#e5e7eb',
+              color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#6b7280'
+            }
+          }}
         >
           {loading ? 'Creating...' : 'Create Order'}
         </Button>
@@ -1100,7 +1231,11 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
       </DialogTitle>
       <DialogContent sx={{ pt: 3 }}>
         {error && (
-          <IconlessAlert severity="error" sx={{ mb: 2 }}>
+          <IconlessAlert severity="error" sx={{ 
+            mb: 2,
+            borderRadius: 1,
+            border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+          }}>
             {error}
             {apiResponse && process.env.NODE_ENV === 'development' && (
               <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
@@ -1111,7 +1246,11 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
         )}
         
         {!order && (
-          <IconlessAlert severity="warning" sx={{ mb: 2 }}>
+          <IconlessAlert severity="warning" sx={{ 
+            mb: 2,
+            borderRadius: 1,
+            border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+          }}>
             No order data available
           </IconlessAlert>
         )}
@@ -1138,9 +1277,9 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
                 mt: 1, 
                 mb: 2, 
                 p: 1.5, 
-                bgcolor: isDark ? '#374151' : '#f5f5f5', 
+                bgcolor: isDark ? '#4b5563' : '#f5f5f5', 
                 borderRadius: 1, 
-                border: isDark ? '1px solid #4b5563' : '1px solid #e0e0e0' 
+                border: isDark ? '1px solid #6b7280' : '1px solid #e0e0e0' 
               }}>
                 <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: isDark ? '#f3f4f6' : 'inherit' }}>
                   Comment:
@@ -1152,7 +1291,12 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
             )}
             
             {validNextStatuses.length === 0 && (isRoaster || isRetailer || isBarista) && (
-              <IconlessAlert severity="info" sx={{ mt: 2, mb: 1 }}>
+              <IconlessAlert severity="info" sx={{ 
+                mt: 2, 
+                mb: 1,
+                borderRadius: 1,
+                border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+              }}>
                 You cannot change the status of this order from its current state: {order.status}
               </IconlessAlert>
             )}
@@ -1380,7 +1524,7 @@ export default function RetailOrders() {
   }, []);
 
   // Fetch haircut percentage
-  const fetchHaircutPercentage = async () => {
+  const fetchHaircutPercentage = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/haircut-settings');
       if (response.ok) {
@@ -1391,7 +1535,7 @@ export default function RetailOrders() {
       console.error('Failed to fetch haircut percentage:', error);
       // Keep default value of 15%
     }
-  };
+  }, []);
 
   // Fetch shops
   useEffect(() => {
@@ -1547,8 +1691,16 @@ export default function RetailOrders() {
   }, [selectedShop]);
 
   // Fetch data function - moved to component level for accessibility
-  const fetchData = async (useDirectMode = false) => {
+  const fetchData = useCallback(async (useDirectMode = false, retryCount = 0) => {
     if (!selectedShop) return;
+    
+    // Prevent infinite recursion
+    if (retryCount > 3) {
+      console.error('Maximum retry attempts reached for fetchData');
+      setError('Failed to load data after multiple attempts. Please refresh the page.');
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -1577,8 +1729,8 @@ export default function RetailOrders() {
         if (!inventoryResponse.ok) {
           if (!useDirectMode && inventoryResponse.status === 401) {
             console.log('Authentication failed for inventory, trying direct mode...');
-            // Stop current attempt and retry with direct mode
-            return fetchData(true);
+            // Retry with direct mode and increment retry count
+            return fetchData(true, retryCount + 1);
           }
           
           throw new Error(`Failed to fetch inventory (${inventoryResponse.status})`);
@@ -1675,7 +1827,7 @@ export default function RetailOrders() {
         console.error('Error reading cached inventory during error recovery:', cacheError);
       }
     }
-  };
+  }, [selectedShop, fetchHaircutPercentage]);
 
   // Fetch inventory and available coffee when shop changes
   useEffect(() => {
@@ -1685,7 +1837,7 @@ export default function RetailOrders() {
     localStorage.setItem('selectedShopId', selectedShop);
     
     fetchData();
-  }, [selectedShop]);
+  }, [selectedShop, fetchData]);
   
   // Fetch available coffee separately
   useEffect(() => {
@@ -2079,14 +2231,22 @@ export default function RetailOrders() {
           </Box>
 
           {error && (
-            <IconlessAlert severity="error" sx={{ mb: 2 }}>
+            <IconlessAlert severity="error" sx={{ 
+              mb: 2,
+              borderRadius: 1,
+              border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+            }}>
               {error}
             </IconlessAlert>
           )}
           
           {/* Alert for pending orders */}
           {shouldShowPendingAlert && hasPendingOrders && (
-            <IconlessAlert severity="warning" sx={{ mb: 3 }}>
+            <IconlessAlert severity="warning" sx={{ 
+              mb: 3,
+              borderRadius: 1,
+              border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+            }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 Attention: There are pending orders that need your review!
               </Typography>
@@ -2100,7 +2260,11 @@ export default function RetailOrders() {
           
           {/* Alert for recently changed orders */}
           {shouldShowChangedOrdersAlert && recentlyChangedOrders.length > 0 && (
-            <IconlessAlert severity="info" sx={{ mb: 3 }}>
+            <IconlessAlert severity="info" sx={{ 
+              mb: 3,
+              borderRadius: 1,
+              border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+            }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 Order Updates Since Your Last Visit
               </Typography>
@@ -2338,11 +2502,12 @@ export default function RetailOrders() {
                         
                         return (
                           <TableRow sx={{ 
-                            backgroundColor: '#f5f5f5', 
+                            backgroundColor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5', 
                             fontWeight: 'bold',
                             '& .MuiTableCell-root': { 
                               fontWeight: 'bold',
-                              borderTop: '2px solid #e0e0e0' 
+                              borderTop: theme => theme.palette.mode === 'dark' ? '2px solid #6b7280' : '2px solid #e0e0e0',
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit'
                             }
                           }}>
                             {canUpdateInventory && <TableCell />}
@@ -2381,21 +2546,51 @@ export default function RetailOrders() {
                               {section.title} ({section.items.length} coffee{section.items.length !== 1 ? 's' : ''})
                             </Typography>
                             
-                            <TableContainer component={Paper}>
+                            <TableContainer component={Paper} sx={{
+                              bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+                              border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+                            }}>
                               <Table size="small">
-                                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                                <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                                   <TableRow>
                                     {canUpdateInventory && (
-                                      <TableCell align="center">Actions</TableCell>
+                                      <TableCell align="center" sx={{ 
+                                        color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                        fontWeight: 600
+                                      }}>Actions</TableCell>
                                     )}
-                                    <TableCell>Coffee</TableCell>
-                                    <TableCell>Grade</TableCell>
-                                    <TableCell align="right">Espresso Bags (200g)</TableCell>
-                                    <TableCell align="right">Filter Bags (200g)</TableCell>
-                                    <TableCell align="right">Large Bags (1kg)</TableCell>
-                                    <TableCell>Last Order Date</TableCell>
-                                    <TableCell>Stock Status</TableCell>
-                                    <TableCell>Availability</TableCell>
+                                    <TableCell sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Coffee</TableCell>
+                                    <TableCell sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Grade</TableCell>
+                                    <TableCell align="right" sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Espresso Bags (200g)</TableCell>
+                                    <TableCell align="right" sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Filter Bags (200g)</TableCell>
+                                    <TableCell align="right" sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Large Bags (1kg)</TableCell>
+                                    <TableCell sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Last Order Date</TableCell>
+                                    <TableCell sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Stock Status</TableCell>
+                                    <TableCell sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Availability</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -2427,7 +2622,11 @@ export default function RetailOrders() {
                         </Box>
                         
                         {alertMessage && (
-                          <IconlessAlert severity={alertMessage.type} sx={{ mb: 2 }}>
+                          <IconlessAlert severity={alertMessage.type} sx={{ 
+                            mb: 2,
+                            borderRadius: 1,
+                            border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+                          }}>
                             {alertMessage.text}
                           </IconlessAlert>
                         )}
@@ -2435,14 +2634,32 @@ export default function RetailOrders() {
                         {recentAlertLogs.length > 0 ? (
                           <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
                             <Table size="small">
-                              <TableHead>
+                              <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                                 <TableRow>
-                                  <TableCell>Date</TableCell>
-                                  <TableCell>Alert Type</TableCell>
-                                  <TableCell>Espresso Bags</TableCell>
-                                  <TableCell>Filter Bags</TableCell>
-                                  <TableCell>Large Bags</TableCell>
-                                  <TableCell>Emails Sent</TableCell>
+                                  <TableCell sx={{ 
+                                    color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                    fontWeight: 600
+                                  }}>Date</TableCell>
+                                  <TableCell sx={{ 
+                                    color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                    fontWeight: 600
+                                  }}>Alert Type</TableCell>
+                                  <TableCell sx={{ 
+                                    color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                    fontWeight: 600
+                                  }}>Espresso Bags</TableCell>
+                                  <TableCell sx={{ 
+                                    color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                    fontWeight: 600
+                                  }}>Filter Bags</TableCell>
+                                  <TableCell sx={{ 
+                                    color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                    fontWeight: 600
+                                  }}>Large Bags</TableCell>
+                                  <TableCell sx={{ 
+                                    color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                    fontWeight: 600
+                                  }}>Emails Sent</TableCell>
                                 </TableRow>
                               </TableHead>
                               <TableBody>
@@ -2504,17 +2721,40 @@ export default function RetailOrders() {
                   <IconlessAlert severity="info">No inventory history available for this shop in the last 3 months</IconlessAlert>
                 ) : (
                   <Paper elevation={1}>
-                    <TableContainer>
+                    <TableContainer sx={{
+                      bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white'
+                    }}>
                       <Table size="small">
-                        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                           <TableRow>
-                            <TableCell>Date</TableCell>
-                            <TableCell>Coffee</TableCell>
-                            <TableCell>Updated By</TableCell>
-                            <TableCell align="right">Previous Qty</TableCell>
-                            <TableCell align="right">New Qty</TableCell>
-                            <TableCell align="right">Change</TableCell>
-                            <TableCell>Details</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Date</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Coffee</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Updated By</TableCell>
+                            <TableCell align="right" sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Previous Qty</TableCell>
+                            <TableCell align="right" sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>New Qty</TableCell>
+                            <TableCell align="right" sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Change</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Details</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2603,29 +2843,59 @@ export default function RetailOrders() {
                     />
                   )}
                   
-                  <Paper elevation={1}>
+                  <Paper elevation={1} sx={{ 
+                    bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+                    border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+                  }}>
                     <TableContainer>
                       <Table size="small">
-                        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableHead sx={{ 
+                          bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5'
+                        }}>
                           <TableRow>
-                            <TableCell padding="checkbox" />
-                            <TableCell>Date</TableCell>
-                            <TableCell>Ordered By</TableCell>
-                            <TableCell>Items</TableCell>
-                            <TableCell>Total Quantity</TableCell>
-                            <TableCell>Order ID</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell align="right">Actions</TableCell>
+                            <TableCell padding="checkbox" sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }} />
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Date</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Ordered By</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Items</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Total Quantity</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Order ID</TableCell>
+                            <TableCell sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Status</TableCell>
+                            <TableCell align="right" sx={{ 
+                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                              fontWeight: 600
+                            }}>Actions</TableCell>
                           </TableRow>
                         </TableHead>
-                        <TableBody>
+                        <TableBody sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white' }}>
                           {orders.map((order) => (
                             <React.Fragment key={order.id}>
                               <TableRow 
                                 hover 
                                 sx={{ 
+                                  bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
                                   '&:hover': {
-                                    backgroundColor: (isDark ?? false) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
+                                    backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
                                   }
                                 }}
                               >
@@ -2759,9 +3029,9 @@ export default function RetailOrders() {
                                           sx={{ 
                                             mb: 2, 
                                             p: 1.5, 
-                                            bgcolor: isDark ? '#374151' : '#f5f5f5', 
+                                            bgcolor: isDark ? '#4b5563' : '#f5f5f5', 
                                             borderRadius: 1,
-                                            border: isDark ? '1px solid #4b5563' : '1px solid #e0e0e0'
+                                            border: isDark ? '1px solid #6b7280' : '1px solid #e0e0e0'
                                           }}
                                         >
                                           <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: isDark ? '#f3f4f6' : 'inherit' }}>
@@ -2774,14 +3044,32 @@ export default function RetailOrders() {
                                       )}
                                       
                                       <Table size="small">
-                                        <TableHead>
+                                        <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                                           <TableRow>
-                                            <TableCell>Coffee</TableCell>
-                                            <TableCell>Grade</TableCell>
-                                            <TableCell align="right">Espresso Bags (200g)</TableCell>
-                                            <TableCell align="right">Filter Bags (200g)</TableCell>
-                                            <TableCell align="right">Large Bags (1kg)</TableCell>
-                                            <TableCell align="right">Total Quantity</TableCell>
+                                            <TableCell sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Coffee</TableCell>
+                                            <TableCell sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Grade</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Espresso Bags (200g)</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Filter Bags (200g)</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Large Bags (1kg)</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Total Quantity</TableCell>
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
