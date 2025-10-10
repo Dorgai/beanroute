@@ -732,7 +732,12 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                     const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
                     
                     return (
-                      <TableRow key={coffee.id} hover>
+                      <TableRow key={coffee.id} hover sx={{
+                        bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+                        '&:hover': {
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
+                        }
+                      }}>
                         <TableCell>
                           <strong>{coffee.name || 'Unknown'}</strong> 
                           <Typography variant="caption" color="text.secondary" display="block">
@@ -2583,7 +2588,7 @@ export default function RetailOrders() {
                                     }}>Availability</TableCell>
                                   </TableRow>
                                 </TableHead>
-                                <TableBody>
+                                <TableBody sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white' }}>
                                   {renderInventoryRows(section.items)}
                                   {renderSummaryRow(section.items)}
                                 </TableBody>
@@ -2652,7 +2657,7 @@ export default function RetailOrders() {
                                   }}>Emails Sent</TableCell>
                                 </TableRow>
                               </TableHead>
-                              <TableBody>
+                              <TableBody sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white' }}>
                                 {recentAlertLogs.slice(0, 3).map((log) => (
                                   <TableRow key={log.id}>
                                     <TableCell>{format(new Date(log.createdAt), 'MMM d, yyyy h:mm a')}</TableCell>
@@ -2747,9 +2752,14 @@ export default function RetailOrders() {
                             }}>Details</TableCell>
                           </TableRow>
                         </TableHead>
-                        <TableBody>
+                        <TableBody sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white' }}>
                           {inventoryHistory.map((item) => (
-                            <TableRow key={item.id} hover>
+                            <TableRow key={item.id} hover sx={{
+                              bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+                              '&:hover': {
+                                backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
+                              }
+                            }}>
                               <TableCell>
                                 {item.timestamp 
                                   ? format(new Date(item.timestamp), 'MMM d, yyyy HH:mm')
@@ -3060,7 +3070,7 @@ export default function RetailOrders() {
                                             }}>Total Quantity</TableCell>
                                           </TableRow>
                                         </TableHead>
-                                        <TableBody>
+                                        <TableBody sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white' }}>
                                           {order.items.map((item) => (
                                             <TableRow key={item.id}>
                                               <TableCell>
