@@ -2397,7 +2397,7 @@ export default function RetailOrders() {
                             ? '#fff8f8'
                             : isWarning 
                               ? '#fffaf0'
-                              : theme => theme.palette.mode === 'dark' ? '#374151' : 'white';
+                              : undefined;
                           
                           return (
                             <TableRow 
@@ -2409,7 +2409,7 @@ export default function RetailOrders() {
                                 }
                               }}
                               sx={{ 
-                                bgcolor: rowBgColor,
+                                bgcolor: rowBgColor || (theme => theme.palette.mode === 'dark' ? '#374151' : 'white'),
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
