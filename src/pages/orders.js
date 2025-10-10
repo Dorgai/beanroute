@@ -974,8 +974,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           Cancel
         </Button>
         
-        {/* Debug info */}
-        {console.log('OrderDialog render - selectedShop:', selectedShop, 'coffeeItems:', coffeeItems, 'showSaveTemplate:', showSaveTemplate)}
+          {/* Debug info */}
         
         {showSaveTemplate ? (
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -2162,18 +2161,7 @@ export default function RetailOrders() {
         <title>Retail - Bean Route</title>
       </Head>
       
-      {/* Debug for troubleshooting */}
-      {console.log('DEBUG - ShopStockSummary values:', {
-        isRoaster,
-        loading,
-        selectedShopDetails,
-        inventoryExists: !!inventory,
-        inventoryLength: inventory?.length || 0,
-        shopDetailsExists: !!selectedShopDetails,
-        shopDetailsName: selectedShopDetails?.name || 'none',
-        minSmallBags: selectedShopDetails?.minCoffeeQuantitySmall || 'none',
-        minLargeBags: selectedShopDetails?.minCoffeeQuantityLarge || 'none'
-      })}
+        {/* Debug for troubleshooting */}
       
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         {/* Shop Stock Summary displayed prominently at the top - ALWAYS show for non-roasters if shop details exist */}
@@ -2245,7 +2233,9 @@ export default function RetailOrders() {
             <IconlessAlert severity="warning" sx={{ 
               mb: 3,
               borderRadius: 1,
-              border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+              border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0',
+              bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : '#fff3cd',
+              color: theme => theme.palette.mode === 'dark' ? '#fbbf24' : '#664d03'
             }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 Attention: There are pending orders that need your review!
@@ -2988,7 +2978,6 @@ export default function RetailOrders() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     try {
-                                      console.log('Status column clicked for order:', order?.id);
                                       handleOpenStatusDialog(order);
                                     } catch (error) {
                                       console.error('Error opening status dialog:', error);
@@ -3006,7 +2995,6 @@ export default function RetailOrders() {
                                       size="small" 
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        console.log('Actions column clicked for order:', order?.id);
                                         handleOpenStatusDialog(order);
                                       }}
                                       sx={{ cursor: 'pointer' }}
