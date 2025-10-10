@@ -2395,10 +2395,10 @@ export default function RetailOrders() {
                           const isCritical = isEspressoBagsCritical || isFilterBagsCritical;
                           const isWarning = (isEspressoBagsLow || isFilterBagsLow) && !isCritical;
                           const rowBgColor = isCritical 
-                            ? '#fff8f8'
+                            ? (theme => theme.palette.mode === 'dark' ? '#4a1a1a' : '#fff8f8')
                             : isWarning 
-                              ? '#fffaf0'
-                              : '#374151';
+                              ? (theme => theme.palette.mode === 'dark' ? '#4a3a1a' : '#fffaf0')
+                              : undefined;
                           
                           return (
                             <TableRow 
@@ -2410,13 +2410,13 @@ export default function RetailOrders() {
                                 }
                               }}
                               sx={{ 
-                                bgcolor: rowBgColor,
+                                bgcolor: rowBgColor || (theme => theme.palette.mode === 'dark' ? '#374151' : 'white'),
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
-                                    ? '#fff0f0' 
+                                    ? (theme => theme.palette.mode === 'dark' ? '#5a2a2a' : '#fff0f0')
                                     : isWarning 
-                                      ? '#fff5e6' 
+                                      ? (theme => theme.palette.mode === 'dark' ? '#5a4a2a' : '#fff5e6')
                                       : canUpdateInventory
                                         ? theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
                                         : undefined
