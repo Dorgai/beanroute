@@ -2410,7 +2410,7 @@ export default function RetailOrders() {
                                 }
                               }}
                               sx={{ 
-                                bgcolor: rowBgColor || (theme => theme.palette.mode === 'dark' ? '#374151' : 'white'),
+                                bgcolor: rowBgColor || '#374151',
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
