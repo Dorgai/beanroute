@@ -1281,14 +1281,14 @@ function StatusUpdateDialog({ open, onClose, order, refreshData }) {
                 mt: 1, 
                 mb: 2, 
                 p: 1.5, 
-                bgcolor: isDark ? '#4b5563' : '#f5f5f5', 
+                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5', 
                 borderRadius: 1, 
-                border: isDark ? '1px solid #6b7280' : '1px solid #e0e0e0' 
+                border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0' 
               }}>
-                <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: isDark ? '#f3f4f6' : 'inherit' }}>
+                <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: theme => theme.palette.mode === 'dark' ? '#f3f4f6' : 'inherit' }}>
                   Comment:
                 </Typography>
-                <Typography variant="body2" sx={{ color: isDark ? '#d1d5db' : 'inherit' }}>
+                <Typography variant="body2" sx={{ color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit' }}>
                   {order.comment}
                 </Typography>
               </Box>
@@ -2196,11 +2196,11 @@ export default function RetailOrders() {
         <Paper elevation={2} sx={{ 
           p: 3, 
           mb: 4,
-          backgroundColor: isDark ? '#374151' : '#ffffff',
-          color: isDark ? '#ffffff' : 'inherit'
+          bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : '#ffffff',
+          color: theme => theme.palette.mode === 'dark' ? '#ffffff' : 'inherit'
         }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" component="h1" sx={{ color: isDark ? '#ffffff' : 'inherit' }}>
+            <Typography variant="h5" component="h1" sx={{ color: theme => theme.palette.mode === 'dark' ? '#ffffff' : 'inherit' }}>
               {isRoaster ? "Orders Management" : "Retail Management"}
             </Typography>
             <Box>
@@ -2270,25 +2270,25 @@ export default function RetailOrders() {
           )}
 
           <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel sx={{ color: isDark ? '#d1d5db' : 'inherit' }}>Shop</InputLabel>
+            <InputLabel sx={{ color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit' }}>Shop</InputLabel>
             <Select
               value={selectedShop}
               onChange={(e) => setSelectedShop(e.target.value)}
               label="Shop"
               size="small"
               sx={{
-                color: isDark ? '#ffffff' : 'inherit',
+                color: theme => theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: isDark ? '#6b7280' : 'inherit',
+                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'inherit',
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: isDark ? '#9ca3af' : 'inherit',
+                  borderColor: theme => theme.palette.mode === 'dark' ? '#9ca3af' : 'inherit',
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: isDark ? '#3b82f6' : 'inherit',
+                  borderColor: theme => theme.palette.mode === 'dark' ? '#3b82f6' : 'inherit',
                 },
                 '& .MuiSvgIcon-root': {
-                  color: isDark ? '#d1d5db' : 'inherit',
+                  color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit',
                 }
               }}
             >
@@ -2627,7 +2627,11 @@ export default function RetailOrders() {
                         )}
                         
                         {recentAlertLogs.length > 0 ? (
-                          <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                          <TableContainer component={Paper} variant="outlined" sx={{ 
+                            mb: 2,
+                            bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+                            border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
+                          }}>
                             <Table size="small">
                               <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                                 <TableRow>
@@ -3027,15 +3031,15 @@ export default function RetailOrders() {
                                           sx={{ 
                                             mb: 2, 
                                             p: 1.5, 
-                                            bgcolor: isDark ? '#4b5563' : '#f5f5f5', 
+                                            bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5', 
                                             borderRadius: 1,
-                                            border: isDark ? '1px solid #6b7280' : '1px solid #e0e0e0'
+                                            border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
                                           }}
                                         >
-                                          <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: isDark ? '#f3f4f6' : 'inherit' }}>
+                                          <Typography variant="body2" fontWeight="medium" gutterBottom sx={{ color: theme => theme.palette.mode === 'dark' ? '#f3f4f6' : 'inherit' }}>
                                             Comment:
                                           </Typography>
-                                          <Typography variant="body2" sx={{ color: isDark ? '#d1d5db' : 'inherit' }}>
+                                          <Typography variant="body2" sx={{ color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit' }}>
                                             {order.comment}
                                           </Typography>
                                         </Box>
