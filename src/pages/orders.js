@@ -2395,9 +2395,9 @@ export default function RetailOrders() {
                           const isCritical = isEspressoBagsCritical || isFilterBagsCritical;
                           const isWarning = (isEspressoBagsLow || isFilterBagsLow) && !isCritical;
                           const rowBgColor = isCritical 
-                            ? (theme => theme.palette.mode === 'dark' ? '#4a1a1a' : '#fff8f8')
+                            ? '#fff8f8'
                             : isWarning 
-                              ? (theme => theme.palette.mode === 'dark' ? '#4a3a1a' : '#fffaf0')
+                              ? '#fffaf0'
                               : undefined;
                           
                           return (
@@ -2414,9 +2414,9 @@ export default function RetailOrders() {
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
-                                    ? (theme => theme.palette.mode === 'dark' ? '#5a2a2a' : '#fff0f0')
+                                    ? '#fff0f0' 
                                     : isWarning 
-                                      ? (theme => theme.palette.mode === 'dark' ? '#5a4a2a' : '#fff5e6')
+                                      ? '#fff5e6' 
                                       : canUpdateInventory
                                         ? theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
                                         : undefined
