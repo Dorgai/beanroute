@@ -1,4 +1,4 @@
-// Cache bust: table background fix v3 - force complete rebuild
+// Cache bust: table background fix v4 - force complete rebuild - FINAL ATTEMPT
 import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -2409,6 +2409,7 @@ export default function RetailOrders() {
                                   handleOpenInventoryDialog(item);
                                 }
                               }}
+                              style={{ backgroundColor: rowBgColor || '#374151' }}
                               sx={{ 
                                 bgcolor: rowBgColor || '#374151',
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
