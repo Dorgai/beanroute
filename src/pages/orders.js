@@ -733,7 +733,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                     const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
                     
                     return (
-                      <TableRow key={coffee.id} hover sx={{
+                      <TableRow key={coffee.id} hover style={{ backgroundColor: '#374151' }} sx={{
                         bgcolor: '#374151',
                         '&:hover': {
                           backgroundColor: 'rgba(255, 255, 255, 0.05)'
