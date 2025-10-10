@@ -1,8 +1,10 @@
 import { createTheme } from '@mui/material/styles';
 
-// Define more vibrant color palette
-const theme = createTheme({
-  palette: {
+// Create app theme function that accepts theme mode
+export const createAppTheme = (mode = 'light') => {
+  return createTheme({
+    palette: {
+      mode: mode,
     primary: {
       main: '#1976d2', // Vibrant blue
       light: '#4791db',
@@ -56,8 +58,8 @@ const theme = createTheme({
       A700: '#616161',
     },
     background: {
-      default: '#ffffff',
-      paper: '#ffffff',
+      default: mode === 'dark' ? '#1a1a1a' : '#ffffff',
+      paper: mode === 'dark' ? '#2d2d2d' : '#ffffff',
     },
   },
   typography: {
@@ -108,6 +110,9 @@ const theme = createTheme({
       },
     },
   },
-});
+  });
+};
 
+// Default theme for backward compatibility
+const theme = createAppTheme('light');
 export default theme; 
