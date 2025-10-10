@@ -2398,7 +2398,7 @@ export default function RetailOrders() {
                             ? '#fff8f8'
                             : isWarning 
                               ? '#fffaf0'
-                              : undefined;
+                              : '#374151';
                           
                           return (
                             <TableRow 
@@ -2410,7 +2410,7 @@ export default function RetailOrders() {
                                 }
                               }}
                               sx={{ 
-                                bgcolor: rowBgColor || '#374151', // Force dark background for production
+                                bgcolor: rowBgColor,
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
