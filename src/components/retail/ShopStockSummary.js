@@ -1,8 +1,9 @@
 import React from 'react';
-import { Box, Typography, LinearProgress, Alert } from '@mui/material';
+import { Box, Typography, Alert } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
 import { useTheme } from '../../contexts/ThemeContext';
+import CircleChart from '../ui/CircleChart';
 
 /**
  * Component to display a summary of shop stock levels with progress bars
@@ -145,114 +146,65 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
         </Alert>
       ) : (
         <>
-          <Box sx={{ mb: 3 }}>
-            {/* Espresso Bags Progress Bar */}
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Espresso Bags</Typography>
-                <Typography variant="body2" sx={{ 
-                  fontWeight: 'bold', 
-                  color: getTextColor(totalEspressoBags, minEspressoBags, espressoBagsPercentage),
-                  fontSize: isEspressoBagsCritical || isEspressoBagsWarning ? '0.85rem' : '0.8rem',
-                  textShadow: isEspressoBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
-                             isEspressoBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
-                }}>
-                  {totalEspressoBags} in stock
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={espressoBagsPercentage} 
-                color={getProgressColor(espressoBagsPercentage)}
-                sx={{ 
-                  height: 10, 
-                  borderRadius: 5,
-                  bgcolor: isDark ? '#374151' : '#e0e0e0',
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 5,
-                    bgcolor: espressoBagsPercentage < 30 ? '#ff0000' :
-                            espressoBagsPercentage < 70 ? '#ff8000' : undefined
-                  }
-                }}
-              />
-              {isEspressoBagsCritical && (
-                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
-                  Critical: Minimum requirement is {minEspressoBags} bags
-                </Typography>
-              )}
-            </Box>
-
-            {/* Filter Bags Progress Bar */}
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Filter Bags</Typography>
-                <Typography variant="body2" sx={{ 
-                  fontWeight: 'bold', 
-                  color: getTextColor(totalFilterBags, minFilterBags, filterBagsPercentage),
-                  fontSize: isFilterBagsCritical || isFilterBagsWarning ? '0.85rem' : '0.8rem',
-                  textShadow: isFilterBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
-                             isFilterBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
-                }}>
-                  {totalFilterBags} in stock
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={filterBagsPercentage} 
-                color={getProgressColor(filterBagsPercentage)}
-                sx={{ 
-                  height: 10, 
-                  borderRadius: 5,
-                  bgcolor: isDark ? '#374151' : '#e0e0e0',
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 5,
-                    bgcolor: filterBagsPercentage < 30 ? '#ff0000' :
-                            filterBagsPercentage < 70 ? '#ff8000' : undefined
-                  }
-                }}
-              />
-              {isFilterBagsCritical && (
-                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
-                  Critical: Minimum requirement is {minFilterBags} bags
-                </Typography>
-              )}
-            </Box>
+          {/* Circle Charts Row */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-around', 
+            alignItems: 'center',
+            mb: 2,
+            py: 1
+          }}>
+            {/* Espresso Bags Circle Chart */}
+            <CircleChart
+              percentage={espressoBagsPercentage}
+              label="Espresso"
+              value={totalEspressoBags}
+              isDark={isDark}
+              isCritical={isEspressoBagsCritical}
+              isWarning={isEspressoBagsWarning}
+            />
+            
+            {/* Filter Bags Circle Chart */}
+            <CircleChart
+              percentage={filterBagsPercentage}
+              label="Filter"
+              value={totalFilterBags}
+              isDark={isDark}
+              isCritical={isFilterBagsCritical}
+              isWarning={isFilterBagsWarning}
+            />
+            
+            {/* Large Bags Circle Chart */}
+            <CircleChart
+              percentage={largeBagsPercentage}
+              label="Large"
+              value={totalLargeBags}
+              isDark={isDark}
+              isCritical={isLargeBagsCritical}
+              isWarning={isLargeBagsWarning}
+            />
           </Box>
           
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.85rem', color: isDark ? '#d1d5db' : 'inherit' }}>Large Bags</Typography>
-              <Typography variant="body2" sx={{ 
-                fontWeight: 'bold', 
-                color: getTextColor(totalLargeBags, minLargeBags, largeBagsPercentage),
-                fontSize: isLargeBagsCritical || isLargeBagsWarning ? '0.85rem' : '0.8rem',
-                textShadow: isLargeBagsCritical ? '0px 0px 1px rgba(255,23,68,0.3)' : 
-                           isLargeBagsWarning ? '0px 0px 1px rgba(255,145,0,0.3)' : 'none'
-              }}>
-                {totalLargeBags} in stock
-              </Typography>
+          {/* Critical Warnings */}
+          {(isEspressoBagsCritical || isFilterBagsCritical || isLargeBagsCritical) && (
+            <Box sx={{ mt: 1 }}>
+              {isEspressoBagsCritical && (
+                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', fontSize: '0.75rem' }}>
+                  Espresso: Critical - Minimum requirement is {minEspressoBags} bags
+                </Typography>
+              )}
+              {isFilterBagsCritical && (
+                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', fontSize: '0.75rem' }}>
+                  Filter: Critical - Minimum requirement is {minFilterBags} bags
+                </Typography>
+              )}
+              {isLargeBagsCritical && (
+                <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', fontSize: '0.75rem' }}>
+                  Large: Critical - Minimum requirement is {minLargeBags} bags
+                </Typography>
+              )}
             </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={largeBagsPercentage} 
-              color={getProgressColor(largeBagsPercentage)}
-              sx={{ 
-                height: 10, 
-                borderRadius: 5,
-                bgcolor: isDark ? '#374151' : '#e0e0e0',
-                '& .MuiLinearProgress-bar': {
-                  borderRadius: 5,
-                  bgcolor: largeBagsPercentage < 30 ? '#ff0000' :
-                          largeBagsPercentage < 70 ? '#ff8000' : undefined
-                }
-              }}
-            />
-            {isLargeBagsCritical && (
-              <Typography variant="caption" sx={{ color: '#ff1744', fontWeight: 'medium', display: 'block', mt: 0.5, fontSize: '0.75rem' }}>
-                Critical: Minimum requirement is {minLargeBags} bags
-              </Typography>
-            )}
-          </Box>
+          )}
         </>
       )}
     </Box>
