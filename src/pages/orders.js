@@ -1,4 +1,4 @@
-// Cache bust: table background fix v2
+// Cache bust: table background fix v3 - force complete rebuild
 import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -2410,7 +2410,10 @@ export default function RetailOrders() {
                                 }
                               }}
                               sx={{ 
-                                bgcolor: rowBgColor || (theme => theme.palette.mode === 'dark' ? '#374151' : 'white'),
+                                bgcolor: rowBgColor || (theme => {
+                                  console.log('Theme mode in production:', theme.palette.mode);
+                                  return theme.palette.mode === 'dark' ? '#374151' : 'white';
+                                }),
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
