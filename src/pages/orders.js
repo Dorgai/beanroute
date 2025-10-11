@@ -2891,10 +2891,11 @@ export default function RetailOrders() {
                             <React.Fragment key={order.id}>
                               <TableRow 
                                 hover 
+                                style={{ backgroundColor: '#374151' }}
                                 sx={{ 
-                                  bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
+                                  bgcolor: '#374151',
                                   '&:hover': {
-                                    backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
+                                    backgroundColor: 'rgba(255, 255, 255, 0.05)'
                                   }
                                 }}
                               >
