@@ -2404,15 +2404,16 @@ export default function RetailOrders() {
                                   handleOpenInventoryDialog(item);
                                 }
                               }}
+                              style={{ backgroundColor: rowBgColor || '#374151' }}
                               sx={{ 
-                                bgcolor: rowBgColor || (theme => theme.palette.mode === 'dark' ? '#374151' : 'white'),
+                                bgcolor: rowBgColor || '#374151',
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
                                     ? '#fff0f0' 
                                     : isWarning 
                                       ? '#fff5e6' 
-                                      : (theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)')
+                                      : 'rgba(255, 255, 255, 0.05)'
                                 }
                               }}
                             >
