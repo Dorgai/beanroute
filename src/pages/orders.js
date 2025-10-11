@@ -2399,21 +2399,26 @@ export default function RetailOrders() {
                             <TableRow 
                               key={item.id} 
                               hover
+                              className="inventory-table-row"
                               onClick={() => {
                                 if (canUpdateInventory) {
                                   handleOpenInventoryDialog(item);
                                 }
                               }}
-                              style={{ backgroundColor: rowBgColor || '#374151' }}
+                              style={{ 
+                                backgroundColor: rowBgColor || '#374151',
+                                background: rowBgColor || '#374151'
+                              }}
                               sx={{ 
-                                bgcolor: rowBgColor || '#374151',
+                                bgcolor: rowBgColor || '#374151 !important',
+                                backgroundColor: rowBgColor || '#374151 !important',
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
-                                    ? '#fff0f0' 
+                                    ? '#fff0f0 !important' 
                                     : isWarning 
-                                      ? '#fff5e6' 
-                                      : 'rgba(255, 255, 255, 0.05)'
+                                      ? '#fff5e6 !important' 
+                                      : 'rgba(255, 255, 255, 0.05) !important'
                                 }
                               }}
                             >
