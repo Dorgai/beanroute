@@ -2389,6 +2389,22 @@ export default function RetailOrders() {
                           
                           const isCritical = isEspressoBagsCritical || isFilterBagsCritical;
                           const isWarning = (isEspressoBagsLow || isFilterBagsLow) && !isCritical;
+                          
+                          // Debug logging to understand the calculation
+                          console.log(`Stock calculation for ${item.coffee?.name}:`, {
+                            numberOfCoffees,
+                            perCoffeeMinEspresso,
+                            perCoffeeMinFilter,
+                            espressoBags: item.smallBagsEspresso,
+                            filterBags: item.smallBagsFilter,
+                            espressoBagsPercentage,
+                            filterBagsPercentage,
+                            isEspressoBagsCritical,
+                            isFilterBagsCritical,
+                            isCritical,
+                            isWarning
+                          });
+                          
                           const rowBgColor = isCritical 
                             ? (isDark ? '#4a1a1a' : '#fff8f8')
                             : isWarning 
