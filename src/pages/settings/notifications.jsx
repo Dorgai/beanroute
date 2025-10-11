@@ -5,10 +5,12 @@ import { useEffect } from 'react';
 import NotificationSettings from '../../components/ui/NotificationSettings';
 import { FiArrowLeft } from 'react-icons/fi';
 import Link from 'next/link';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function NotificationSettingsPage() {
   const { session, loading } = useSession();
   const router = useRouter();
+  const { isDark } = useTheme();
 
   useEffect(() => {
     if (!loading && !session) {
@@ -18,7 +20,7 @@ export default function NotificationSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen ${isDark ? 'bg-gray-800' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -29,21 +31,21 @@ export default function NotificationSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-800' : 'bg-gray-50'} py-8`}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <Link
             href="/orders"
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
+            className={`inline-flex items-center text-sm ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} mb-4`}
           >
             <FiArrowLeft className="w-4 h-4 mr-1" />
             Back to Orders
           </Link>
           
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Notification Settings</h1>
-            <p className="mt-1 text-sm text-gray-600">
+            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Notification Settings</h1>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               Manage your push notification preferences and connected devices
             </p>
           </div>
