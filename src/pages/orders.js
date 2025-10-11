@@ -2405,11 +2405,12 @@ export default function RetailOrders() {
                             isWarning
                           });
                           
-                          const rowBgColor = isCritical 
-                            ? (isDark ? '#4a1a1a' : '#fff8f8')
-                            : isWarning 
-                              ? (isDark ? '#4a3a1a' : '#fffaf0')
-                              : undefined;
+                          // Temporarily disable stock status coloring to test
+                          const rowBgColor = undefined; // isCritical 
+                          //   ? (isDark ? '#2d1b1b' : '#fff8f8')
+                          //   : isWarning 
+                          //     ? (isDark ? '#2d251b' : '#fffaf0')
+                          //     : undefined;
                           
                           return (
                             <TableRow 
