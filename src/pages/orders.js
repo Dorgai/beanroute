@@ -2405,14 +2405,14 @@ export default function RetailOrders() {
                                 }
                               }}
                               sx={{ 
-                                bgcolor: rowBgColor || undefined,
+                                bgcolor: rowBgColor || 'inherit',
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
                                     ? '#fff0f0' 
                                     : isWarning 
                                       ? '#fff5e6' 
-                                        : undefined
+                                      : undefined
                                 }
                               }}
                             >
