@@ -2400,6 +2400,7 @@ export default function RetailOrders() {
                               key={item.id} 
                               hover
                               className="inventory-table-row"
+                              data-bg-color={rowBgColor || '#374151'}
                               onClick={() => {
                                 if (canUpdateInventory) {
                                   handleOpenInventoryDialog(item);
@@ -2407,7 +2408,8 @@ export default function RetailOrders() {
                               }}
                               style={{ 
                                 backgroundColor: rowBgColor || '#374151',
-                                background: rowBgColor || '#374151'
+                                background: rowBgColor || '#374151',
+                                backgroundColor: rowBgColor || '#374151'
                               }}
                               onMouseEnter={(e) => {
                                 if (!isCritical && !isWarning) {
