@@ -109,6 +109,16 @@ export const createAppTheme = (mode = 'light') => {
         },
       },
     },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'dark' ? '#374151' : 'inherit',
+          '&:hover': {
+            backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+          },
+        },
+      },
+    },
   },
   });
 };

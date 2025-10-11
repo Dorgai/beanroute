@@ -733,12 +733,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                     const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
                     
                     return (
-                      <TableRow key={coffee.id} hover sx={{
-                        bgcolor: '#374151 !important',
-                        '&:hover': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.05) !important'
-                        }
-                      }}>
+                      <TableRow key={coffee.id} hover>
                         <TableCell>
                           <strong>{coffee.name || 'Unknown'}</strong> 
                           <Typography variant="caption" color="text.secondary" display="block">
@@ -980,7 +975,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           Cancel
         </Button>
         
-          {/* Debug info */}
+        {/* Debug info */}
         
         {showSaveTemplate ? (
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -2410,15 +2405,13 @@ export default function RetailOrders() {
                                 }
                               }}
                               sx={{ 
-                                bgcolor: (rowBgColor || '#374151') + ' !important',
+                                bgcolor: rowBgColor || undefined,
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
-                                    ? '#fff0f0 !important' 
+                                    ? '#fff0f0' 
                                     : isWarning 
-                                      ? '#fff5e6 !important' 
-                                      : canUpdateInventory
-                                        ? 'rgba(255, 255, 255, 0.05) !important'
+                                      ? '#fff5e6' 
                                         : undefined
                                 }
                               }}
@@ -2542,7 +2535,7 @@ export default function RetailOrders() {
                               {section.title} ({section.items.length} coffee{section.items.length !== 1 ? 's' : ''})
                             </Typography>
                             
-                            <TableContainer component={Paper} sx={{
+                            <TableContainer component={Paper} sx={{ 
                               bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
                               border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
                             }}>
@@ -2723,7 +2716,7 @@ export default function RetailOrders() {
                   <Paper elevation={1}>
                     <TableContainer sx={{
                       bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white'
-                    }}>
+                  }}>
                       <Table size="small">
                         <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                           <TableRow>
