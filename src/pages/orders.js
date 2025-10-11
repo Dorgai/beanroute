@@ -2427,10 +2427,10 @@ export default function RetailOrders() {
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
-                                    ? '#fff0f0' 
+                                    ? (isDark ? '#5a2a2a' : '#fff0f0')
                                     : isWarning 
-                                      ? '#fff5e6' 
-                                      : 'rgba(255, 255, 255, 0.05)'
+                                      ? (isDark ? '#5a4a2a' : '#fff5e6')
+                                      : (isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)')
                                 }
                               }}
                             >
@@ -2908,11 +2908,11 @@ export default function RetailOrders() {
                             <React.Fragment key={order.id}>
                               <TableRow 
                                 hover 
-                                style={{ backgroundColor: '#374151' }}
+                                style={{ backgroundColor: isDark ? '#374151' : 'white' }}
                                 sx={{ 
-                                  bgcolor: '#374151',
+                                  bgcolor: isDark ? '#374151' : 'white',
                                   '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'
                                   }
                                 }}
                               >
