@@ -123,7 +123,7 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
     >
       <Typography variant="h3" sx={{ 
         fontWeight: 'bold', 
-        mb: 0.5, 
+        mb: 3, 
         color: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
         fontSize: '2.5rem',
         lineHeight: 1.2,

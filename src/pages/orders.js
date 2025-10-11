@@ -2168,7 +2168,7 @@ export default function RetailOrders() {
         {/* Shop Stock Summary displayed prominently at the top - ALWAYS show for non-roasters if shop details exist */}
         {!isRoaster && selectedShopDetails && (
           <div>
-            <Box sx={{ mb: 4, mt: 2 }}>
+            <Box sx={{ mb: 4, mt: 0.5 }}>
               <ShopStockSummary 
                 inventory={inventory || []} 
                 shopDetails={selectedShopDetails} 
