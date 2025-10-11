@@ -2409,16 +2409,26 @@ export default function RetailOrders() {
                                 backgroundColor: rowBgColor || '#374151',
                                 background: rowBgColor || '#374151'
                               }}
+                              onMouseEnter={(e) => {
+                                if (!isCritical && !isWarning) {
+                                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isCritical && !isWarning) {
+                                  e.currentTarget.style.backgroundColor = rowBgColor || '#374151';
+                                }
+                              }}
                               sx={{ 
                                 bgcolor: rowBgColor || '#374151 !important',
                                 backgroundColor: rowBgColor || '#374151 !important',
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
-                                    ? '#fff0f0 !important' 
+                                    ? '#fff0f0' 
                                     : isWarning 
-                                      ? '#fff5e6 !important' 
-                                      : 'rgba(255, 255, 255, 0.05) !important'
+                                      ? '#fff5e6' 
+                                      : 'rgba(255, 255, 255, 0.05)'
                                 }
                               }}
                             >
