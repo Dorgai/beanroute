@@ -121,12 +121,12 @@ export default function ShopStockSummary({ inventory, shopDetails, sx = {} }) {
         ...sx 
       }}
     >
-      <Typography variant="subtitle1" sx={{ 
+      <Typography variant="h3" sx={{ 
         fontWeight: 'bold', 
-        mb: 3, 
-        color: isDark ? '#f3f4f6' : '#333333',
-        fontSize: '0.9rem',
-        textShadow: showCritical || hasWarning ? '0px 0px 1px rgba(0,0,0,0.1)' : 'none',
+        mb: 0.5, 
+        color: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
+        fontSize: '2.5rem',
+        lineHeight: 1.2,
         textAlign: 'center'
       }}>
         {shopDetails.name} - Inventory Summary

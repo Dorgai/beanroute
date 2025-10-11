@@ -2566,13 +2566,7 @@ export default function RetailOrders() {
                         
                         return (
                           <Box key={section.key} sx={{ mb: 3 }}>
-                            <Typography variant="h3" sx={{ 
-                              mb: 0.5, 
-                              color: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)', 
-                              fontWeight: 'bold',
-                              fontSize: '2.5rem',
-                              lineHeight: 1.2
-                            }}>
+                            <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
                               {section.title} ({section.items.length} coffee{section.items.length !== 1 ? 's' : ''})
                             </Typography>
                             
