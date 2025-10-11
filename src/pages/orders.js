@@ -2390,9 +2390,9 @@ export default function RetailOrders() {
                           const isCritical = isEspressoBagsCritical || isFilterBagsCritical;
                           const isWarning = (isEspressoBagsLow || isFilterBagsLow) && !isCritical;
                           const rowBgColor = isCritical 
-                            ? '#fff8f8'
+                            ? (isDark ? '#4a1a1a' : '#fff8f8')
                             : isWarning 
-                              ? '#fffaf0'
+                              ? (isDark ? '#4a3a1a' : '#fffaf0')
                               : undefined;
                           
                           return (
@@ -2400,30 +2400,30 @@ export default function RetailOrders() {
                               key={item.id} 
                               hover
                               className="inventory-table-row"
-                              data-bg-color={rowBgColor || '#374151'}
+                              data-bg-color={rowBgColor || (isDark ? '#374151' : 'white')}
                               onClick={() => {
                                 if (canUpdateInventory) {
                                   handleOpenInventoryDialog(item);
                                 }
                               }}
                               style={{ 
-                                backgroundColor: rowBgColor || '#374151',
-                                background: rowBgColor || '#374151',
-                                backgroundColor: rowBgColor || '#374151'
+                                backgroundColor: rowBgColor || (isDark ? '#374151' : 'white'),
+                                background: rowBgColor || (isDark ? '#374151' : 'white'),
+                                backgroundColor: rowBgColor || (isDark ? '#374151' : 'white')
                               }}
                               onMouseEnter={(e) => {
                                 if (!isCritical && !isWarning) {
-                                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                  e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)';
                                 }
                               }}
                               onMouseLeave={(e) => {
                                 if (!isCritical && !isWarning) {
-                                  e.currentTarget.style.backgroundColor = rowBgColor || '#374151';
+                                  e.currentTarget.style.backgroundColor = rowBgColor || (isDark ? '#374151' : 'white');
                                 }
                               }}
                               sx={{ 
-                                bgcolor: rowBgColor || '#374151 !important',
-                                backgroundColor: rowBgColor || '#374151 !important',
+                                bgcolor: rowBgColor || (isDark ? '#374151' : 'white') + ' !important',
+                                backgroundColor: rowBgColor || (isDark ? '#374151' : 'white') + ' !important',
                                 cursor: canUpdateInventory ? 'pointer' : 'default',
                                 '&:hover': {
                                   backgroundColor: isCritical 
