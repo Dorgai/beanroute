@@ -50,6 +50,8 @@ export default async function handler(req, res) {
           OR: [
             { smallBagsEspresso: { gt: 0 } },
             { smallBagsFilter: { gt: 0 } },
+            { mediumBagsEspresso: { gt: 0 } },
+            { mediumBagsFilter: { gt: 0 } },
             { largeBags: { gt: 0 } }
           ]
         },
@@ -69,7 +71,7 @@ export default async function handler(req, res) {
 
       console.log(`Shop inventory query returned ${shopInventoryCoffee.length} items with stock > 0`);
       shopInventoryCoffee.forEach(item => {
-        console.log(`  - ${item.coffee.name}: Espresso=${item.smallBagsEspresso}, Filter=${item.smallBagsFilter}, Large=${item.largeBags}`);
+        console.log(`  - ${item.coffee.name}: Small Espresso=${item.smallBagsEspresso}, Small Filter=${item.smallBagsFilter}, Medium Espresso=${item.mediumBagsEspresso || 0}, Medium Filter=${item.mediumBagsFilter || 0}, Large=${item.largeBags}`);
       });
 
       // Then, get coffees with green stock that the shop can order
@@ -113,8 +115,8 @@ export default async function handler(req, res) {
       
       console.log(`Total coffees in shop ${shopId} inventory: ${allShopCoffees.length}`);
       allShopCoffees.forEach(item => {
-        const totalStock = (item.smallBagsEspresso || 0) + (item.smallBagsFilter || 0) + (item.largeBags || 0);
-        console.log(`  - ${item.coffee.name}: Espresso=${item.smallBagsEspresso || 0}, Filter=${item.smallBagsFilter || 0}, Large=${item.largeBags || 0}, Total=${totalStock}`);
+        const totalStock = (item.smallBagsEspresso || 0) + (item.smallBagsFilter || 0) + (item.mediumBagsEspresso || 0) + (item.mediumBagsFilter || 0) + (item.largeBags || 0);
+        console.log(`  - ${item.coffee.name}: Small Espresso=${item.smallBagsEspresso || 0}, Small Filter=${item.smallBagsFilter || 0}, Medium Espresso=${item.mediumBagsEspresso || 0}, Medium Filter=${item.mediumBagsFilter || 0}, Large=${item.largeBags || 0}, Total=${totalStock}`);
       });
 
       // Combine both lists - prioritize green stock for ordering
@@ -130,6 +132,8 @@ export default async function handler(req, res) {
           // No shop inventory initially
           shopSmallBagsEspresso: 0,
           shopSmallBagsFilter: 0,
+          shopMediumBagsEspresso: 0,
+          shopMediumBagsFilter: 0,
           shopLargeBags: 0,
           shopTotalQuantity: 0
         });
@@ -137,7 +141,7 @@ export default async function handler(req, res) {
 
       // Add shop inventory coffees (these show current shop stock)
       shopInventoryCoffee.forEach(item => {
-        console.log(`Adding shop inventory coffee: ${item.coffee.name} - Small: ${item.smallBagsEspresso}, Filter: ${item.smallBagsFilter}, Large: ${item.largeBags}`);
+        console.log(`Adding shop inventory coffee: ${item.coffee.name} - Small Espresso: ${item.smallBagsEspresso}, Small Filter: ${item.smallBagsFilter}, Medium Espresso: ${item.mediumBagsEspresso || 0}, Medium Filter: ${item.mediumBagsFilter || 0}, Large: ${item.largeBags}`);
         
         // If this coffee is already in the map (has green stock), update it with shop inventory
         if (coffeeMap.has(item.coffee.id)) {
@@ -147,6 +151,8 @@ export default async function handler(req, res) {
             source: 'both', // Has both green stock and shop inventory
             shopSmallBagsEspresso: item.smallBagsEspresso,
             shopSmallBagsFilter: item.smallBagsFilter,
+            shopMediumBagsEspresso: item.mediumBagsEspresso || 0,
+            shopMediumBagsFilter: item.mediumBagsFilter || 0,
             shopLargeBags: item.largeBags,
             shopTotalQuantity: item.totalQuantity
           });
@@ -160,6 +166,8 @@ export default async function handler(req, res) {
             // Include shop inventory details
             shopSmallBagsEspresso: item.smallBagsEspresso,
             shopSmallBagsFilter: item.smallBagsFilter,
+            shopMediumBagsEspresso: item.mediumBagsEspresso || 0,
+            shopMediumBagsFilter: item.mediumBagsFilter || 0,
             shopLargeBags: item.largeBags,
             shopTotalQuantity: item.totalQuantity
           });
@@ -171,7 +179,7 @@ export default async function handler(req, res) {
       // Additional validation: filter out any coffees that somehow have zero stock in both places
       const filteredCoffee = coffee.filter(item => {
         if (item.source === 'shop_inventory') {
-          const hasStock = (item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.largeBags > 0);
+          const hasStock = (item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.shopMediumBagsEspresso > 0 || item.shopMediumBagsFilter > 0 || item.largeBags > 0);
           if (!hasStock) {
             console.log(`Filtering out shop inventory coffee with zero stock: ${item.name}`);
           }
@@ -200,7 +208,7 @@ export default async function handler(req, res) {
       const finalFilteredCoffee = filteredCoffee.filter(item => {
         let hasStock = false;
         if (item.source === 'shop_inventory') {
-          hasStock = (item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.largeBags > 0);
+          hasStock = (item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.shopMediumBagsEspresso > 0 || item.shopMediumBagsFilter > 0 || item.largeBags > 0);
         } else if (item.source === 'green_stock') {
           hasStock = item.originalQuantity > 0;
         } else if (item.source === 'both') {
@@ -209,7 +217,7 @@ export default async function handler(req, res) {
         
         if (!hasStock) {
           console.log(`FINAL FILTER: Removing coffee with zero stock: ${item.name} (${item.source})`);
-          console.log(`  Shop stock: Espresso=${item.shopSmallBagsEspresso}, Filter=${item.shopSmallBagsFilter}, Large=${item.largeBags}`);
+          console.log(`  Shop stock: Small Espresso=${item.shopSmallBagsEspresso}, Small Filter=${item.shopSmallBagsFilter}, Medium Espresso=${item.shopMediumBagsEspresso}, Medium Filter=${item.shopMediumBagsFilter}, Large=${item.largeBags}`);
           console.log(`  Green stock: ${item.originalQuantity}`);
         }
         
@@ -258,7 +266,7 @@ export default async function handler(req, res) {
         // This coffee has both shop inventory AND green stock - show green stock for ordering
         const haircutAmount = parseFloat((item.originalQuantity * (haircutPercentage / 100)).toFixed(2));
         const quantityAfterHaircut = parseFloat((item.originalQuantity * (1 - haircutPercentage / 100)).toFixed(2));
-        const shopTotalQuantity = (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopLargeBags * 1.0);
+        const shopTotalQuantity = (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopMediumBagsEspresso * 0.5) + (item.shopMediumBagsFilter * 0.5) + (item.shopLargeBags * 1.0);
         
         console.log(`[available-coffee] ${item.name}: Both sources - Shop inventory: ${shopTotalQuantity.toFixed(2)}kg, Green stock: ${item.originalQuantity}kg, available for ordering: ${quantityAfterHaircut}kg`);
         
@@ -273,8 +281,8 @@ export default async function handler(req, res) {
         };
       } else if (item.source === 'shop_inventory') {
         // For shop inventory coffees, check if they also have green stock available for ordering
-        const shopTotalQuantity = (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopLargeBags * 1.0);
-        console.log(`[available-coffee] ${item.name}: Shop inventory - Espresso: ${item.shopSmallBagsEspresso}×0.2kg, Filter: ${item.shopSmallBagsFilter}×0.2kg, Large: ${item.shopLargeBags}×1.0kg = ${shopTotalQuantity.toFixed(2)}kg in shop inventory`);
+        const shopTotalQuantity = (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopMediumBagsEspresso * 0.5) + (item.shopMediumBagsFilter * 0.5) + (item.shopLargeBags * 1.0);
+        console.log(`[available-coffee] ${item.name}: Shop inventory - Small Espresso: ${item.shopSmallBagsEspresso}×0.2kg, Small Filter: ${item.shopSmallBagsFilter}×0.2kg, Medium Espresso: ${item.shopMediumBagsEspresso}×0.5kg, Medium Filter: ${item.shopMediumBagsFilter}×0.5kg, Large: ${item.shopLargeBags}×1.0kg = ${shopTotalQuantity.toFixed(2)}kg in shop inventory`);
         
         // Check if this coffee also has green stock available for ordering
         const greenStockItem = greenStockCoffee.find(coffee => coffee.id === item.id);
