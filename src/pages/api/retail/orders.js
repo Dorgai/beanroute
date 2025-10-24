@@ -110,8 +110,8 @@ export default async function handler(req, res) {
           smallBags: true,
           smallBagsEspresso: true,
           smallBagsFilter: true,
-            mediumBagsEspresso: true,
-            mediumBagsFilter: true,
+          mediumBagsEspresso: true,
+          mediumBagsFilter: true,
           largeBags: true,
           totalQuantity: true,
           coffee: {
@@ -123,6 +123,13 @@ export default async function handler(req, res) {
           }
         }
       });
+      
+      // Handle backward compatibility for medium bag columns (set NULL to 0)
+      const processedOrderItems = orderItems.map(item => ({
+        ...item,
+        mediumBagsEspresso: item.mediumBagsEspresso || 0,
+        mediumBagsFilter: item.mediumBagsFilter || 0
+      }));
       
       // Get users separately
       const userIds = [...new Set(orders.map(order => order.orderedById))];
@@ -152,7 +159,7 @@ export default async function handler(req, res) {
       
       // Combine data
       const enrichedOrders = orders.map(order => {
-        const orderItemsForOrder = orderItems.filter(item => item.orderId === order.id);
+        const orderItemsForOrder = processedOrderItems.filter(item => item.orderId === order.id);
         const user = users.find(u => u.id === order.orderedById);
         const shop = shops.find(s => s.id === order.shopId);
         
