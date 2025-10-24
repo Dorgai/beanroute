@@ -74,6 +74,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           initialItems[coffee.id] = { 
             smallBagsEspresso: '', 
             smallBagsFilter: '', 
+            mediumBagsEspresso: '',
+            mediumBagsFilter: '',
             largeBags: '' 
           };
         }
@@ -123,16 +125,16 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
   }, [open]);
   
   // Calculate total quantity for a coffee item in kg
-  const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, largeBags) => {
-    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + (largeBags * 1.0);
+  const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
+    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + ((mediumBagsEspresso + mediumBagsFilter) * 0.5) + (largeBags * 1.0);
   };
   
   // Validate if the requested quantity is within available limits
-  const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, largeBags) => {
+  const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
     const coffee = coffeeItems.find(c => c.id === coffeeId);
     if (!coffee) return true; // Can't validate if coffee not found
     
-    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, largeBags);
+    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags);
     const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
     const isValid = realTimeAvailable >= requestedQuantity;
     
@@ -157,9 +159,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     if (currentOrder) {
       const espressoInput = parseInt(currentOrder.smallBagsEspresso) || 0;
       const filterInput = parseInt(currentOrder.smallBagsFilter) || 0;
+      const mediumEInput = parseInt(currentOrder.mediumBagsEspresso) || 0;
+      const mediumFInput = parseInt(currentOrder.mediumBagsFilter) || 0;
       const largeBagsInput = parseInt(currentOrder.largeBags) || 0;
       
-      const currentOrderQuantity = ((espressoInput + filterInput) * 0.2) + (largeBagsInput * 1.0);
+      const currentOrderQuantity = calculateTotalQuantity(espressoInput, filterInput, mediumEInput, mediumFInput, largeBagsInput);
       availableQuantity -= currentOrderQuantity;
     }
     
@@ -186,10 +190,12 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     // Only validate if we have actual numeric values
     const espressoValue = parseInt(updatedValues.smallBagsEspresso) || 0;
     const filterValue = parseInt(updatedValues.smallBagsFilter) || 0;
+    const mediumEValue = parseInt(updatedValues.mediumBagsEspresso) || 0;
+    const mediumFValue = parseInt(updatedValues.mediumBagsFilter) || 0;
     const largeBagsValue = parseInt(updatedValues.largeBags) || 0;
     
     // Validate after updating
-    validateQuantity(coffeeId, espressoValue, filterValue, largeBagsValue);
+    validateQuantity(coffeeId, espressoValue, filterValue, mediumEValue, mediumFValue, largeBagsValue);
   };
 
   const handleSubmit = async () => {
@@ -221,13 +227,17 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           if (!coffeeId || !item) return false;
           const espressoValue = parseInt(item.smallBagsEspresso) || 0;
           const filterValue = parseInt(item.smallBagsFilter) || 0;
+          const mediumEValue = parseInt(item.mediumBagsEspresso) || 0;
+          const mediumFValue = parseInt(item.mediumBagsFilter) || 0;
           const largeBagsValue = parseInt(item.largeBags) || 0;
-          return (espressoValue > 0 || filterValue > 0 || largeBagsValue > 0);
+          return (espressoValue > 0 || filterValue > 0 || mediumEValue > 0 || mediumFValue > 0 || largeBagsValue > 0);
         })
         .map(([coffeeId, item]) => ({
           coffeeId,
           smallBagsEspresso: parseInt(item.smallBagsEspresso) || 0,
           smallBagsFilter: parseInt(item.smallBagsFilter) || 0,
+          mediumBagsEspresso: parseInt(item.mediumBagsEspresso) || 0,
+          mediumBagsFilter: parseInt(item.mediumBagsFilter) || 0,
           largeBags: parseInt(item.largeBags) || 0
         }));
 
@@ -372,6 +382,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           newOrderItems[templateItem.coffeeId] = {
             smallBagsEspresso: templateItem.smallBagsEspresso.toString(),
             smallBagsFilter: templateItem.smallBagsFilter.toString(),
+            mediumBagsEspresso: (templateItem.mediumBagsEspresso || 0).toString(),
+            mediumBagsFilter: (templateItem.mediumBagsFilter || 0).toString(),
             largeBags: templateItem.largeBags.toString()
           };
         }
@@ -413,6 +425,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
         .filter(([coffeeId, quantities]) => {
           const total = (parseInt(quantities.smallBagsEspresso) || 0) +
                         (parseInt(quantities.smallBagsFilter) || 0) +
+                        (parseInt(quantities.mediumBagsEspresso) || 0) +
+                        (parseInt(quantities.mediumBagsFilter) || 0) +
                         (parseInt(quantities.largeBags) || 0);
           return total > 0;
         })
@@ -420,9 +434,13 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           coffeeId,
           smallBagsEspresso: parseInt(quantities.smallBagsEspresso) || 0,
           smallBagsFilter: parseInt(quantities.smallBagsFilter) || 0,
+          mediumBagsEspresso: parseInt(quantities.mediumBagsEspresso) || 0,
+          mediumBagsFilter: parseInt(quantities.mediumBagsFilter) || 0,
           largeBags: parseInt(quantities.largeBags) || 0,
           totalQuantity: ((parseInt(quantities.smallBagsEspresso) || 0) +
                           (parseInt(quantities.smallBagsFilter) || 0)) * 0.2 +
+                          ((parseInt(quantities.mediumBagsEspresso) || 0) +
+                          (parseInt(quantities.mediumBagsFilter) || 0)) * 0.5 +
                           (parseInt(quantities.largeBags) || 0) * 1.0
         }));
 
@@ -659,6 +677,14 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                       fontWeight: 600
+                    }}>Medium Espresso (500g)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Medium Filter (500g)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
                     }}>Large Bags (1kg)</TableCell>
                   </TableRow>
                 </TableHead>
@@ -875,6 +901,72 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             value={orderItems[coffee.id]?.smallBagsFilter || ''}
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsFilter', e.target.value)}
+                            size="small"
+                            fullWidth
+                            error={Boolean(validationErrors[coffee.id])}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.primary.main
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+                              },
+                              '& .MuiInputBase-input::placeholder': {
+                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
+                                opacity: 1
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            InputProps={{ inputProps: { min: 0 } }}
+                            value={orderItems[coffee.id]?.mediumBagsEspresso || ''}
+                            placeholder="0"
+                            onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsEspresso', e.target.value)}
+                            size="small"
+                            fullWidth
+                            error={Boolean(validationErrors[coffee.id])}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.primary.main
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+                              },
+                              '& .MuiInputBase-input::placeholder': {
+                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
+                                opacity: 1
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            InputProps={{ inputProps: { min: 0 } }}
+                            value={orderItems[coffee.id]?.mediumBagsFilter || ''}
+                            placeholder="0"
+                            onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsFilter', e.target.value)}
                             size="small"
                             fullWidth
                             error={Boolean(validationErrors[coffee.id])}
@@ -1523,6 +1615,20 @@ export default function RetailOrders() {
     }
   }, []);
 
+  // Ensure a shop is selected when shops are available
+  useEffect(() => {
+    console.log('🔥 DEBUG: Shop selection useEffect triggered');
+    console.log('🔥 DEBUG: shops.length:', shops.length);
+    console.log('🔥 DEBUG: selectedShop:', selectedShop);
+    console.log('🔥 DEBUG: selectedShop type:', typeof selectedShop);
+    if (shops.length > 0 && (!selectedShop || selectedShop === '')) {
+      const shopId = shops[0].id;
+      console.log('Fallback: Auto-selecting first shop:', shopId, shops[0].name);
+      setSelectedShop(shopId);
+      localStorage.setItem('selectedShopId', shopId);
+    }
+  }, [shops, selectedShop]);
+
   // Fetch haircut percentage
   const fetchHaircutPercentage = useCallback(async () => {
     try {
@@ -1601,7 +1707,7 @@ export default function RetailOrders() {
         setShops(shopArray);
         
         // If we have shop data and no selected shop, select the first one
-        if (shopArray.length > 0 && !selectedShop) {
+        if (shopArray.length > 0 && (!selectedShop || selectedShop === '')) {
           const shopId = shopArray[0].id;
           console.log('Auto-selecting first shop:', shopId, shopArray[0].name);
           setSelectedShop(shopId);
@@ -1619,7 +1725,7 @@ export default function RetailOrders() {
                 setShops(cachedShops);
                 
                 // If we still need to select a shop, use the first cached one
-                if (!selectedShop) {
+                if (!selectedShop || selectedShop === '') {
                   const shopId = cachedShops[0].id;
                   setSelectedShop(shopId);
                   localStorage.setItem('selectedShopId', shopId);
@@ -1843,8 +1949,11 @@ export default function RetailOrders() {
   useEffect(() => {
     const fetchAvailableCoffee = async () => {
         console.log('🔥 FRESH CODE 2025-09-30 fetchAvailableCoffee called with selectedShop:', selectedShop, typeof selectedShop);
+        console.log('🔥 DEBUG: shops.length:', shops.length);
+        console.log('🔥 DEBUG: shops:', shops);
       if (!selectedShop || selectedShop === '' || selectedShop === null || selectedShop === undefined) {
         console.log('No selectedShop (empty/null/undefined), skipping coffee fetch');
+        console.log('🔥 DEBUG: Setting availableCoffee to empty array');
         setAvailableCoffee([]);
         return;
       }
@@ -2473,6 +2582,8 @@ export default function RetailOrders() {
                               <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
                               <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
                               <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell align="right">{item.mediumBagsEspresso ? item.mediumBagsEspresso.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell align="right">{item.mediumBagsFilter ? item.mediumBagsFilter.toFixed(2) : '0.00'}</TableCell>
                               <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
                               <TableCell>
                                 {item.lastOrderDate
@@ -2545,6 +2656,12 @@ export default function RetailOrders() {
                               {items.reduce((sum, item) => sum + (item.smallBagsFilter || 0), 0).toFixed(2)}
                             </TableCell>
                             <TableCell align="right">
+                              {items.reduce((sum, item) => sum + (item.mediumBagsEspresso || 0), 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {items.reduce((sum, item) => sum + (item.mediumBagsFilter || 0), 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell align="right">
                               {items.reduce((sum, item) => sum + (item.largeBags || 0), 0).toFixed(2)}
                             </TableCell>
                             <TableCell colSpan={3} />
@@ -2599,6 +2716,14 @@ export default function RetailOrders() {
                                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                                       fontWeight: 600
                                     }}>Filter Bags (200g)</TableCell>
+                                    <TableCell align="right" sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Medium Espresso (500g)</TableCell>
+                                    <TableCell align="right" sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Medium Filter (500g)</TableCell>
                                     <TableCell align="right" sx={{ 
                                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                                       fontWeight: 600
@@ -3097,6 +3222,14 @@ export default function RetailOrders() {
                                             <TableCell align="right" sx={{ 
                                               color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                                               fontWeight: 600
+                                            }}>Medium Espresso (500g)</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Medium Filter (500g)</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
                                             }}>Large Bags (1kg)</TableCell>
                                             <TableCell align="right" sx={{ 
                                               color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
@@ -3115,6 +3248,8 @@ export default function RetailOrders() {
                                               </TableCell>
                                               <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.mediumBagsEspresso ? item.mediumBagsEspresso.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.mediumBagsFilter ? item.mediumBagsFilter.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.totalQuantity?.toFixed(2) || '0.00'} kg</TableCell>
                                             </TableRow>

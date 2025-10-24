@@ -1,12 +1,12 @@
-# FORCE RAILWAY REBUILD - Push notification database migration
-# LAST UPDATE: 2025-01-28 18:30 - Force push notification DB migration
-# UNIQUE ID: push-migration-20250102 - Force Railway rebuild
-# FORCE RESTART: Push notification database schema migration
+# FORCE RAILWAY REBUILD - 500g Bag Support Deployment
+# LAST UPDATE: 2025-01-28 20:00 - 500g bag support deployment
+# UNIQUE ID: medium-bags-$(date +%s) - Force Railway rebuild
+# FORCE RESTART: 500g bag support database schema migration
 FROM node:18-alpine
 
 # Force rebuild by adding unique identifier
 LABEL build_id="$(date +%s)"
-LABEL version="database-migration-fixes-v1"
+LABEL version="medium-bags-support-v1"
 LABEL force_restart="true"
 
 WORKDIR /app

@@ -82,6 +82,7 @@ export default async function handler(req, res) {
       smallBags: 0, 
       smallBagsEspresso: 0, 
       smallBagsFilter: 0, 
+      mediumBags: 0,
       largeBags: 0, 
       orderCount: 0 
     };
@@ -90,6 +91,7 @@ export default async function handler(req, res) {
       smallBags: 0, 
       smallBagsEspresso: 0, 
       smallBagsFilter: 0, 
+      mediumBags: 0,
       largeBags: 0, 
       orderCount: 0 
     };
@@ -98,6 +100,7 @@ export default async function handler(req, res) {
       smallBags: 0, 
       smallBagsEspresso: 0, 
       smallBagsFilter: 0, 
+      mediumBags: 0,
       largeBags: 0, 
       orderCount: 0 
     };
@@ -112,10 +115,12 @@ export default async function handler(req, res) {
           const totalSmallBags = item.smallBags || (item.smallBagsEspresso + item.smallBagsFilter);
           const espressoBags = item.smallBagsEspresso || 0;
           const filterBags = item.smallBagsFilter || 0;
+          const totalMediumBags = (item.mediumBagsEspresso || 0) + (item.mediumBagsFilter || 0);
           
           groupedData[grade].smallBags += totalSmallBags;
           groupedData[grade].smallBagsEspresso += espressoBags;
           groupedData[grade].smallBagsFilter += filterBags;
+          groupedData[grade].mediumBags += totalMediumBags;
           groupedData[grade].largeBags += item.largeBags;
           groupedData[grade].orderCount += 1;
         }

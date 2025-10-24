@@ -111,7 +111,8 @@ async function handleLabelQuantityUpdates(tx, order, newStatus) {
   for (const item of order.items) {
     // Calculate total bags for this coffee type (1 label per bag)
     const totalBags = (item.smallBags || 0) + (item.smallBagsEspresso || 0) + 
-                     (item.smallBagsFilter || 0) + (item.largeBags || 0);
+                     (item.smallBagsFilter || 0) + (item.mediumBagsEspresso || 0) + 
+                     (item.mediumBagsFilter || 0) + (item.largeBags || 0);
     
     if (totalBags > 0) {
       coffeeLabelsNeeded[item.coffeeId] = (coffeeLabelsNeeded[item.coffeeId] || 0) + totalBags;
@@ -275,6 +276,8 @@ export default async function handler(req, res) {
               smallBags: true,        // Keep for backward compatibility
               smallBagsEspresso: true, // Add separate espresso field
               smallBagsFilter: true,   // Add separate filter field
+              mediumBagsEspresso: true,
+              mediumBagsFilter: true,
               largeBags: true,
               totalQuantity: true
             }
@@ -425,7 +428,7 @@ export default async function handler(req, res) {
           
           // Log the order items for debugging
           existingOrder.items.forEach((item, index) => {
-            console.log(`[update-order-status] Order item ${index + 1}: Coffee ${item.coffeeId}, Espresso: ${item.smallBagsEspresso || 0}, Filter: ${item.smallBagsFilter || 0}, Large: ${item.largeBags || 0}, Total: ${item.totalQuantity || 0}kg`);
+            console.log(`[update-order-status] Order item ${index + 1}: Coffee ${item.coffeeId}, Small Espresso: ${item.smallBagsEspresso || 0}, Small Filter: ${item.smallBagsFilter || 0}, Medium Espresso: ${item.mediumBagsEspresso || 0}, Medium Filter: ${item.mediumBagsFilter || 0}, Large: ${item.largeBags || 0}, Total: ${item.totalQuantity || 0}kg`);
           });
           
           // Batch process all items in parallel for better performance
@@ -435,8 +438,10 @@ export default async function handler(req, res) {
               (item.smallBags ? Math.ceil(item.smallBags / 2) : 0);
             const smallBagsFilter = item.smallBagsFilter !== undefined ? item.smallBagsFilter : 
               (item.smallBags ? Math.floor(item.smallBags / 2) : 0);
+            const mediumBagsEspresso = item.mediumBagsEspresso || 0;
+            const mediumBagsFilter = item.mediumBagsFilter || 0;
             
-            console.log(`[update-order-status] Processing inventory update for item: Coffee ${item.coffeeId} - ${smallBagsEspresso} espresso bags, ${smallBagsFilter} filter bags, ${item.largeBags || 0} large bags`);
+            console.log(`[update-order-status] Processing inventory update for item: Coffee ${item.coffeeId} - smallE ${smallBagsEspresso}, smallF ${smallBagsFilter}, mediumE ${mediumBagsEspresso}, mediumF ${mediumBagsFilter}, large ${item.largeBags || 0}`);
             
             try {
               // First, check if the inventory record exists
@@ -451,6 +456,8 @@ export default async function handler(req, res) {
                   id: true,
                   smallBagsEspresso: true,
                   smallBagsFilter: true,
+                  mediumBagsEspresso: true,
+                  mediumBagsFilter: true,
                   largeBags: true,
                   totalQuantity: true
                 }
@@ -471,6 +478,8 @@ export default async function handler(req, res) {
                   coffeeId: item.coffeeId,
                   smallBagsEspresso: smallBagsEspresso,
                   smallBagsFilter: smallBagsFilter,
+                  mediumBagsEspresso: mediumBagsEspresso,
+                  mediumBagsFilter: mediumBagsFilter,
                   largeBags: item.largeBags || 0,
                   totalQuantity: item.totalQuantity || 0,
                   lastOrderDate: new Date()
@@ -481,6 +490,12 @@ export default async function handler(req, res) {
                   },
                   smallBagsFilter: {
                     increment: smallBagsFilter
+                  },
+                  mediumBagsEspresso: {
+                    increment: mediumBagsEspresso
+                  },
+                  mediumBagsFilter: {
+                    increment: mediumBagsFilter
                   },
                   largeBags: {
                     increment: item.largeBags || 0

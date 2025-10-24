@@ -344,25 +344,28 @@ export default function Analytics() {
       'Origin': row.origin,
       'Grade': row.grade,
       'Small Bags (200g)': row.smallBags,
+      'Medium Bags (500g)': row.mediumBags || 0,
       'Large Bags (1kg)': row.largeBags,
       'Total Orders': row.orderCount,
-      'Total Quantity (kg)': (row.smallBags * 0.2 + row.largeBags * 1.0).toFixed(2)
+      'Total Quantity (kg)': ((row.smallBags * 0.2) + ((row.mediumBags || 0) * 0.5) + (row.largeBags * 1.0)).toFixed(2)
     }));
 
     // Add totals row
     const totals = analyticsData.reduce((acc, row) => ({
       smallBags: acc.smallBags + row.smallBags,
+      mediumBags: acc.mediumBags + (row.mediumBags || 0),
       largeBags: acc.largeBags + row.largeBags,
       orderCount: acc.orderCount + row.orderCount
-    }), { smallBags: 0, largeBags: 0, orderCount: 0 });
+    }), { smallBags: 0, mediumBags: 0, largeBags: 0, orderCount: 0 });
 
-    const totalKg = (totals.smallBags * 0.2 + totals.largeBags * 1.0).toFixed(2);
+    const totalKg = ((totals.smallBags * 0.2) + (totals.mediumBags * 0.5) + (totals.largeBags * 1.0)).toFixed(2);
 
     exportData.push({
       'Coffee': 'TOTAL',
       'Origin': '',
       'Grade': '',
       'Small Bags (200g)': totals.smallBags,
+      'Medium Bags (500g)': totals.mediumBags,
       'Large Bags (1kg)': totals.largeBags,
       'Total Orders': totals.orderCount,
       'Total Quantity (kg)': totalKg

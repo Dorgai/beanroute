@@ -18,13 +18,16 @@ export const publicPaths = [
   '/api/admin/test-db', // Allow db testing
   '/api/health',
   '/api/health-basic',
+  '/api/fix-db', // TEMPORARY: Allow database fix endpoint
   '/api/admin/create-admin',
   '/api/admin/fix-admin', // Add our fix-admin endpoint
   '/api/admin/temp-migration', // TEMPORARY: Allow one-time migration endpoint
+  '/api/admin/complete-db-setup', // TEMPORARY: Allow complete database setup endpoint
   '/api/retail/check-inventory-alerts', // Allow inventory checks with API key
   '/api/public/coffee-inventory-total', // Public coffee inventory endpoint
   '/api/public/create-table', // TEMPORARY: Public migration endpoint
   '/api/public/add-label-quantity', // TEMPORARY: Public migration endpoint for labelQuantity column
+  '/api/public/setup-db', // TEMPORARY: Public database setup endpoint
   '/api/migrate-label-quantity', // EMERGENCY: Public migration endpoint for labelQuantity column
   '/api/debug/check-inventory-table', // TEMPORARY: Debug endpoint
   '/api/push/config', // Allow push notification configuration check

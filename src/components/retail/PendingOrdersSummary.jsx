@@ -16,6 +16,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 // Constants for bag sizes in kg
 const SMALL_BAG_SIZE = 0.2; // 200g
+const MEDIUM_BAG_SIZE = 0.5; // 500g
 const LARGE_BAG_SIZE = 1.0; // 1kg
 
 /**
@@ -63,11 +64,14 @@ export default function PendingOrdersSummary({
           const espressoBags = item.smallBagsEspresso || 0;
           const filterBags = item.smallBagsFilter || 0;
           const largeBags = item.largeBags || 0;
+          const mediumEspressoBags = item.mediumBagsEspresso || 0;
+          const mediumFilterBags = item.mediumBagsFilter || 0;
           
           // For backward compatibility: if no espresso/filter data, treat smallBags as espresso
           let actualEspressoBags = espressoBags;
           let actualFilterBags = filterBags;
           let totalSmallBags = espressoBags + filterBags;
+          const totalMediumBags = mediumEspressoBags + mediumFilterBags;
           
           if (smallBags > 0 && espressoBags === 0 && filterBags === 0) {
             // Old data structure - treat all smallBags as espresso for backward compatibility
@@ -98,10 +102,14 @@ export default function PendingOrdersSummary({
               smallBags: 0,
               smallBagsEspresso: 0,
               smallBagsFilter: 0,
+              mediumBags: 0,
+              mediumBagsEspresso: 0,
+              mediumBagsFilter: 0,
               largeBags: 0,
               totalKg: 0,
               espressoKg: 0,
-              filterKg: 0
+              filterKg: 0,
+              mediumKg: 0
             };
           }
           
@@ -110,15 +118,20 @@ export default function PendingOrdersSummary({
           aggregatedData[key].smallBagsEspresso += actualEspressoBags;
           aggregatedData[key].smallBagsFilter += actualFilterBags;
           aggregatedData[key].largeBags += largeBags;
+          aggregatedData[key].mediumBags += totalMediumBags;
+          aggregatedData[key].mediumBagsEspresso += mediumEspressoBags;
+          aggregatedData[key].mediumBagsFilter += mediumFilterBags;
           
           // Calculate total in kg (using the correct small bag size of 200g)
-          const totalKg = (totalSmallBags * SMALL_BAG_SIZE) + (largeBags * LARGE_BAG_SIZE);
+          const totalKg = (totalSmallBags * SMALL_BAG_SIZE) + (totalMediumBags * MEDIUM_BAG_SIZE) + (largeBags * LARGE_BAG_SIZE);
           const espressoKg = actualEspressoBags * SMALL_BAG_SIZE;
           const filterKg = actualFilterBags * SMALL_BAG_SIZE;
+          const mediumKg = totalMediumBags * MEDIUM_BAG_SIZE;
           
           aggregatedData[key].totalKg += totalKg;
           aggregatedData[key].espressoKg += espressoKg;
           aggregatedData[key].filterKg += filterKg;
+          aggregatedData[key].mediumKg += mediumKg;
         });
       }
     });
@@ -142,12 +155,16 @@ export default function PendingOrdersSummary({
         smallBags: acc.smallBags + item.smallBags,
         smallBagsEspresso: acc.smallBagsEspresso + item.smallBagsEspresso,
         smallBagsFilter: acc.smallBagsFilter + item.smallBagsFilter,
+        mediumBags: acc.mediumBags + (item.mediumBags || 0),
+        mediumBagsEspresso: acc.mediumBagsEspresso + (item.mediumBagsEspresso || 0),
+        mediumBagsFilter: acc.mediumBagsFilter + (item.mediumBagsFilter || 0),
         largeBags: acc.largeBags + item.largeBags,
         totalKg: acc.totalKg + item.totalKg,
         espressoKg: acc.espressoKg + item.espressoKg,
-        filterKg: acc.filterKg + item.filterKg
+        filterKg: acc.filterKg + item.filterKg,
+        mediumKg: acc.mediumKg + (item.mediumKg || 0)
       };
-    }, { smallBags: 0, smallBagsEspresso: 0, smallBagsFilter: 0, largeBags: 0, totalKg: 0, espressoKg: 0, filterKg: 0 });
+    }, { smallBags: 0, smallBagsEspresso: 0, smallBagsFilter: 0, mediumBags: 0, mediumBagsEspresso: 0, mediumBagsFilter: 0, largeBags: 0, totalKg: 0, espressoKg: 0, filterKg: 0, mediumKg: 0 });
   }, [summaryData]);
 
   // Calculate shop subtotals for shop breakdown view
@@ -189,9 +206,11 @@ export default function PendingOrdersSummary({
       'Grade': item.grade,
       ...(showShopInfo && !aggregateAcrossShops ? { 'Shop': item.shopName } : {}),
       'Large Bags (1kg)': item.largeBags,
+      'Medium Bags (500g)': item.mediumBags || 0,
       'Small Bags (200g)': item.smallBags,
       'Espresso Bags (200g)': item.smallBagsEspresso,
       'Filter Bags (200g)': item.smallBagsFilter,
+      'Medium (kg)': (item.mediumKg || 0).toFixed(2),
       'Espresso (kg)': item.espressoKg.toFixed(2),
       'Filter (kg)': item.filterKg.toFixed(2),
       'Total Quantity (kg)': item.totalKg.toFixed(2)
@@ -203,9 +222,11 @@ export default function PendingOrdersSummary({
       'Grade': '',
       ...(showShopInfo && !aggregateAcrossShops ? { 'Shop': '' } : {}),
       'Large Bags (1kg)': totals.largeBags,
+      'Medium Bags (500g)': totals.mediumBags,
       'Small Bags (200g)': totals.smallBags,
       'Espresso Bags (200g)': totals.smallBagsEspresso,
       'Filter Bags (200g)': totals.smallBagsFilter,
+      'Medium (kg)': (totals.mediumKg || 0).toFixed(2),
       'Espresso (kg)': totals.espressoKg.toFixed(2),
       'Filter (kg)': totals.filterKg.toFixed(2),
       'Total Quantity (kg)': totals.totalKg.toFixed(2)
@@ -280,6 +301,10 @@ export default function PendingOrdersSummary({
               <TableCell align="right" sx={{
                 color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                 fontWeight: 600
+              }}>Medium Bags (500g)</TableCell>
+              <TableCell align="right" sx={{
+                color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                fontWeight: 600
               }}>Small Bags (200g)</TableCell>
               <TableCell align="right" sx={{
                 color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
@@ -314,9 +339,8 @@ export default function PendingOrdersSummary({
                     <TableCell><strong>{item.name}</strong></TableCell>
                     <TableCell>{item.grade}</TableCell>
                     {showShopInfo && !aggregateAcrossShops && <TableCell>{item.shopName}</TableCell>}
-                    <TableCell align="right">
-                      {item.largeBags}
-                    </TableCell>
+                    <TableCell align="right">{item.largeBags}</TableCell>
+                    <TableCell align="right">{item.mediumBags || 0}</TableCell>
                     <TableCell align="right">
                       {item.smallBags}
                       {item.smallBags > 0 && (
@@ -350,9 +374,8 @@ export default function PendingOrdersSummary({
                           {item.shopName} Subtotal
                         </Typography>
                       </TableCell>
-                      <TableCell align="right">
-                        {shopSubtotals[item.shopName]?.largeBags || 0}
-                      </TableCell>
+                      <TableCell align="right">{shopSubtotals[item.shopName]?.largeBags || 0}</TableCell>
+                      <TableCell align="right">{shopSubtotals[item.shopName]?.mediumBags || 0}</TableCell>
                       <TableCell align="right">
                         {shopSubtotals[item.shopName]?.smallBags || 0}
                         {(shopSubtotals[item.shopName]?.smallBags || 0) > 0 && (
@@ -386,9 +409,8 @@ export default function PendingOrdersSummary({
               <TableCell colSpan={showShopInfo && !aggregateAcrossShops ? 3 : 2}>
                 <Typography variant="subtitle2">TOTAL</Typography>
               </TableCell>
-              <TableCell align="right">
-                {totals.largeBags}
-              </TableCell>
+              <TableCell align="right">{totals.largeBags}</TableCell>
+              <TableCell align="right">{totals.mediumBags}</TableCell>
               <TableCell align="right">
                 {totals.smallBags}
                 {totals.smallBags > 0 && (

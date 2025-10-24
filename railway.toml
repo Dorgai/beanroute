@@ -1,10 +1,10 @@
-# Railway configuration - FORCE COMPLETE RESTART
-# This configuration was working before we broke it
-# FORCE REBUILD: $(date) - Push notification fixes deployed
+# Railway configuration - 500g Bag Support Deployment
+# This configuration includes 500g bag support for retail ordering
+# FORCE REBUILD: $(date) - 500g bag support deployed
 # IMPORTANT: Use Dockerfile builder since Nixpacks is failing
-# LAST UPDATE: 2025-01-28 15:30 - FORCE RAILWAY TO USE NEW DEPLOYMENT
-# UNIQUE ID: $(date +%s) - Force Railway rebuild
-# FORCE RESTART: Adding completely new configuration
+# LAST UPDATE: 2025-01-28 20:00 - 500g bag support deployment
+# UNIQUE ID: medium-bags-$(date +%s) - Force Railway rebuild
+# FORCE RESTART: Adding 500g bag support configuration
 
 [build]
 builder = "DOCKERFILE"
