@@ -28,6 +28,7 @@ export const publicPaths = [
   '/api/public/create-table', // TEMPORARY: Public migration endpoint
   '/api/public/add-label-quantity', // TEMPORARY: Public migration endpoint for labelQuantity column
   '/api/public/setup-db', // TEMPORARY: Public database setup endpoint
+  '/api/test-schema', // TEMPORARY: Schema test endpoint
   '/api/migrate-label-quantity', // EMERGENCY: Public migration endpoint for labelQuantity column
   '/api/debug/check-inventory-table', // TEMPORARY: Debug endpoint
   '/api/push/config', // Allow push notification configuration check
