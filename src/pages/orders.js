@@ -74,6 +74,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           initialItems[coffee.id] = { 
             smallBagsEspresso: '', 
             smallBagsFilter: '', 
+            mediumBagsEspresso: '',
+            mediumBagsFilter: '',
             largeBags: '' 
           };
         }
@@ -221,13 +223,17 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           if (!coffeeId || !item) return false;
           const espressoValue = parseInt(item.smallBagsEspresso) || 0;
           const filterValue = parseInt(item.smallBagsFilter) || 0;
+          const mediumEspressoValue = parseInt(item.mediumBagsEspresso) || 0;
+          const mediumFilterValue = parseInt(item.mediumBagsFilter) || 0;
           const largeBagsValue = parseInt(item.largeBags) || 0;
-          return (espressoValue > 0 || filterValue > 0 || largeBagsValue > 0);
+          return (espressoValue > 0 || filterValue > 0 || mediumEspressoValue > 0 || mediumFilterValue > 0 || largeBagsValue > 0);
         })
         .map(([coffeeId, item]) => ({
           coffeeId,
           smallBagsEspresso: parseInt(item.smallBagsEspresso) || 0,
           smallBagsFilter: parseInt(item.smallBagsFilter) || 0,
+          mediumBagsEspresso: parseInt(item.mediumBagsEspresso) || 0,
+          mediumBagsFilter: parseInt(item.mediumBagsFilter) || 0,
           largeBags: parseInt(item.largeBags) || 0
         }));
 
@@ -659,6 +665,14 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                       fontWeight: 600
+                    }}>Espresso Bags (500g)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
+                    }}>Filter Bags (500g)</TableCell>
+                    <TableCell sx={{ 
+                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                      fontWeight: 600
                     }}>Large Bags (1kg)</TableCell>
                   </TableRow>
                 </TableHead>
@@ -875,6 +889,72 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             value={orderItems[coffee.id]?.smallBagsFilter || ''}
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsFilter', e.target.value)}
+                            size="small"
+                            fullWidth
+                            error={Boolean(validationErrors[coffee.id])}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.primary.main
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+                              },
+                              '& .MuiInputBase-input::placeholder': {
+                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
+                                opacity: 1
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            InputProps={{ inputProps: { min: 0 } }}
+                            value={orderItems[coffee.id]?.mediumBagsEspresso || ''}
+                            placeholder="0"
+                            onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsEspresso', e.target.value)}
+                            size="small"
+                            fullWidth
+                            error={Boolean(validationErrors[coffee.id])}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                  borderColor: theme => theme.palette.primary.main
+                                }
+                              },
+                              '& .MuiInputBase-input': {
+                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
+                              },
+                              '& .MuiInputBase-input::placeholder': {
+                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
+                                opacity: 1
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            InputProps={{ inputProps: { min: 0 } }}
+                            value={orderItems[coffee.id]?.mediumBagsFilter || ''}
+                            placeholder="0"
+                            onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsFilter', e.target.value)}
                             size="small"
                             fullWidth
                             error={Boolean(validationErrors[coffee.id])}
