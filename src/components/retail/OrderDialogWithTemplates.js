@@ -160,8 +160,6 @@ export default function OrderDialogWithTemplates({
         newOrderItems[coffee.id] = { 
           smallBagsEspresso: '', 
             smallBagsFilter: '', 
-            mediumBagsEspresso: '',
-            mediumBagsFilter: '',
           largeBags: '' 
         };
       }
@@ -177,8 +175,6 @@ export default function OrderDialogWithTemplates({
         newOrderItems[item.coffeeId] = {
           smallBagsEspresso: isAvailable ? (item.smallBagsEspresso || '') : '',
           smallBagsFilter: isAvailable ? (item.smallBagsFilter || '') : '',
-          mediumBagsEspresso: isAvailable ? (item.mediumBagsEspresso || '') : '',
-          mediumBagsFilter: isAvailable ? (item.mediumBagsFilter || '') : '',
           largeBags: isAvailable ? (item.largeBags || '') : ''
         };
       }
@@ -191,12 +187,10 @@ export default function OrderDialogWithTemplates({
       const item = newOrderItems[coffeeId];
       const espresso = parseInt(item.smallBagsEspresso) || 0;
       const filter = parseInt(item.smallBagsFilter) || 0;
-      const mediumE = parseInt(item.mediumBagsEspresso) || 0;
-      const mediumF = parseInt(item.mediumBagsFilter) || 0;
       const large = parseInt(item.largeBags) || 0;
       
-      if (espresso > 0 || filter > 0 || mediumE > 0 || mediumF > 0 || large > 0) {
-        validateQuantity(coffeeId, espresso, filter, mediumE, mediumF, large);
+      if (espresso > 0 || filter > 0 || large > 0) {
+        validateQuantity(coffeeId, espresso, filter, large);
       }
     });
     
@@ -289,16 +283,16 @@ export default function OrderDialogWithTemplates({
   };
 
   // Calculate total quantity for a coffee item in kg
-  const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
-    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + ((mediumBagsEspresso + mediumBagsFilter) * 0.5) + (largeBags * 1.0);
+  const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, largeBags) => {
+    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + (largeBags * 1.0);
   };
 
   // Validate quantity
-  const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
+  const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, largeBags) => {
     const coffee = coffeeItems.find(c => c.id === coffeeId);
     if (!coffee) return true;
     
-    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags);
+    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, largeBags);
     const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
     const isValid = realTimeAvailable >= requestedQuantity;
     
@@ -320,11 +314,9 @@ export default function OrderDialogWithTemplates({
     if (currentOrder) {
       const espressoInput = parseInt(currentOrder.smallBagsEspresso) || 0;
       const filterInput = parseInt(currentOrder.smallBagsFilter) || 0;
-      const mediumEInput = parseInt(currentOrder.mediumBagsEspresso) || 0;
-      const mediumFInput = parseInt(currentOrder.mediumBagsFilter) || 0;
       const largeBagsInput = parseInt(currentOrder.largeBags) || 0;
       
-      const currentOrderQuantity = calculateTotalQuantity(espressoInput, filterInput, mediumEInput, mediumFInput, largeBagsInput);
+      const currentOrderQuantity = calculateTotalQuantity(espressoInput, filterInput, largeBagsInput);
       availableQuantity -= currentOrderQuantity;
     }
     
@@ -348,11 +340,9 @@ export default function OrderDialogWithTemplates({
       const item = updated[coffeeId];
       const espresso = parseInt(item.smallBagsEspresso) || 0;
       const filter = parseInt(item.smallBagsFilter) || 0;
-      const mediumE = parseInt(item.mediumBagsEspresso) || 0;
-      const mediumF = parseInt(item.mediumBagsFilter) || 0;
       const large = parseInt(item.largeBags) || 0;
       
-      validateQuantity(coffeeId, espresso, filter, mediumE, mediumF, large);
+      validateQuantity(coffeeId, espresso, filter, large);
       
       return updated;
     });
@@ -373,16 +363,12 @@ export default function OrderDialogWithTemplates({
         .filter(([_, item]) => 
           (parseInt(item.smallBagsEspresso) || 0) > 0 ||
           (parseInt(item.smallBagsFilter) || 0) > 0 ||
-          (parseInt(item.mediumBagsEspresso) || 0) > 0 ||
-          (parseInt(item.mediumBagsFilter) || 0) > 0 ||
           (parseInt(item.largeBags) || 0) > 0
         )
         .map(([coffeeId, item]) => ({
           coffeeId,
           smallBagsEspresso: parseInt(item.smallBagsEspresso) || 0,
           smallBagsFilter: parseInt(item.smallBagsFilter) || 0,
-          mediumBagsEspresso: parseInt(item.mediumBagsEspresso) || 0,
-          mediumBagsFilter: parseInt(item.mediumBagsFilter) || 0,
           largeBags: parseInt(item.largeBags) || 0
         }));
 
@@ -628,8 +614,6 @@ export default function OrderDialogWithTemplates({
                 <TableCell align="center">Available (kg)</TableCell>
                 <TableCell align="center">Small Espresso (200g)</TableCell>
                 <TableCell align="center">Small Filter (200g)</TableCell>
-                <TableCell align="center">Medium Espresso (500g)</TableCell>
-                <TableCell align="center">Medium Filter (500g)</TableCell>
                 <TableCell align="center">Large Bags (1kg)</TableCell>
                 <TableCell align="center">Total (kg)</TableCell>
                 <TableCell align="center">Pending Orders</TableCell>
@@ -640,10 +624,8 @@ export default function OrderDialogWithTemplates({
                 const orderItem = orderItems[coffee.id] || {};
                 const espresso = parseInt(orderItem.smallBagsEspresso) || 0;
                 const filter = parseInt(orderItem.smallBagsFilter) || 0;
-                const mediumE = parseInt(orderItem.mediumBagsEspresso) || 0;
-                const mediumF = parseInt(orderItem.mediumBagsFilter) || 0;
                 const large = parseInt(orderItem.largeBags) || 0;
-                const totalQuantity = calculateTotalQuantity(espresso, filter, mediumE, mediumF, large);
+                const totalQuantity = calculateTotalQuantity(espresso, filter, large);
                 const availableQuantity = calculateRealTimeAvailableQuantity(coffee);
                 const validationError = validationErrors[coffee.id];
                 const pendingOrder = pendingOrdersData[coffee.id];
@@ -719,36 +701,6 @@ export default function OrderDialogWithTemplates({
                         type="text"
                         value={orderItem.smallBagsFilter || ''}
                         onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsFilter', e.target.value)}
-                    <TableCell align="center">
-                      <TextField
-                        size="small"
-                        type="text"
-                        value={orderItem.mediumBagsEspresso || ''}
-                        onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsEspresso', e.target.value)}
-                        disabled={isOutOfStock}
-                        inputProps={{ 
-                          style: { textAlign: 'center', width: '60px' },
-                          inputMode: 'numeric'
-                        }}
-                        error={!!validationError}
-                        placeholder={isOutOfStock ? "N/A" : "0"}
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <TextField
-                        size="small"
-                        type="text"
-                        value={orderItem.mediumBagsFilter || ''}
-                        onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsFilter', e.target.value)}
-                        disabled={isOutOfStock}
-                        inputProps={{ 
-                          style: { textAlign: 'center', width: '60px' },
-                          inputMode: 'numeric'
-                        }}
-                        error={!!validationError}
-                        placeholder={isOutOfStock ? "N/A" : "0"}
-                      />
-                    </TableCell>
                         disabled={isOutOfStock}
                         inputProps={{ 
                           style: { textAlign: 'center', width: '60px' },
