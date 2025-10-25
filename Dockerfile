@@ -6,7 +6,7 @@ FROM node:18-alpine
 
 # Force rebuild by adding unique identifier
 LABEL build_id="$(date +%s)"
-LABEL version="fix-order-dialog-crash-v14"
+LABEL version="add-500g-bag-database-columns-v15"
 LABEL force_restart="true"
 LABEL db_schema="fixed"
 LABEL deployment="confirmed"

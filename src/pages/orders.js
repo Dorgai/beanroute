@@ -2571,6 +2571,8 @@ export default function RetailOrders() {
                               <TableCell>{item.coffee?.grade?.replace('_', ' ') || 'Unknown'}</TableCell>
                               <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
                               <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell align="right">{item.mediumBagsEspresso ? item.mediumBagsEspresso.toFixed(2) : '0.00'}</TableCell>
+                              <TableCell align="right">{item.mediumBagsFilter ? item.mediumBagsFilter.toFixed(2) : '0.00'}</TableCell>
                               <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
                               <TableCell>
                                 {item.lastOrderDate
@@ -2643,6 +2645,12 @@ export default function RetailOrders() {
                               {items.reduce((sum, item) => sum + (item.smallBagsFilter || 0), 0).toFixed(2)}
                             </TableCell>
                             <TableCell align="right">
+                              {items.reduce((sum, item) => sum + (item.mediumBagsEspresso || 0), 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {items.reduce((sum, item) => sum + (item.mediumBagsFilter || 0), 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell align="right">
                               {items.reduce((sum, item) => sum + (item.largeBags || 0), 0).toFixed(2)}
                             </TableCell>
                             <TableCell colSpan={3} />
@@ -2697,6 +2705,14 @@ export default function RetailOrders() {
                                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                                       fontWeight: 600
                                     }}>Filter Bags (200g)</TableCell>
+                                    <TableCell align="right" sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Espresso Bags (500g)</TableCell>
+                                    <TableCell align="right" sx={{ 
+                                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                      fontWeight: 600
+                                    }}>Filter Bags (500g)</TableCell>
                                     <TableCell align="right" sx={{ 
                                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                                       fontWeight: 600
@@ -3195,6 +3211,14 @@ export default function RetailOrders() {
                                             <TableCell align="right" sx={{ 
                                               color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
                                               fontWeight: 600
+                                            }}>Espresso Bags (500g)</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
+                                            }}>Filter Bags (500g)</TableCell>
+                                            <TableCell align="right" sx={{ 
+                                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
+                                              fontWeight: 600
                                             }}>Large Bags (1kg)</TableCell>
                                             <TableCell align="right" sx={{ 
                                               color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
@@ -3213,6 +3237,8 @@ export default function RetailOrders() {
                                               </TableCell>
                                               <TableCell align="right">{item.smallBagsEspresso ? item.smallBagsEspresso.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.smallBagsFilter ? item.smallBagsFilter.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.mediumBagsEspresso ? item.mediumBagsEspresso.toFixed(2) : '0.00'}</TableCell>
+                                              <TableCell align="right">{item.mediumBagsFilter ? item.mediumBagsFilter.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.largeBags ? item.largeBags.toFixed(2) : '0.00'}</TableCell>
                                               <TableCell align="right">{item.totalQuantity?.toFixed(2) || '0.00'} kg</TableCell>
                                             </TableRow>
