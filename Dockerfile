@@ -6,11 +6,12 @@ FROM node:18-alpine
 
 # Force rebuild by adding unique identifier
 LABEL build_id="$(date +%s)"
-LABEL version="medium-bags-support-v4"
+LABEL version="medium-bags-support-v5"
 LABEL force_restart="true"
 LABEL db_schema="fixed"
 LABEL deployment="confirmed"
 LABEL rebuild="aggressive"
+LABEL prisma="updated"
 
 WORKDIR /app
 
