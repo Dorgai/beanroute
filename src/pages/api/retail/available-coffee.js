@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
   const prisma = new PrismaClient();
   
-  console.log('🚀 [available-coffee] API called - VERSION 0.1.1 with 500g bag support');
+  console.log('🚀 [available-coffee] API called - VERSION 0.1.1 with 500g bag support - AGGRESSIVE REBUILD v4');
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
