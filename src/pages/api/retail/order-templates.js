@@ -39,6 +39,16 @@ async function handleGet(req, res, prisma, session) {
   try {
     const { shopId } = req.query;
     
+    // Check if OrderTemplate table exists by trying a simple query
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "OrderTemplate" LIMIT 1`;
+    } catch (tableError) {
+      // Table doesn't exist, return empty array
+      console.log('OrderTemplate table does not exist, returning empty templates array');
+      await prisma.$disconnect();
+      return res.status(200).json([]);
+    }
+    
     const whereClause = {
       OR: [
         { createdById: session.user.id }, // User's own templates
@@ -106,6 +116,15 @@ async function handleGet(req, res, prisma, session) {
 // POST - Create new order template
 async function handlePost(req, res, prisma, session) {
   try {
+    // Check if OrderTemplate table exists
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "OrderTemplate" LIMIT 1`;
+    } catch (tableError) {
+      console.log('OrderTemplate table does not exist, cannot create template');
+      await prisma.$disconnect();
+      return res.status(400).json({ error: 'Order templates feature is not available' });
+    }
+
     const { name, description, shopId, items, isPublic = false } = req.body;
 
     if (!name || !name.trim()) {
@@ -217,6 +236,15 @@ async function handlePost(req, res, prisma, session) {
 // PUT - Update existing order template
 async function handlePut(req, res, prisma, session) {
   try {
+    // Check if OrderTemplate table exists
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "OrderTemplate" LIMIT 1`;
+    } catch (tableError) {
+      console.log('OrderTemplate table does not exist, cannot update template');
+      await prisma.$disconnect();
+      return res.status(400).json({ error: 'Order templates feature is not available' });
+    }
+
     const { id, name, description, shopId, items, isPublic } = req.body;
 
     if (!id) {
@@ -345,6 +373,15 @@ async function handlePut(req, res, prisma, session) {
 // DELETE - Delete order template
 async function handleDelete(req, res, prisma, session) {
   try {
+    // Check if OrderTemplate table exists
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "OrderTemplate" LIMIT 1`;
+    } catch (tableError) {
+      console.log('OrderTemplate table does not exist, cannot delete template');
+      await prisma.$disconnect();
+      return res.status(400).json({ error: 'Order templates feature is not available' });
+    }
+
     const { id } = req.query;
 
     if (!id) {
