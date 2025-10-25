@@ -137,20 +137,16 @@ async function handlePost(req, res, prisma, session) {
     const processedItems = items.map(item => {
       const smallBagsEspresso = parseInt(item.smallBagsEspresso) || 0;
       const smallBagsFilter = parseInt(item.smallBagsFilter) || 0;
-      const mediumBagsEspresso = parseInt(item.mediumBagsEspresso) || 0;
-      const mediumBagsFilter = parseInt(item.mediumBagsFilter) || 0;
       const largeBags = parseInt(item.largeBags) || 0;
       const smallBags = parseInt(item.smallBags) || 0; // For backward compatibility
       
-      const totalQuantity = ((smallBagsEspresso + smallBagsFilter + smallBags) * 0.2) + ((mediumBagsEspresso + mediumBagsFilter) * 0.5) + (largeBags * 1.0);
+      const totalQuantity = ((smallBagsEspresso + smallBagsFilter + smallBags) * 0.2) + (largeBags * 1.0);
       
       return {
         coffeeId: item.coffeeId,
         smallBags,
         smallBagsEspresso,
         smallBagsFilter,
-        mediumBagsEspresso,
-        mediumBagsFilter,
         largeBags,
         totalQuantity
       };
@@ -158,8 +154,6 @@ async function handlePost(req, res, prisma, session) {
       item.smallBags > 0 || 
       item.smallBagsEspresso > 0 || 
       item.smallBagsFilter > 0 || 
-      item.mediumBagsEspresso > 0 ||
-      item.mediumBagsFilter > 0 ||
       item.largeBags > 0
     );
 
@@ -273,20 +267,16 @@ async function handlePut(req, res, prisma, session) {
       const processedItems = items.map(item => {
         const smallBagsEspresso = parseInt(item.smallBagsEspresso) || 0;
         const smallBagsFilter = parseInt(item.smallBagsFilter) || 0;
-        const mediumBagsEspresso = parseInt(item.mediumBagsEspresso) || 0;
-        const mediumBagsFilter = parseInt(item.mediumBagsFilter) || 0;
         const largeBags = parseInt(item.largeBags) || 0;
         const smallBags = parseInt(item.smallBags) || 0;
         
-        const totalQuantity = ((smallBagsEspresso + smallBagsFilter + smallBags) * 0.2) + ((mediumBagsEspresso + mediumBagsFilter) * 0.5) + (largeBags * 1.0);
+        const totalQuantity = ((smallBagsEspresso + smallBagsFilter + smallBags) * 0.2) + (largeBags * 1.0);
         
         return {
           coffeeId: item.coffeeId,
           smallBags,
           smallBagsEspresso,
           smallBagsFilter,
-          mediumBagsEspresso,
-          mediumBagsFilter,
           largeBags,
           totalQuantity
         };
@@ -294,8 +284,6 @@ async function handlePut(req, res, prisma, session) {
         item.smallBags > 0 || 
         item.smallBagsEspresso > 0 || 
         item.smallBagsFilter > 0 || 
-        item.mediumBagsEspresso > 0 ||
-        item.mediumBagsFilter > 0 ||
         item.largeBags > 0
       );
 

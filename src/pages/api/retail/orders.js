@@ -110,8 +110,6 @@ export default async function handler(req, res) {
           smallBags: true,
           smallBagsEspresso: true,
           smallBagsFilter: true,
-          mediumBagsEspresso: true,
-          mediumBagsFilter: true,
           largeBags: true,
           totalQuantity: true,
           coffee: {
@@ -126,9 +124,7 @@ export default async function handler(req, res) {
       
       // Handle backward compatibility for medium bag columns (set NULL to 0)
       const processedOrderItems = orderItems.map(item => ({
-        ...item,
-        mediumBagsEspresso: item.mediumBagsEspresso || 0,
-        mediumBagsFilter: item.mediumBagsFilter || 0
+        ...item
       }));
       
       // Get users separately

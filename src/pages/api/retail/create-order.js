@@ -75,32 +75,26 @@ export default async function handler(req, res) {
     const processedItems = items.map(item => {
       const smallBagsEspresso = parseInt(item.smallBagsEspresso) || 0;
       const smallBagsFilter = parseInt(item.smallBagsFilter) || 0;
-      const mediumBagsEspresso = parseInt(item.mediumBagsEspresso) || 0;
-      const mediumBagsFilter = parseInt(item.mediumBagsFilter) || 0;
       const largeBags = parseInt(item.largeBags) || 0;
       
       // For backward compatibility, if smallBags is provided but not espresso/filter, use it as espresso
       const legacySmallBags = parseInt(item.smallBags) || 0;
       const finalEspresso = smallBagsEspresso || legacySmallBags;
       const finalFilter = smallBagsFilter;
-      const finalMediumEspresso = mediumBagsEspresso;
-      const finalMediumFilter = mediumBagsFilter;
       
       return {
         coffeeId: item.coffeeId,
         smallBags: finalEspresso + finalFilter, // Keep for backward compatibility
         smallBagsEspresso: finalEspresso,
         smallBagsFilter: finalFilter,
-        mediumBagsEspresso: finalMediumEspresso,
-        mediumBagsFilter: finalMediumFilter,
         largeBags: largeBags,
-        totalQuantity: ((finalEspresso + finalFilter) * 0.2) + ((finalMediumEspresso + finalMediumFilter) * 0.5) + (largeBags * 1.0)
+        totalQuantity: ((finalEspresso + finalFilter) * 0.2) + (largeBags * 1.0)
       };
     });
     
     const invalidItems = processedItems.filter(item => 
       !item.coffeeId || 
-      (item.smallBagsEspresso <= 0 && item.smallBagsFilter <= 0 && item.mediumBagsEspresso <= 0 && item.mediumBagsFilter <= 0 && item.largeBags <= 0)
+      (item.smallBagsEspresso <= 0 && item.smallBagsFilter <= 0 && item.largeBags <= 0)
     );
 
     if (invalidItems.length > 0) {
@@ -157,8 +151,6 @@ export default async function handler(req, res) {
             smallBags: item.smallBags,
             smallBagsEspresso: item.smallBagsEspresso,
             smallBagsFilter: item.smallBagsFilter,
-            mediumBagsEspresso: item.mediumBagsEspresso,
-            mediumBagsFilter: item.mediumBagsFilter,
             largeBags: item.largeBags,
             totalQuantity: item.totalQuantity
           }

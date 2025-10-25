@@ -6,7 +6,7 @@ FROM node:18-alpine
 
 # Force rebuild by adding unique identifier
 LABEL build_id="$(date +%s)"
-LABEL version="backward-compat-v7"
+LABEL version="complete-api-fix-v8"
 LABEL force_restart="true"
 LABEL db_schema="fixed"
 LABEL deployment="confirmed"
