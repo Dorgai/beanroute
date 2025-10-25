@@ -52,6 +52,8 @@ import PendingOrdersSummary from '../components/retail/PendingOrdersSummary';
 
 // Simple Order Dialog Component
 function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercentage }) {
+  const themeContext = useTheme();
+  const isDark = themeContext?.isDark ?? false;
   const [orderItems, setOrderItems] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -125,16 +127,16 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
   }, [open]);
   
   // Calculate total quantity for a coffee item in kg
-  const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, largeBags) => {
-    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + (largeBags * 1.0);
+  const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
+    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + ((mediumBagsEspresso + mediumBagsFilter) * 0.5) + (largeBags * 1.0);
   };
   
   // Validate if the requested quantity is within available limits
-  const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, largeBags) => {
+  const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
     const coffee = coffeeItems.find(c => c.id === coffeeId);
     if (!coffee) return true; // Can't validate if coffee not found
     
-    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, largeBags);
+    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags);
     const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
     const isValid = realTimeAvailable >= requestedQuantity;
     
@@ -159,9 +161,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     if (currentOrder) {
       const espressoInput = parseInt(currentOrder.smallBagsEspresso) || 0;
       const filterInput = parseInt(currentOrder.smallBagsFilter) || 0;
+      const mediumEspressoInput = parseInt(currentOrder.mediumBagsEspresso) || 0;
+      const mediumFilterInput = parseInt(currentOrder.mediumBagsFilter) || 0;
       const largeBagsInput = parseInt(currentOrder.largeBags) || 0;
       
-      const currentOrderQuantity = calculateTotalQuantity(espressoInput, filterInput, mediumEInput, mediumFInput, largeBagsInput);
+      const currentOrderQuantity = calculateTotalQuantity(espressoInput, filterInput, mediumEspressoInput, mediumFilterInput, largeBagsInput);
       availableQuantity -= currentOrderQuantity;
     }
     
@@ -188,10 +192,12 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     // Only validate if we have actual numeric values
     const espressoValue = parseInt(updatedValues.smallBagsEspresso) || 0;
     const filterValue = parseInt(updatedValues.smallBagsFilter) || 0;
+    const mediumEspressoValue = parseInt(updatedValues.mediumBagsEspresso) || 0;
+    const mediumFilterValue = parseInt(updatedValues.mediumBagsFilter) || 0;
     const largeBagsValue = parseInt(updatedValues.largeBags) || 0;
     
     // Validate after updating
-    validateQuantity(coffeeId, espressoValue, filterValue, mediumEValue, mediumFValue, largeBagsValue);
+    validateQuantity(coffeeId, espressoValue, filterValue, mediumEspressoValue, mediumFilterValue, largeBagsValue);
   };
 
   const handleSubmit = async () => {
@@ -725,7 +731,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5',
                             borderBottom: theme => theme.palette.mode === 'dark' ? '2px solid #6b7280' : '2px solid #e0e0e0'
                           }}>
-                            <TableCell colSpan={7} sx={{ 
+                            <TableCell colSpan={9} sx={{ 
                               fontWeight: 'bold', 
                               fontSize: '0.9rem',
                               color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'primary.main',
