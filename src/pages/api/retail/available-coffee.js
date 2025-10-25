@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
   const prisma = new PrismaClient();
   
-      console.log('🚀 [available-coffee] API called - VERSION 0.1.4 with COMPLETE API FIX - ALL MEDIUM BAGS REMOVED - FORCE DEPLOY');
+      console.log('🚀 [available-coffee] API called - VERSION 0.1.6 with FINAL MEDIUM BAGS FIX - ALL REFERENCES REMOVED');
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -116,8 +116,8 @@ export default async function handler(req, res) {
       
       console.log(`Total coffees in shop ${shopId} inventory: ${allShopCoffees.length}`);
       allShopCoffees.forEach(item => {
-        const totalStock = (item.smallBagsEspresso || 0) + (item.smallBagsFilter || 0) + (item.mediumBagsEspresso || 0) + (item.mediumBagsFilter || 0) + (item.largeBags || 0);
-        console.log(`  - ${item.coffee.name}: Small Espresso=${item.smallBagsEspresso || 0}, Small Filter=${item.smallBagsFilter || 0}, Medium Espresso=${item.mediumBagsEspresso || 0}, Medium Filter=${item.mediumBagsFilter || 0}, Large=${item.largeBags || 0}, Total=${totalStock}`);
+        const totalStock = (item.smallBags || 0) + (item.smallBagsEspresso || 0) + (item.smallBagsFilter || 0) + (item.largeBags || 0);
+        console.log(`  - ${item.coffee.name}: Small=${item.smallBags || 0}, Small Espresso=${item.smallBagsEspresso || 0}, Small Filter=${item.smallBagsFilter || 0}, Large=${item.largeBags || 0}, Total=${totalStock}`);
       });
 
       // Combine both lists - prioritize green stock for ordering
