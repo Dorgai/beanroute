@@ -206,8 +206,6 @@ model RetailOrderItem {
   smallBags         Int         @default(0)
   smallBagsEspresso Int         @default(0)
   smallBagsFilter   Int         @default(0)
-  mediumBagsEspresso Int        @default(0)
-  mediumBagsFilter   Int        @default(0)
   largeBags         Int         @default(0)
   totalQuantity     Float
   createdAt         DateTime    @default(now())
@@ -270,8 +268,6 @@ model RetailInventory {
   updatedAt         DateTime    @updatedAt
   smallBagsEspresso Int         @default(0)
   smallBagsFilter   Int         @default(0)
-  mediumBagsEspresso Int        @default(0)
-  mediumBagsFilter   Int        @default(0)
   coffee            GreenCoffee @relation(fields: [coffeeId], references: [id])
   shop              Shop        @relation(fields: [shopId], references: [id])
 
