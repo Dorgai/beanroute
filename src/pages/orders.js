@@ -49,6 +49,7 @@ import IconlessAlert from '../components/ui/IconlessAlert';
 import CollapsibleAlert from '../components/ui/CollapsibleAlert';
 import ShopStockSummary from '../components/retail/ShopStockSummary';
 import PendingOrdersSummary from '../components/retail/PendingOrdersSummary';
+import { calculateRetailKgFromBags } from '@/lib/retail-quantity';
 
 // Simple Order Dialog Component
 function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercentage }) {
@@ -128,7 +129,13 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
   
   // Calculate total quantity for a coffee item in kg
   const calculateTotalQuantity = (smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
-    return ((smallBagsEspresso + smallBagsFilter) * 0.2) + ((mediumBagsEspresso + mediumBagsFilter) * 0.5) + (largeBags * 1.0);
+    return calculateRetailKgFromBags({
+      smallBagsEspresso,
+      smallBagsFilter,
+      mediumBagsEspresso,
+      mediumBagsFilter,
+      largeBags,
+    });
   };
   
   // Validate if the requested quantity is within available limits
@@ -137,13 +144,13 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     if (!coffee) return true; // Can't validate if coffee not found
     
     const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags);
-    const realTimeAvailable = calculateRealTimeAvailableQuantity(coffee);
-    const isValid = realTimeAvailable >= requestedQuantity;
+    const remainingQuantity = calculateRealTimeAvailableQuantity(coffee);
+    const isValid = remainingQuantity >= 0;
     
     // Update validation errors
     setValidationErrors(prev => ({
       ...prev,
-      [coffeeId]: isValid ? null : `Exceeds available quantity (${realTimeAvailable.toFixed(2)}kg)`
+      [coffeeId]: isValid ? null : `Exceeds available quantity (${coffee.quantity.toFixed(2)}kg)`
     }));
     
     return isValid;
@@ -372,6 +379,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
             newOrderItems[coffee.id] = { 
               smallBagsEspresso: '', 
               smallBagsFilter: '', 
+              mediumBagsEspresso: '',
+              mediumBagsFilter: '',
               largeBags: '' 
             };
           }
@@ -384,6 +393,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
           newOrderItems[templateItem.coffeeId] = {
             smallBagsEspresso: templateItem.smallBagsEspresso.toString(),
             smallBagsFilter: templateItem.smallBagsFilter.toString(),
+            mediumBagsEspresso: (templateItem.mediumBagsEspresso || 0).toString(),
+            mediumBagsFilter: (templateItem.mediumBagsFilter || 0).toString(),
             largeBags: templateItem.largeBags.toString()
           };
         }
@@ -423,19 +434,29 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     try {
       const templateItems = Object.entries(orderItems)
         .filter(([coffeeId, quantities]) => {
-          const total = (parseInt(quantities.smallBagsEspresso) || 0) +
-                        (parseInt(quantities.smallBagsFilter) || 0) +
-                        (parseInt(quantities.largeBags) || 0);
+          const total = calculateRetailKgFromBags({
+            smallBagsEspresso: quantities.smallBagsEspresso,
+            smallBagsFilter: quantities.smallBagsFilter,
+            mediumBagsEspresso: quantities.mediumBagsEspresso,
+            mediumBagsFilter: quantities.mediumBagsFilter,
+            largeBags: quantities.largeBags,
+          });
           return total > 0;
         })
         .map(([coffeeId, quantities]) => ({
           coffeeId,
           smallBagsEspresso: parseInt(quantities.smallBagsEspresso) || 0,
           smallBagsFilter: parseInt(quantities.smallBagsFilter) || 0,
+          mediumBagsEspresso: parseInt(quantities.mediumBagsEspresso) || 0,
+          mediumBagsFilter: parseInt(quantities.mediumBagsFilter) || 0,
           largeBags: parseInt(quantities.largeBags) || 0,
-          totalQuantity: ((parseInt(quantities.smallBagsEspresso) || 0) +
-                          (parseInt(quantities.smallBagsFilter) || 0)) * 0.2 +
-                          (parseInt(quantities.largeBags) || 0) * 1.0
+          totalQuantity: calculateRetailKgFromBags({
+            smallBagsEspresso: quantities.smallBagsEspresso,
+            smallBagsFilter: quantities.smallBagsFilter,
+            mediumBagsEspresso: quantities.mediumBagsEspresso,
+            mediumBagsFilter: quantities.mediumBagsFilter,
+            largeBags: quantities.largeBags,
+          }),
         }));
 
       if (templateItems.length === 0) {

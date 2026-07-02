@@ -1,4 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import {
+  calculateAvailableRetailKg,
+  calculateGreenConsumption,
+  calculateHaircutAmount as calculateHaircutAmountFromRetail,
+} from '@/lib/retail-quantity';
 
 // Default haircut percentage (15%)
 const DEFAULT_HAIRCUT_PERCENTAGE = 15;
@@ -98,12 +103,10 @@ export async function updateHaircutPercentage(percentage, userId, prisma) {
 export async function calculateGreenCoffeeConsumption(retailQuantity, prisma) {
   try {
     const haircutPercentage = await getHaircutPercentage(prisma);
-    const haircutMultiplier = 1 + (haircutPercentage / 100);
-    return retailQuantity * haircutMultiplier;
+    return calculateGreenConsumption(retailQuantity, haircutPercentage);
   } catch (error) {
     console.error('Error calculating green coffee consumption:', error);
-    // Fallback to default haircut
-    return retailQuantity * (1 + (DEFAULT_HAIRCUT_PERCENTAGE / 100));
+    return calculateGreenConsumption(retailQuantity, DEFAULT_HAIRCUT_PERCENTAGE);
   }
 }
 
@@ -116,11 +119,10 @@ export async function calculateGreenCoffeeConsumption(retailQuantity, prisma) {
 export async function calculateHaircutAmount(retailQuantity, prisma) {
   try {
     const haircutPercentage = await getHaircutPercentage(prisma);
-    return retailQuantity * (haircutPercentage / 100);
+    return calculateHaircutAmountFromRetail(retailQuantity, haircutPercentage);
   } catch (error) {
     console.error('Error calculating haircut amount:', error);
-    // Fallback to default haircut
-    return retailQuantity * (DEFAULT_HAIRCUT_PERCENTAGE / 100);
+    return calculateHaircutAmountFromRetail(retailQuantity, DEFAULT_HAIRCUT_PERCENTAGE);
   }
 }
 
@@ -132,22 +134,23 @@ export async function calculateHaircutAmount(retailQuantity, prisma) {
 export async function getHaircutInfo(prisma) {
   try {
     const percentage = await getHaircutPercentage(prisma);
-    const multiplier = 1 + (percentage / 100);
-    
+    const availableFrom100kg = calculateAvailableRetailKg(100, percentage);
+    const greenFor10kgRetail = calculateGreenConsumption(10, percentage);
+    const greenFor25kgRetail = calculateGreenConsumption(25, percentage);
+
     return {
       percentage,
-      multiplier,
-      description: `When retail coffee is ordered, green coffee stock is decreased by ${percentage}% more than the retail quantity to account for processing losses.`,
+      description: `A ${percentage}% processing loss means ${availableFrom100kg.toFixed(1)} kg of retail coffee is available from 100 kg of green stock.`,
       examples: [
         {
           retailOrdered: '10 kg',
-          haircutAmount: `${(10 * percentage / 100).toFixed(1)} kg`,
-          totalGreenConsumption: `${(10 * multiplier).toFixed(1)} kg`
+          haircutAmount: `${calculateHaircutAmountFromRetail(10, percentage).toFixed(1)} kg`,
+          totalGreenConsumption: `${greenFor10kgRetail.toFixed(1)} kg`
         },
         {
           retailOrdered: '25 kg',
-          haircutAmount: `${(25 * percentage / 100).toFixed(1)} kg`,
-          totalGreenConsumption: `${(25 * multiplier).toFixed(1)} kg`
+          haircutAmount: `${calculateHaircutAmountFromRetail(25, percentage).toFixed(1)} kg`,
+          totalGreenConsumption: `${greenFor25kgRetail.toFixed(1)} kg`
         }
       ]
     };
@@ -155,7 +158,6 @@ export async function getHaircutInfo(prisma) {
     console.error('Error getting haircut info:', error);
     return {
       percentage: DEFAULT_HAIRCUT_PERCENTAGE,
-      multiplier: 1 + (DEFAULT_HAIRCUT_PERCENTAGE / 100),
       description: `Default haircut of ${DEFAULT_HAIRCUT_PERCENTAGE}% applied to processing losses.`,
       examples: []
     };
