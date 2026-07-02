@@ -115,6 +115,37 @@ export function countTotalBags(item = {}) {
   );
 }
 
+export const MAX_BAG_COUNT = 99;
+
+/**
+ * Sanitize bag quantity input: whole numbers only, 0-99.
+ * Returns empty string while clearing, otherwise integer string.
+ */
+export function sanitizeBagQuantityInput(raw) {
+  if (raw === '' || raw === null || raw === undefined) return '';
+
+  const digits = String(raw).replace(/[^\d]/g, '');
+  if (digits === '') return '';
+
+  const value = Math.min(MAX_BAG_COUNT, parseInt(digits, 10));
+  return String(value);
+}
+
+/**
+ * Parse a sanitized bag count for calculations (0 if empty/invalid).
+ */
+export function parseBagCount(raw) {
+  const sanitized = sanitizeBagQuantityInput(raw);
+  return sanitized === '' ? 0 : parseInt(sanitized, 10);
+}
+
+/**
+ * Format kg values with one decimal and dot separator.
+ */
+export function formatKgOneDecimal(kg) {
+  return Number(kg || 0).toFixed(1);
+}
+
 function clampHaircutPercentage(haircutPercentage) {
   const pct = Number(haircutPercentage);
   if (Number.isNaN(pct)) return 15;

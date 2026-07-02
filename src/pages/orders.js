@@ -49,7 +49,22 @@ import IconlessAlert from '../components/ui/IconlessAlert';
 import CollapsibleAlert from '../components/ui/CollapsibleAlert';
 import ShopStockSummary from '../components/retail/ShopStockSummary';
 import PendingOrdersSummary from '../components/retail/PendingOrdersSummary';
-import { calculateRetailKgFromBags } from '@/lib/retail-quantity';
+import { calculateRetailKgFromBags, sanitizeBagQuantityInput, parseBagCount, formatKgOneDecimal, MAX_BAG_COUNT } from '@/lib/retail-quantity';
+
+const BAG_FIELD_NAMES = ['smallBagsEspresso', 'smallBagsFilter', 'mediumBagsEspresso', 'mediumBagsFilter', 'largeBags'];
+const EMPTY_BAG_FIELDS = Object.fromEntries(BAG_FIELD_NAMES.map((field) => [field, '']));
+
+const bagQuantityTextFieldProps = {
+  type: 'text',
+  inputMode: 'numeric',
+  InputProps: {
+    inputProps: {
+      min: 0,
+      max: MAX_BAG_COUNT,
+      pattern: '[0-9]*',
+    },
+  },
+};
 
 // Simple Order Dialog Component
 function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercentage }) {
@@ -69,33 +84,44 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
   const [selectedTemplate, setSelectedTemplate] = useState('');
 
   useEffect(() => {
-    // Reset order items when dialog opens with defensive checks
-    if (open && Array.isArray(coffeeItems) && coffeeItems.length > 0) {
+    if (!open) return;
+
+    setValidationErrors({});
+    setComment('');
+    setError(null);
+    setSelectedTemplate('');
+    fetchAvailableTemplates();
+
+    if (Array.isArray(coffeeItems) && coffeeItems.length > 0) {
       const initialItems = {};
-      coffeeItems.forEach(coffee => {
+      coffeeItems.forEach((coffee) => {
         if (coffee && coffee.id) {
-          initialItems[coffee.id] = { 
-            smallBagsEspresso: '', 
-            smallBagsFilter: '', 
-            mediumBagsEspresso: '',
-            mediumBagsFilter: '',
-            largeBags: '' 
-          };
+          initialItems[coffee.id] = { ...EMPTY_BAG_FIELDS };
         }
       });
       setOrderItems(initialItems);
-      setValidationErrors({});
-      setComment('');
-      setError(null); // Clear any previous errors when dialog opens
-      setSelectedTemplate(''); // Reset template selection
-      
-      // Fetch available templates
-      fetchAvailableTemplates();
-    } else if (open) {
-      // If coffeeItems is not a valid array or is empty
+    } else {
       console.warn('No valid coffee items available for ordering');
-      setError(null); // Clear any previous errors when dialog opens
     }
+  }, [open]);
+
+  // Merge newly available coffees without clearing in-progress quantities
+  useEffect(() => {
+    if (!open || !Array.isArray(coffeeItems) || coffeeItems.length === 0) return;
+
+    setOrderItems((prev) => {
+      const updated = { ...prev };
+      let changed = false;
+
+      coffeeItems.forEach((coffee) => {
+        if (coffee?.id && !updated[coffee.id]) {
+          updated[coffee.id] = { ...EMPTY_BAG_FIELDS };
+          changed = true;
+        }
+      });
+
+      return changed ? updated : prev;
+    });
   }, [open, coffeeItems]);
 
   // Fetch pending orders data when dialog opens
@@ -150,7 +176,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     // Update validation errors
     setValidationErrors(prev => ({
       ...prev,
-      [coffeeId]: isValid ? null : `Exceeds available quantity (${coffee.quantity.toFixed(2)}kg)`
+      [coffeeId]: isValid ? null : `Exceeds available quantity (${formatKgOneDecimal(coffee.quantity)}kg)`
     }));
     
     return isValid;
@@ -166,13 +192,13 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
     // Subtract current order inputs from this dialog
     const currentOrder = orderItems[coffee.id];
     if (currentOrder) {
-      const espressoInput = parseInt(currentOrder.smallBagsEspresso) || 0;
-      const filterInput = parseInt(currentOrder.smallBagsFilter) || 0;
-      const mediumEspressoInput = parseInt(currentOrder.mediumBagsEspresso) || 0;
-      const mediumFilterInput = parseInt(currentOrder.mediumBagsFilter) || 0;
-      const largeBagsInput = parseInt(currentOrder.largeBags) || 0;
-      
-      const currentOrderQuantity = calculateTotalQuantity(espressoInput, filterInput, mediumEspressoInput, mediumFilterInput, largeBagsInput);
+      const currentOrderQuantity = calculateTotalQuantity(
+        parseBagCount(currentOrder.smallBagsEspresso),
+        parseBagCount(currentOrder.smallBagsFilter),
+        parseBagCount(currentOrder.mediumBagsEspresso),
+        parseBagCount(currentOrder.mediumBagsFilter),
+        parseBagCount(currentOrder.largeBags)
+      );
       availableQuantity -= currentOrderQuantity;
     }
     
@@ -184,27 +210,26 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       console.warn('Invalid coffeeId in handleQuantityChange');
       return;
     }
-    
-    // Allow empty string or valid numbers
+
+    const sanitizedValue = sanitizeBagQuantityInput(value);
     const updatedValues = {
       ...orderItems[coffeeId],
-      [field]: value
+      [field]: sanitizedValue,
     };
-    
-    setOrderItems(prev => ({
+
+    setOrderItems((prev) => ({
       ...prev,
-      [coffeeId]: updatedValues
+      [coffeeId]: updatedValues,
     }));
-    
-    // Only validate if we have actual numeric values
-    const espressoValue = parseInt(updatedValues.smallBagsEspresso) || 0;
-    const filterValue = parseInt(updatedValues.smallBagsFilter) || 0;
-    const mediumEspressoValue = parseInt(updatedValues.mediumBagsEspresso) || 0;
-    const mediumFilterValue = parseInt(updatedValues.mediumBagsFilter) || 0;
-    const largeBagsValue = parseInt(updatedValues.largeBags) || 0;
-    
-    // Validate after updating
-    validateQuantity(coffeeId, espressoValue, filterValue, mediumEspressoValue, mediumFilterValue, largeBagsValue);
+
+    validateQuantity(
+      coffeeId,
+      parseBagCount(updatedValues.smallBagsEspresso),
+      parseBagCount(updatedValues.smallBagsFilter),
+      parseBagCount(updatedValues.mediumBagsEspresso),
+      parseBagCount(updatedValues.mediumBagsFilter),
+      parseBagCount(updatedValues.largeBags)
+    );
   };
 
   const handleSubmit = async () => {
@@ -234,20 +259,20 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
         .filter(([coffeeId, item]) => {
           // Validate that coffeeId exists and item is valid
           if (!coffeeId || !item) return false;
-          const espressoValue = parseInt(item.smallBagsEspresso) || 0;
-          const filterValue = parseInt(item.smallBagsFilter) || 0;
-          const mediumEspressoValue = parseInt(item.mediumBagsEspresso) || 0;
-          const mediumFilterValue = parseInt(item.mediumBagsFilter) || 0;
-          const largeBagsValue = parseInt(item.largeBags) || 0;
+          const espressoValue = parseBagCount(item.smallBagsEspresso);
+          const filterValue = parseBagCount(item.smallBagsFilter);
+          const mediumEspressoValue = parseBagCount(item.mediumBagsEspresso);
+          const mediumFilterValue = parseBagCount(item.mediumBagsFilter);
+          const largeBagsValue = parseBagCount(item.largeBags);
           return (espressoValue > 0 || filterValue > 0 || mediumEspressoValue > 0 || mediumFilterValue > 0 || largeBagsValue > 0);
         })
         .map(([coffeeId, item]) => ({
           coffeeId,
-          smallBagsEspresso: parseInt(item.smallBagsEspresso) || 0,
-          smallBagsFilter: parseInt(item.smallBagsFilter) || 0,
-          mediumBagsEspresso: parseInt(item.mediumBagsEspresso) || 0,
-          mediumBagsFilter: parseInt(item.mediumBagsFilter) || 0,
-          largeBags: parseInt(item.largeBags) || 0
+          smallBagsEspresso: parseBagCount(item.smallBagsEspresso),
+          smallBagsFilter: parseBagCount(item.smallBagsFilter),
+          mediumBagsEspresso: parseBagCount(item.mediumBagsEspresso),
+          mediumBagsFilter: parseBagCount(item.mediumBagsFilter),
+          largeBags: parseBagCount(item.largeBags),
         }));
 
       console.log('[OrderDialog] Filtered items for order:', items);
@@ -445,11 +470,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
         })
         .map(([coffeeId, quantities]) => ({
           coffeeId,
-          smallBagsEspresso: parseInt(quantities.smallBagsEspresso) || 0,
-          smallBagsFilter: parseInt(quantities.smallBagsFilter) || 0,
-          mediumBagsEspresso: parseInt(quantities.mediumBagsEspresso) || 0,
-          mediumBagsFilter: parseInt(quantities.mediumBagsFilter) || 0,
-          largeBags: parseInt(quantities.largeBags) || 0,
+          smallBagsEspresso: parseBagCount(quantities.smallBagsEspresso),
+          smallBagsFilter: parseBagCount(quantities.smallBagsFilter),
+          mediumBagsEspresso: parseBagCount(quantities.mediumBagsEspresso),
+          mediumBagsFilter: parseBagCount(quantities.mediumBagsFilter),
+          largeBags: parseBagCount(quantities.largeBags),
           totalQuantity: calculateRetailKgFromBags({
             smallBagsEspresso: quantities.smallBagsEspresso,
             smallBagsFilter: quantities.smallBagsFilter,
@@ -820,7 +845,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                           </Box>
                           {coffee.originalQuantity && (
                             <Typography variant="caption" color="text.secondary" display="block">
-                              Green stock: {coffee.originalQuantity.toFixed(2)} kg
+                              Green stock: {formatKgOneDecimal(coffee.originalQuantity)} kg
                             </Typography>
                           )}
                         </TableCell>
@@ -831,16 +856,16 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                               color: realTimeAvailable <= 0 ? 'error.main' : 'text.primary'
                             }}
                           >
-                            {realTimeAvailable.toFixed(2)} kg
+                            {realTimeAvailable.toFixed(1)} kg
                           </Typography>
                           {coffee.haircutAmount && (
                             <Typography variant="caption" color="text.secondary" display="block">
-                              (-{coffee.haircutAmount.toFixed(2)} kg haircut)
+                              (-{formatKgOneDecimal(coffee.haircutAmount)} kg haircut)
                             </Typography>
                           )}
                           {realTimeAvailable !== coffee.quantity && (
                             <Typography variant="caption" color="warning.main" display="block">
-                              ({(coffee.quantity - realTimeAvailable).toFixed(2)} kg in current order)
+                              ({formatKgOneDecimal(coffee.quantity - realTimeAvailable)} kg in current order)
                             </Typography>
                           )}
                         </TableCell>
@@ -878,8 +903,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                         </TableCell>
                         <TableCell>
                           <TextField
-                            type="number"
-                            InputProps={{ inputProps: { min: 0 } }}
+                            {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.smallBagsEspresso || ''}
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsEspresso', e.target.value)}
@@ -911,8 +935,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                         </TableCell>
                         <TableCell>
                           <TextField
-                            type="number"
-                            InputProps={{ inputProps: { min: 0 } }}
+                            {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.smallBagsFilter || ''}
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsFilter', e.target.value)}
@@ -944,8 +967,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                         </TableCell>
                         <TableCell>
                           <TextField
-                            type="number"
-                            InputProps={{ inputProps: { min: 0 } }}
+                            {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.mediumBagsEspresso || ''}
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsEspresso', e.target.value)}
@@ -977,8 +999,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                         </TableCell>
                         <TableCell>
                           <TextField
-                            type="number"
-                            InputProps={{ inputProps: { min: 0 } }}
+                            {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.mediumBagsFilter || ''}
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsFilter', e.target.value)}
@@ -1010,8 +1031,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                         </TableCell>
                         <TableCell>
                           <TextField
-                            type="number"
-                            InputProps={{ inputProps: { min: 0 } }}
+                            {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.largeBags || ''}
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'largeBags', e.target.value)}
@@ -1955,50 +1975,63 @@ export default function RetailOrders() {
     fetchData();
   }, [selectedShop, fetchData]);
   
-  // Fetch available coffee separately
-  useEffect(() => {
-    const fetchAvailableCoffee = async () => {
-        console.log('🔥 FRESH CODE 2025-09-30 fetchAvailableCoffee called with selectedShop:', selectedShop, typeof selectedShop);
-        console.log('🔥 DEBUG: shops.length:', shops.length);
-        console.log('🔥 DEBUG: shops:', shops);
-      if (!selectedShop || selectedShop === '' || selectedShop === null || selectedShop === undefined) {
-        console.log('No selectedShop (empty/null/undefined), skipping coffee fetch');
-        console.log('🔥 DEBUG: Setting availableCoffee to empty array');
-        setAvailableCoffee([]);
-        return;
+  // Fetch available coffee for the order form
+  const fetchAvailableCoffee = useCallback(async () => {
+    if (!selectedShop) {
+      setAvailableCoffee([]);
+      return;
+    }
+
+    try {
+      const coffeeResponse = await fetch(
+        `/api/retail/available-coffee?shopId=${selectedShop}&_=${Date.now()}`,
+        { cache: 'no-store' }
+      );
+      if (!coffeeResponse.ok) {
+        throw new Error(`Failed to fetch available coffee (${coffeeResponse.status})`);
       }
-      
-      try {
-        console.log('Fetching available coffee for shop:', selectedShop);
-        const coffeeResponse = await fetch(`/api/retail/available-coffee?shopId=${selectedShop}`);
-        if (!coffeeResponse.ok) {
-          throw new Error(`Failed to fetch available coffee (${coffeeResponse.status})`);
-        }
-        
-        try {
-          const coffeeData = await coffeeResponse.json();
-          console.log('Available coffee API response:', coffeeData);
-          
-          if (!coffeeData || !Array.isArray(coffeeData)) {
-            console.error('Invalid coffee data format:', coffeeData);
-            setAvailableCoffee([]);
-          } else {
-            console.log('Processed coffee:', coffeeData);
-            setAvailableCoffee(coffeeData);
-          }
-        } catch (jsonError) {
-          console.error('Error parsing coffee JSON:', jsonError);
-          setAvailableCoffee([]);
-        }
-      } catch (err) {
-        console.error('Error fetching available coffee:', err);
+
+      const coffeeData = await coffeeResponse.json();
+      if (!coffeeData || !Array.isArray(coffeeData)) {
         setAvailableCoffee([]);
+      } else {
+        setAvailableCoffee(coffeeData);
+      }
+    } catch (err) {
+      console.error('Error fetching available coffee:', err);
+      setAvailableCoffee([]);
+    }
+  }, [selectedShop]);
+
+  useEffect(() => {
+    fetchAvailableCoffee();
+  }, [fetchAvailableCoffee]);
+
+  // Refresh order form when green inventory changes elsewhere in the app
+  useEffect(() => {
+    const handleInventoryUpdate = () => {
+      fetchAvailableCoffee();
+    };
+
+    window.addEventListener('coffeeInventoryUpdated', handleInventoryUpdate);
+    return () => window.removeEventListener('coffeeInventoryUpdated', handleInventoryUpdate);
+  }, [fetchAvailableCoffee]);
+
+  // Refresh when returning to the tab with the order dialog open
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAvailableCoffee();
       }
     };
-    
-    console.log('🔥 FRESH CODE 2025-09-30 useEffect for fetchAvailableCoffee triggered, selectedShop:', selectedShop);
-    fetchAvailableCoffee();
-  }, [selectedShop]);
+
+    window.addEventListener('focus', fetchAvailableCoffee);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', fetchAvailableCoffee);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchAvailableCoffee]);
 
   // Process orders to check for pending orders and recent changes
   useEffect(() => {
@@ -2132,6 +2165,7 @@ export default function RetailOrders() {
   };
 
   const handleCreateOrder = () => {
+    fetchAvailableCoffee();
     setOrderDialogOpen(true);
   };
 
@@ -2142,8 +2176,8 @@ export default function RetailOrders() {
     console.log('[handleCloseOrderDialog] Set orderDialogOpen to false');
     if (success) {
       console.log('[handleCloseOrderDialog] Success=true, refreshing data...');
-      // Refresh data after successful order
       fetchData();
+      fetchAvailableCoffee();
     }
     // Clear any error state when dialog is closed
     setError(null);
