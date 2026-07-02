@@ -5,6 +5,12 @@ import { createActivityLog } from '@/lib/activity-service';
 import orderEmailService from '@/lib/order-email-service';
 import pushNotificationService from '@/lib/push-notification-service';
 import { getHaircutPercentage } from '@/lib/haircut-service';
+import {
+  calculateAvailableRetailKg,
+  calculateGreenConsumption,
+  calculateHaircutAmount,
+  calculateRetailKgFromBags,
+} from '@/lib/retail-quantity';
 
 export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
@@ -92,7 +98,13 @@ export default async function handler(req, res) {
         mediumBagsEspresso: mediumBagsEspresso,
         mediumBagsFilter: mediumBagsFilter,
         largeBags: largeBags,
-        totalQuantity: ((finalEspresso + finalFilter) * 0.2) + (mediumBagsEspresso * 0.5) + (mediumBagsFilter * 0.5) + (largeBags * 1.0)
+        totalQuantity: calculateRetailKgFromBags({
+          smallBagsEspresso: finalEspresso,
+          smallBagsFilter: finalFilter,
+          mediumBagsEspresso,
+          mediumBagsFilter,
+          largeBags,
+        }),
       };
     });
     
@@ -107,6 +119,33 @@ export default async function handler(req, res) {
         error: 'Invalid items in order', 
         details: invalidItems.map(item => item.coffeeId || 'unknown')
       });
+    }
+
+    const haircutPercentage = await getHaircutPercentage(prisma);
+
+    // Validate green stock before creating the order
+    for (const item of processedItems) {
+      const coffee = await prisma.greenCoffee.findUnique({
+        where: { id: item.coffeeId },
+        select: { id: true, name: true, quantity: true },
+      });
+
+      if (!coffee) {
+        await prisma.$disconnect();
+        return res.status(400).json({
+          error: `Coffee not found (ID: ${item.coffeeId})`,
+        });
+      }
+
+      const requiredGreen = calculateGreenConsumption(item.totalQuantity, haircutPercentage);
+      const availableRetail = calculateAvailableRetailKg(coffee.quantity, haircutPercentage);
+
+      if (coffee.quantity < requiredGreen) {
+        await prisma.$disconnect();
+        return res.status(400).json({
+          error: `Insufficient quantity for coffee ${coffee.name} (ID: ${item.coffeeId}). Available: ${availableRetail.toFixed(2)}kg, Requested: ${item.totalQuantity.toFixed(2)}kg`,
+        });
+      }
     }
 
     // Create order without transaction first
@@ -155,6 +194,8 @@ export default async function handler(req, res) {
             smallBags: item.smallBags,
             smallBagsEspresso: item.smallBagsEspresso,
             smallBagsFilter: item.smallBagsFilter,
+            mediumBagsEspresso: item.mediumBagsEspresso,
+            mediumBagsFilter: item.mediumBagsFilter,
             largeBags: item.largeBags,
             totalQuantity: item.totalQuantity
           }
@@ -167,25 +208,8 @@ export default async function handler(req, res) {
       // Update coffee quantities in parallel with haircut applied
       const coffeeUpdatePromises = processedItems.map(async (item) => {
         try {
-          // Get haircut percentage for this coffee
-          let haircutPercentage = 15; // Default fallback
-          try {
-            haircutPercentage = await getHaircutPercentage(prisma);
-            console.log(`[create-order] Coffee ${item.coffeeId}: Using haircut percentage: ${haircutPercentage}%`);
-          } catch (haircutError) {
-            console.error(`Error getting haircut percentage for coffee ${item.coffeeId}:`, haircutError);
-            // Already set to default 15%
-          }
-          
-          // Ensure haircut percentage is a valid number
-          if (isNaN(haircutPercentage) || haircutPercentage < 0 || haircutPercentage > 100) {
-            console.warn(`Invalid haircut percentage for coffee ${item.coffeeId}: ${haircutPercentage}, using default 15%`);
-            haircutPercentage = 15;
-          }
-          
-          const haircutMultiplier = 1 + (haircutPercentage / 100);
-          const totalGreenConsumption = item.totalQuantity * haircutMultiplier;
-          const haircutAmount = item.totalQuantity * (haircutPercentage / 100);
+          const totalGreenConsumption = calculateGreenConsumption(item.totalQuantity, haircutPercentage);
+          const haircutAmount = calculateHaircutAmount(item.totalQuantity, haircutPercentage);
           
           console.log(`[create-order] Coffee ${item.coffeeId} calculation:`);
           console.log(`  - Retail quantity ordered: ${item.totalQuantity}kg`);

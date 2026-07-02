@@ -4,6 +4,7 @@ import { verifyRequestAndGetUser } from '@/lib/auth';
 import orderEmailService from '@/lib/order-email-service';
 import pushNotificationService from '@/lib/push-notification-service';
 import { getHaircutPercentage } from '@/lib/haircut-service';
+import { calculateGreenConsumption, calculateHaircutAmount, countTotalBags } from '@/lib/retail-quantity';
 
 /**
  * Handle green coffee stock adjustments when orders are cancelled
@@ -24,16 +25,14 @@ async function handleGreenCoffeeStockAdjustments(tx, order, newStatus) {
   try {
     // Get current haircut percentage
     const haircutPercentage = await getHaircutPercentage(tx);
-    const haircutMultiplier = 1 + (haircutPercentage / 100);
     
-    console.log(`[green-coffee-stock] Using haircut percentage: ${haircutPercentage}% (multiplier: ${haircutMultiplier})`);
+    console.log(`[green-coffee-stock] Using haircut percentage: ${haircutPercentage}%`);
     
     // Process each item in the cancelled order
     const stockAdjustmentPromises = order.items.map(async (item) => {
       try {
-        // Calculate the total green coffee consumption that was originally deducted
-        const totalGreenConsumption = (item.totalQuantity || 0) * haircutMultiplier;
-        const haircutAmount = (item.totalQuantity || 0) * (haircutPercentage / 100);
+        const totalGreenConsumption = calculateGreenConsumption(item.totalQuantity || 0, haircutPercentage);
+        const haircutAmount = calculateHaircutAmount(item.totalQuantity || 0, haircutPercentage);
         
         console.log(`[green-coffee-stock] Restoring coffee ${item.coffeeId}:`);
         console.log(`  - Retail quantity: ${item.totalQuantity || 0}kg`);
@@ -109,9 +108,7 @@ async function handleLabelQuantityUpdates(tx, order, newStatus) {
   const coffeeLabelsNeeded = {};
   
   for (const item of order.items) {
-    // Calculate total bags for this coffee type (1 label per bag)
-    const totalBags = (item.smallBags || 0) + (item.smallBagsEspresso || 0) + 
-                     (item.smallBagsFilter || 0) + (item.largeBags || 0);
+    const totalBags = countTotalBags(item);
     
     if (totalBags > 0) {
       coffeeLabelsNeeded[item.coffeeId] = (coffeeLabelsNeeded[item.coffeeId] || 0) + totalBags;

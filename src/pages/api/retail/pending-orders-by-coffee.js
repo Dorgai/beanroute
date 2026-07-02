@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
+import { calculateRetailKgFromBags } from '@/lib/retail-quantity';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -43,6 +44,7 @@ export default async function handler(req, res) {
 
     // Constants for bag sizes in kg (matching frontend)
     const SMALL_BAG_SIZE = 0.2; // 200g
+    const MEDIUM_BAG_SIZE = 0.5; // 500g
     const LARGE_BAG_SIZE = 1.0; // 1kg
     
     // Group by coffee and sum small bags (espresso and filter separately)
@@ -60,6 +62,8 @@ export default async function handler(req, res) {
         const smallBags = item.smallBags || 0;
         const espressoBags = item.smallBagsEspresso || 0;
         const filterBags = item.smallBagsFilter || 0;
+        const mediumEspressoBags = item.mediumBagsEspresso || 0;
+        const mediumFilterBags = item.mediumBagsFilter || 0;
         const largeBags = item.largeBags || 0;
         
         // For backward compatibility: if no espresso/filter data, treat smallBags as espresso
@@ -82,6 +86,8 @@ export default async function handler(req, res) {
             smallBags: 0,
             smallBagsEspresso: 0,
             smallBagsFilter: 0,
+            mediumBagsEspresso: 0,
+            mediumBagsFilter: 0,
             largeBags: 0,
             totalKg: 0,
             espressoKg: 0,
@@ -91,17 +97,23 @@ export default async function handler(req, res) {
           };
         }
         
-        // Add to the aggregated data (matching frontend logic exactly)
         coffeePendingTotals[coffeeId].smallBags += totalSmallBags;
         coffeePendingTotals[coffeeId].smallBagsEspresso += actualEspressoBags;
         coffeePendingTotals[coffeeId].smallBagsFilter += actualFilterBags;
+        coffeePendingTotals[coffeeId].mediumBagsEspresso += mediumEspressoBags;
+        coffeePendingTotals[coffeeId].mediumBagsFilter += mediumFilterBags;
         coffeePendingTotals[coffeeId].largeBags += largeBags;
         
-        // Calculate total in kg (using correct sizes)
-        const totalKg = (totalSmallBags * SMALL_BAG_SIZE) + (largeBags * LARGE_BAG_SIZE);
+        const totalKg = calculateRetailKgFromBags({
+          smallBagsEspresso: actualEspressoBags,
+          smallBagsFilter: actualFilterBags,
+          mediumBagsEspresso: mediumEspressoBags,
+          mediumBagsFilter: mediumFilterBags,
+          largeBags,
+        });
         const espressoKg = actualEspressoBags * SMALL_BAG_SIZE;
         const filterKg = actualFilterBags * SMALL_BAG_SIZE;
-        const mediumKg = 0;
+        const mediumKg = (mediumEspressoBags + mediumFilterBags) * MEDIUM_BAG_SIZE;
         
         coffeePendingTotals[coffeeId].totalKg += totalKg;
         coffeePendingTotals[coffeeId].espressoKg += espressoKg;

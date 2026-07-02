@@ -2,6 +2,11 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from '@/lib/session';
 import { getHaircutPercentage } from '@/lib/haircut-service';
+import {
+  calculateAvailableRetailKg,
+  calculateHaircutAmount,
+  calculateShopInventoryKg,
+} from '@/lib/retail-quantity';
 
 export default async function handler(req, res) {
   // Create a dedicated prisma instance for this request
@@ -177,7 +182,7 @@ export default async function handler(req, res) {
       // Additional validation: filter out any coffees that somehow have zero stock in both places
       const filteredCoffee = coffee.filter(item => {
         if (item.source === 'shop_inventory') {
-          const hasStock = (item.shopSmallBags > 0 || item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.largeBags > 0);
+          const hasStock = (item.shopSmallBags > 0 || item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.shopLargeBags > 0);
           if (!hasStock) {
             console.log(`Filtering out shop inventory coffee with zero stock: ${item.name}`);
           }
@@ -206,7 +211,7 @@ export default async function handler(req, res) {
       const finalFilteredCoffee = filteredCoffee.filter(item => {
         let hasStock = false;
         if (item.source === 'shop_inventory') {
-          hasStock = (item.shopSmallBags > 0 || item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.largeBags > 0);
+          hasStock = (item.shopSmallBags > 0 || item.shopSmallBagsEspresso > 0 || item.shopSmallBagsFilter > 0 || item.shopLargeBags > 0);
         } else if (item.source === 'green_stock') {
           hasStock = item.originalQuantity > 0;
         } else if (item.source === 'both') {
@@ -215,7 +220,7 @@ export default async function handler(req, res) {
         
         if (!hasStock) {
           console.log(`FINAL FILTER: Removing coffee with zero stock: ${item.name} (${item.source})`);
-          console.log(`  Shop stock: Small=${item.shopSmallBags || 0}, Small Espresso=${item.shopSmallBagsEspresso || 0}, Small Filter=${item.shopSmallBagsFilter || 0}, Large=${item.largeBags || 0}`);
+          console.log(`  Shop stock: Small=${item.shopSmallBags || 0}, Small Espresso=${item.shopSmallBagsEspresso || 0}, Small Filter=${item.shopSmallBagsFilter || 0}, Large=${item.shopLargeBags || 0}`);
           console.log(`  Green stock: ${item.originalQuantity}`);
         }
         
@@ -246,25 +251,23 @@ export default async function handler(req, res) {
     
     const coffeeWithHaircut = coffee.map(item => {
       if (item.source === 'green_stock' && item.originalQuantity > 0) {
-        // For green stock coffees, show the quantity AFTER haircut (this is what's actually available for ordering)
-        const haircutAmount = parseFloat((item.originalQuantity * (haircutPercentage / 100)).toFixed(2));
-        const quantityAfterHaircut = parseFloat((item.originalQuantity * (1 - haircutPercentage / 100)).toFixed(2));
+        const quantityAfterHaircut = calculateAvailableRetailKg(item.originalQuantity, haircutPercentage);
+        const haircutAmount = calculateHaircutAmount(quantityAfterHaircut, haircutPercentage);
         
         console.log(`[available-coffee] ${item.name}: Green stock ${item.originalQuantity}kg, haircut ${haircutAmount}kg (${haircutPercentage}%), available for ordering: ${quantityAfterHaircut}kg`);
         
         return {
           ...item,
-          quantity: quantityAfterHaircut, // Show quantity AFTER haircut (what's actually available for ordering)
+          quantity: quantityAfterHaircut,
           haircutAmount: haircutAmount,
           haircutPercentage: haircutPercentage,
-          originalQuantity: item.originalQuantity, // Keep original for reference
+          originalQuantity: item.originalQuantity,
           note: `Green stock: ${item.originalQuantity}kg. After ${haircutPercentage}% haircut: ${quantityAfterHaircut}kg available for ordering.`
         };
       } else if (item.source === 'both' && item.originalQuantity > 0) {
-        // This coffee has both shop inventory AND green stock - show green stock for ordering
-        const haircutAmount = parseFloat((item.originalQuantity * (haircutPercentage / 100)).toFixed(2));
-        const quantityAfterHaircut = parseFloat((item.originalQuantity * (1 - haircutPercentage / 100)).toFixed(2));
-        const shopTotalQuantity = (item.shopSmallBags * 0.2) + (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopLargeBags * 1.0);
+        const quantityAfterHaircut = calculateAvailableRetailKg(item.originalQuantity, haircutPercentage);
+        const haircutAmount = calculateHaircutAmount(quantityAfterHaircut, haircutPercentage);
+        const shopTotalQuantity = calculateShopInventoryKg(item);
         
         console.log(`[available-coffee] ${item.name}: Both sources - Shop inventory: ${shopTotalQuantity.toFixed(2)}kg, Green stock: ${item.originalQuantity}kg, available for ordering: ${quantityAfterHaircut}kg`);
         
@@ -278,16 +281,13 @@ export default async function handler(req, res) {
           note: `Shop inventory: ${parseFloat(shopTotalQuantity.toFixed(2))}kg. Green stock: ${item.originalQuantity}kg. After ${haircutPercentage}% haircut: ${quantityAfterHaircut}kg available for ordering.`
         };
       } else if (item.source === 'shop_inventory') {
-        // For shop inventory coffees, check if they also have green stock available for ordering
-        const shopTotalQuantity = (item.shopSmallBags * 0.2) + (item.shopSmallBagsEspresso * 0.2) + (item.shopSmallBagsFilter * 0.2) + (item.shopLargeBags * 1.0);
+        const shopTotalQuantity = calculateShopInventoryKg(item);
         console.log(`[available-coffee] ${item.name}: Shop inventory - Small: ${item.shopSmallBags}×0.2kg, Small Espresso: ${item.shopSmallBagsEspresso}×0.2kg, Small Filter: ${item.shopSmallBagsFilter}×0.2kg, Large: ${item.shopLargeBags}×1.0kg = ${shopTotalQuantity.toFixed(2)}kg in shop inventory`);
         
-        // Check if this coffee also has green stock available for ordering
         const greenStockItem = greenStockCoffee.find(coffee => coffee.id === item.id);
         if (greenStockItem && greenStockItem.quantity > 0) {
-          // This coffee has both shop inventory AND green stock - show green stock for ordering
-          const haircutAmount = parseFloat((greenStockItem.quantity * (haircutPercentage / 100)).toFixed(2));
-          const quantityAfterHaircut = parseFloat((greenStockItem.quantity * (1 - haircutPercentage / 100)).toFixed(2));
+          const quantityAfterHaircut = calculateAvailableRetailKg(greenStockItem.quantity, haircutPercentage);
+          const haircutAmount = calculateHaircutAmount(quantityAfterHaircut, haircutPercentage);
           
           console.log(`[available-coffee] ${item.name}: Also has green stock ${greenStockItem.quantity}kg, available for ordering: ${quantityAfterHaircut}kg`);
           
