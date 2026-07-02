@@ -64,6 +64,29 @@ const bagQuantityTextFieldProps = {
       pattern: '[0-9]*',
     },
   },
+  sx: {
+    '& .MuiInputBase-input': {
+      textAlign: 'center',
+      padding: '8px 4px',
+    },
+  },
+};
+
+const bagColumnCellSx = {
+  width: 76,
+  minWidth: 76,
+  maxWidth: 76,
+  px: 0.5,
+  textAlign: 'center',
+  verticalAlign: 'top',
+};
+
+const bagColumnHeaderSx = {
+  ...bagColumnCellSx,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  fontSize: '0.7rem',
+  lineHeight: 1.2,
 };
 
 // Simple Order Dialog Component
@@ -167,19 +190,53 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
   // Validate if the requested quantity is within available limits
   const validateQuantity = (coffeeId, smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags) => {
     const coffee = coffeeItems.find(c => c.id === coffeeId);
-    if (!coffee) return true; // Can't validate if coffee not found
-    
-    const requestedQuantity = calculateTotalQuantity(smallBagsEspresso, smallBagsFilter, mediumBagsEspresso, mediumBagsFilter, largeBags);
-    const remainingQuantity = calculateRealTimeAvailableQuantity(coffee);
-    const isValid = remainingQuantity >= 0;
-    
-    // Update validation errors
+    if (!coffee) return true;
+
+    const requestedQuantity = calculateTotalQuantity(
+      smallBagsEspresso,
+      smallBagsFilter,
+      mediumBagsEspresso,
+      mediumBagsFilter,
+      largeBags
+    );
+    const isValid = requestedQuantity <= coffee.quantity;
+
     setValidationErrors(prev => ({
       ...prev,
       [coffeeId]: isValid ? null : `Exceeds available quantity (${formatKgOneDecimal(coffee.quantity)}kg)`
     }));
-    
+
     return isValid;
+  };
+
+  const validateAllOrderItems = (itemsMap = orderItems) => {
+    const errors = {};
+    let hasErrors = false;
+
+    Object.entries(itemsMap).forEach(([coffeeId, item]) => {
+      if (!item) return;
+
+      const coffee = coffeeItems.find(c => c.id === coffeeId);
+      if (!coffee) return;
+
+      const requestedQuantity = calculateTotalQuantity(
+        parseBagCount(item.smallBagsEspresso),
+        parseBagCount(item.smallBagsFilter),
+        parseBagCount(item.mediumBagsEspresso),
+        parseBagCount(item.mediumBagsFilter),
+        parseBagCount(item.largeBags)
+      );
+
+      if (requestedQuantity > 0 && requestedQuantity > coffee.quantity) {
+        errors[coffeeId] = `Exceeds available quantity (${formatKgOneDecimal(coffee.quantity)}kg)`;
+        hasErrors = true;
+      } else {
+        errors[coffeeId] = null;
+      }
+    });
+
+    setValidationErrors(errors);
+    return !hasErrors;
   };
 
   // Calculate real-time available quantity for a coffee considering current order inputs
@@ -283,11 +340,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
         setLoading(false);
         return;
       }
-      
-      // Check for any validation errors before submitting
-      const hasValidationErrors = Object.values(validationErrors).some(error => error !== null);
-      if (hasValidationErrors) {
-        console.log('[OrderDialog] Validation errors found:', validationErrors);
+
+      if (!validateAllOrderItems(orderItems)) {
         setError('Please correct the quantity errors before submitting');
         setLoading(false);
         return;
@@ -296,7 +350,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       // Create the order with fast timeout and optimistic handling
       console.log('[OrderDialog] Sending order request to API...');
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       
       const response = await fetch('/api/retail/create-order', {
         method: 'POST',
@@ -426,6 +480,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       });
 
       setOrderItems(newOrderItems);
+      validateAllOrderItems(newOrderItems);
       setError(null);
       
       // Show info about loaded template
@@ -522,7 +577,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
       if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
         onClose(false);
       }
-    }} maxWidth="md">
+    }} maxWidth="lg" fullWidth>
       <DialogTitle sx={{ 
         borderBottom: '1px solid #eee', 
         pb: 2,
@@ -687,44 +742,48 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
               bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white',
               border: theme => theme.palette.mode === 'dark' ? '1px solid #6b7280' : '1px solid #e0e0e0'
             }}>
-              <Table size="small">
+              <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
                 <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                   <TableRow>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      width: '18%',
                     }}>Coffee</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      width: '10%',
                     }}>Available (After {haircutPercentage}% Haircut)</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      width: '10%',
                     }}>Pending Espresso Bags (All Shops)</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      width: '10%',
                     }}>Pending Filter Bags (All Shops)</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      ...bagColumnHeaderSx,
                     }}>Espresso Bags (200g)</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      ...bagColumnHeaderSx,
                     }}>Filter Bags (200g)</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      ...bagColumnHeaderSx,
                     }}>Espresso Bags (500g)</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      ...bagColumnHeaderSx,
                     }}>Filter Bags (500g)</TableCell>
                     <TableCell sx={{ 
                       color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600
+                      ...bagColumnHeaderSx,
                     }}>Large Bags (1kg)</TableCell>
                   </TableRow>
                 </TableHead>
@@ -901,7 +960,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={bagColumnCellSx}>
                           <TextField
                             {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.smallBagsEspresso || ''}
@@ -933,7 +992,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             }}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={bagColumnCellSx}>
                           <TextField
                             {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.smallBagsFilter || ''}
@@ -965,7 +1024,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             }}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={bagColumnCellSx}>
                           <TextField
                             {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.mediumBagsEspresso || ''}
@@ -997,7 +1056,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             }}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={bagColumnCellSx}>
                           <TextField
                             {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.mediumBagsFilter || ''}
@@ -1029,7 +1088,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             }}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={bagColumnCellSx}>
                           <TextField
                             {...bagQuantityTextFieldProps}
                             value={orderItems[coffee.id]?.largeBags || ''}
@@ -1140,7 +1199,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
             !selectedShop || 
             !Array.isArray(coffeeItems) || 
             coffeeItems.length === 0 ||
-            Object.values(validationErrors).some(error => error !== null)
+            Object.values(validationErrors).some(Boolean)
           }
           sx={{
             bgcolor: '#6b7280',
