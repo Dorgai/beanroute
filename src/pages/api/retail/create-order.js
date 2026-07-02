@@ -10,6 +10,8 @@ import {
   calculateGreenConsumption,
   calculateHaircutAmount,
   calculateRetailKgFromBags,
+  MAX_BAG_COUNT,
+  parseBagCount,
 } from '@/lib/retail-quantity';
 
 export default async function handler(req, res) {
@@ -77,16 +79,38 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Comment must be 200 characters or less' });
     }
 
+    const isValidBagCount = (raw) => {
+      if (raw === '' || raw === null || raw === undefined) return true;
+      const n = parseInt(String(raw), 10);
+      return Number.isInteger(n) && n >= 0 && n <= MAX_BAG_COUNT;
+    };
+
+    const invalidBagCounts = items.filter((item) => (
+      !isValidBagCount(item.smallBagsEspresso) ||
+      !isValidBagCount(item.smallBagsFilter) ||
+      !isValidBagCount(item.mediumBagsEspresso) ||
+      !isValidBagCount(item.mediumBagsFilter) ||
+      !isValidBagCount(item.largeBags) ||
+      !isValidBagCount(item.smallBags)
+    ));
+
+    if (invalidBagCounts.length > 0) {
+      await prisma.$disconnect();
+      return res.status(400).json({
+        error: `Bag quantities must be whole numbers between 0 and ${MAX_BAG_COUNT}`,
+      });
+    }
+
     // Validate each item has a valid coffeeId and at least one bag
     const processedItems = items.map(item => {
-      const smallBagsEspresso = parseInt(item.smallBagsEspresso) || 0;
-      const smallBagsFilter = parseInt(item.smallBagsFilter) || 0;
-      const mediumBagsEspresso = parseInt(item.mediumBagsEspresso) || 0;
-      const mediumBagsFilter = parseInt(item.mediumBagsFilter) || 0;
-      const largeBags = parseInt(item.largeBags) || 0;
+      const smallBagsEspresso = parseBagCount(item.smallBagsEspresso);
+      const smallBagsFilter = parseBagCount(item.smallBagsFilter);
+      const mediumBagsEspresso = parseBagCount(item.mediumBagsEspresso);
+      const mediumBagsFilter = parseBagCount(item.mediumBagsFilter);
+      const largeBags = parseBagCount(item.largeBags);
       
       // For backward compatibility, if smallBags is provided but not espresso/filter, use it as espresso
-      const legacySmallBags = parseInt(item.smallBags) || 0;
+      const legacySmallBags = parseBagCount(item.smallBags);
       const finalEspresso = smallBagsEspresso || legacySmallBags;
       const finalFilter = smallBagsFilter;
       

@@ -54,6 +54,109 @@ import { calculateRetailKgFromBags, sanitizeBagQuantityInput, parseBagCount, for
 const BAG_FIELD_NAMES = ['smallBagsEspresso', 'smallBagsFilter', 'mediumBagsEspresso', 'mediumBagsFilter', 'largeBags'];
 const EMPTY_BAG_FIELDS = Object.fromEntries(BAG_FIELD_NAMES.map((field) => [field, '']));
 
+const orderTableHeaderColor = (theme) => (theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)');
+
+const orderTableHeaderLabelSx = {
+  display: 'block',
+  fontSize: '0.7rem',
+  fontWeight: 600,
+  lineHeight: 1.2,
+};
+
+const orderTableHeaderBaseSx = {
+  fontWeight: 600,
+  fontSize: '0.7rem',
+  lineHeight: 1.2,
+  verticalAlign: 'bottom',
+  px: 0.5,
+  py: 1,
+  color: orderTableHeaderColor,
+};
+
+const orderCoffeeHeaderSx = {
+  ...orderTableHeaderBaseSx,
+  textAlign: 'left',
+  width: '16%',
+};
+
+const orderInfoHeaderSx = {
+  ...orderTableHeaderBaseSx,
+  textAlign: 'center',
+  width: '11%',
+};
+
+const bagColumnHeaderSx = {
+  ...orderTableHeaderBaseSx,
+  textAlign: 'center',
+  width: 52,
+  minWidth: 52,
+  maxWidth: 52,
+};
+
+const orderCoffeeCellSx = {
+  verticalAlign: 'top',
+  px: 1,
+  py: 1,
+};
+
+const orderInfoCellSx = {
+  verticalAlign: 'top',
+  textAlign: 'center',
+  px: 0.5,
+  py: 1,
+  fontSize: '0.8rem',
+};
+
+const bagColumnCellSx = {
+  width: 52,
+  minWidth: 52,
+  maxWidth: 52,
+  px: 0.25,
+  py: 0.5,
+  textAlign: 'center',
+  verticalAlign: 'middle',
+};
+
+const bagInputFieldSx = {
+  width: 48,
+  maxWidth: 48,
+  mx: 'auto',
+  '& .MuiOutlinedInput-root': {
+    bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#4b5563' : 'white'),
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: (theme) => (theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'),
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: (theme) => (theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'),
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: (theme) => theme.palette.primary.main,
+    },
+  },
+  '& .MuiInputBase-input': {
+    textAlign: 'center',
+    padding: '6px 2px',
+    fontSize: '0.85rem',
+    color: (theme) => (theme.palette.mode === 'dark' ? 'white' : 'inherit'),
+  },
+  '& .MuiInputBase-input::placeholder': {
+    color: (theme) => (theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb'),
+    opacity: 1,
+  },
+};
+
+function OrderTableHeader({ lines, align = 'center' }) {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: align === 'left' ? 'flex-start' : 'center', gap: 0.25 }}>
+      {lines.map((line) => (
+        <Typography key={line} component="span" sx={orderTableHeaderLabelSx}>
+          {line}
+        </Typography>
+      ))}
+    </Box>
+  );
+}
+
 const bagQuantityTextFieldProps = {
   type: 'text',
   inputMode: 'numeric',
@@ -62,31 +165,9 @@ const bagQuantityTextFieldProps = {
       min: 0,
       max: MAX_BAG_COUNT,
       pattern: '[0-9]*',
+      maxLength: 2,
     },
   },
-  sx: {
-    '& .MuiInputBase-input': {
-      textAlign: 'center',
-      padding: '8px 4px',
-    },
-  },
-};
-
-const bagColumnCellSx = {
-  width: 76,
-  minWidth: 76,
-  maxWidth: 76,
-  px: 0.5,
-  textAlign: 'center',
-  verticalAlign: 'top',
-};
-
-const bagColumnHeaderSx = {
-  ...bagColumnCellSx,
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-  fontSize: '0.7rem',
-  lineHeight: 1.2,
 };
 
 // Simple Order Dialog Component
@@ -745,46 +826,33 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
               <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
                 <TableHead sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5' }}>
                   <TableRow>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600,
-                      width: '18%',
-                    }}>Coffee</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600,
-                      width: '10%',
-                    }}>Available (After {haircutPercentage}% Haircut)</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600,
-                      width: '10%',
-                    }}>Pending Espresso Bags (All Shops)</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 600,
-                      width: '10%',
-                    }}>Pending Filter Bags (All Shops)</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      ...bagColumnHeaderSx,
-                    }}>Espresso Bags (200g)</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      ...bagColumnHeaderSx,
-                    }}>Filter Bags (200g)</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      ...bagColumnHeaderSx,
-                    }}>Espresso Bags (500g)</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      ...bagColumnHeaderSx,
-                    }}>Filter Bags (500g)</TableCell>
-                    <TableCell sx={{ 
-                      color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)',
-                      ...bagColumnHeaderSx,
-                    }}>Large Bags (1kg)</TableCell>
+                    <TableCell sx={orderCoffeeHeaderSx}>
+                      <OrderTableHeader lines={['Coffee']} align="left" />
+                    </TableCell>
+                    <TableCell sx={orderInfoHeaderSx}>
+                      <OrderTableHeader lines={['Available', `After ${haircutPercentage}%`]} />
+                    </TableCell>
+                    <TableCell sx={orderInfoHeaderSx}>
+                      <OrderTableHeader lines={['Pending Espresso', 'All Shops']} />
+                    </TableCell>
+                    <TableCell sx={orderInfoHeaderSx}>
+                      <OrderTableHeader lines={['Pending Filter', 'All Shops']} />
+                    </TableCell>
+                    <TableCell sx={bagColumnHeaderSx}>
+                      <OrderTableHeader lines={['Espresso', '200g']} />
+                    </TableCell>
+                    <TableCell sx={bagColumnHeaderSx}>
+                      <OrderTableHeader lines={['Filter', '200g']} />
+                    </TableCell>
+                    <TableCell sx={bagColumnHeaderSx}>
+                      <OrderTableHeader lines={['Espresso', '500g']} />
+                    </TableCell>
+                    <TableCell sx={bagColumnHeaderSx}>
+                      <OrderTableHeader lines={['Filter', '500g']} />
+                    </TableCell>
+                    <TableCell sx={bagColumnHeaderSx}>
+                      <OrderTableHeader lines={['Large', '1kg']} />
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody sx={{ bgcolor: theme => theme.palette.mode === 'dark' ? '#374151' : 'white' }}>
@@ -836,13 +904,17 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : '#f5f5f5',
                             borderBottom: theme => theme.palette.mode === 'dark' ? '2px solid #6b7280' : '2px solid #e0e0e0'
                           }}>
-                            <TableCell colSpan={9} sx={{ 
-                              fontWeight: 'bold', 
-                              fontSize: '0.9rem',
-                              color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'primary.main',
-                              py: 1
+                            <TableCell colSpan={9} sx={{
+                              ...orderTableHeaderBaseSx,
+                              textAlign: 'left',
+                              py: 1,
+                              px: 1,
+                              color: (theme) => (theme.palette.mode === 'dark' ? '#d1d5db' : theme.palette.primary.main),
                             }}>
-                              {section.title} ({section.coffees.length} coffee{section.coffees.length !== 1 ? 's' : ''})
+                              <OrderTableHeader
+                                lines={[`${section.title} (${section.coffees.length} coffee${section.coffees.length !== 1 ? 's' : ''})`]}
+                                align="left"
+                              />
                             </TableCell>
                           </TableRow>
                           
@@ -859,8 +931,10 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                     
                     return (
                       <TableRow key={coffee.id} hover>
-                        <TableCell>
-                          <strong>{coffee.name || 'Unknown'}</strong> 
+                        <TableCell sx={orderCoffeeCellSx}>
+                          <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                            {coffee.name || 'Unknown'}
+                          </Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
                             {coffee.grade ? coffee.grade.replace('_', ' ') : 'Unknown grade'}
                           </Typography>
@@ -908,14 +982,15 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={orderInfoCellSx}>
                           <Typography 
                             sx={{ 
-                              fontWeight: 'bold',
+                              fontWeight: 600,
+                              fontSize: '0.85rem',
                               color: realTimeAvailable <= 0 ? 'error.main' : 'text.primary'
                             }}
                           >
-                            {realTimeAvailable.toFixed(1)} kg
+                            {formatKgOneDecimal(realTimeAvailable)} kg
                           </Typography>
                           {coffee.haircutAmount && (
                             <Typography variant="caption" color="text.secondary" display="block">
@@ -928,11 +1003,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={orderInfoCellSx}>
                           {pendingEspressoBags > 0 ? (
                             <Box>
-                              <Typography variant="body2" color="warning.main" fontWeight="bold">
-                                {pendingEspressoBags} bags ({(pendingEspressoBags * 0.2).toFixed(1)}kg)
+                              <Typography variant="body2" color="warning.main" fontWeight={600} sx={{ fontSize: '0.85rem' }}>
+                                {pendingEspressoBags} ({formatKgOneDecimal(pendingEspressoBags * 0.2)}kg)
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 in {pendingData.orderCount} pending order{pendingData.orderCount !== 1 ? 's' : ''}
@@ -944,11 +1019,11 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={orderInfoCellSx}>
                           {pendingFilterBags > 0 ? (
                             <Box>
-                              <Typography variant="body2" color="warning.main" fontWeight="bold">
-                                {pendingFilterBags} bags ({(pendingFilterBags * 0.2).toFixed(1)}kg)
+                              <Typography variant="body2" color="warning.main" fontWeight={600} sx={{ fontSize: '0.85rem' }}>
+                                {pendingFilterBags} ({formatKgOneDecimal(pendingFilterBags * 0.2)}kg)
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 in {pendingData.orderCount} pending order{pendingData.orderCount !== 1 ? 's' : ''}
@@ -967,29 +1042,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsEspresso', e.target.value)}
                             size="small"
-                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.primary.main
-                                }
-                              },
-                              '& .MuiInputBase-input': {
-                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
-                              },
-                              '& .MuiInputBase-input::placeholder': {
-                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
-                                opacity: 1
-                              }
-                            }}
+                            sx={bagInputFieldSx}
                           />
                         </TableCell>
                         <TableCell sx={bagColumnCellSx}>
@@ -999,29 +1053,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsFilter', e.target.value)}
                             size="small"
-                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.primary.main
-                                }
-                              },
-                              '& .MuiInputBase-input': {
-                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
-                              },
-                              '& .MuiInputBase-input::placeholder': {
-                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
-                                opacity: 1
-                              }
-                            }}
+                            sx={bagInputFieldSx}
                           />
                         </TableCell>
                         <TableCell sx={bagColumnCellSx}>
@@ -1031,29 +1064,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsEspresso', e.target.value)}
                             size="small"
-                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.primary.main
-                                }
-                              },
-                              '& .MuiInputBase-input': {
-                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
-                              },
-                              '& .MuiInputBase-input::placeholder': {
-                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
-                                opacity: 1
-                              }
-                            }}
+                            sx={bagInputFieldSx}
                           />
                         </TableCell>
                         <TableCell sx={bagColumnCellSx}>
@@ -1063,29 +1075,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsFilter', e.target.value)}
                             size="small"
-                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.primary.main
-                                }
-                              },
-                              '& .MuiInputBase-input': {
-                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
-                              },
-                              '& .MuiInputBase-input::placeholder': {
-                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
-                                opacity: 1
-                              }
-                            }}
+                            sx={bagInputFieldSx}
                           />
                         </TableCell>
                         <TableCell sx={bagColumnCellSx}>
@@ -1095,29 +1086,8 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'largeBags', e.target.value)}
                             size="small"
-                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                bgcolor: theme => theme.palette.mode === 'dark' ? '#4b5563' : 'white',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'rgba(0, 0, 0, 0.23)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.mode === 'dark' ? '#0066ff' : 'rgba(0, 0, 0, 0.87)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                  borderColor: theme => theme.palette.primary.main
-                                }
-                              },
-                              '& .MuiInputBase-input': {
-                                color: theme => theme.palette.mode === 'dark' ? 'white' : 'inherit'
-                              },
-                              '& .MuiInputBase-input::placeholder': {
-                                color: theme => theme.palette.mode === 'dark' ? '#9ca3af' : '#bbb',
-                                opacity: 1
-                              }
-                            }}
+                            sx={bagInputFieldSx}
                           />
                           {validationErrors[coffee.id] && (
                             <Typography color="error" variant="caption" display="block" sx={{ mt: 1 }}>

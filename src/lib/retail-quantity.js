@@ -124,7 +124,7 @@ export const MAX_BAG_COUNT = 99;
 export function sanitizeBagQuantityInput(raw) {
   if (raw === '' || raw === null || raw === undefined) return '';
 
-  const digits = String(raw).replace(/[^\d]/g, '');
+  const digits = String(raw).replace(/[^\d]/g, '').slice(0, 2);
   if (digits === '') return '';
 
   const value = Math.min(MAX_BAG_COUNT, parseInt(digits, 10));
