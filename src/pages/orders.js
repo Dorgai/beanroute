@@ -34,6 +34,7 @@ import {
   IconButton,
   ToggleButton,
   ToggleButtonGroup,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -43,6 +44,8 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
 import SaveIcon from '@mui/icons-material/Save';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { format } from 'date-fns';
 import InventoryUpdateDialog from '@/components/retail/InventoryUpdateDialog';
 import IconlessAlert from '../components/ui/IconlessAlert';
@@ -50,9 +53,17 @@ import CollapsibleAlert from '../components/ui/CollapsibleAlert';
 import ShopStockSummary from '../components/retail/ShopStockSummary';
 import PendingOrdersSummary from '../components/retail/PendingOrdersSummary';
 import { calculateRetailKgFromBags, sanitizeBagQuantityInput, parseBagCount, formatKgOneDecimal, MAX_BAG_COUNT } from '@/lib/retail-quantity';
+import {
+  getStoredDefaultShopId,
+  getStoredSelectedShopId,
+  resolveInitialShopId,
+  setStoredDefaultShopId,
+  setStoredSelectedShopId,
+} from '@/lib/retail-shop-preference';
 
 const BAG_FIELD_NAMES = ['smallBagsEspresso', 'smallBagsFilter', 'mediumBagsEspresso', 'mediumBagsFilter', 'largeBags'];
 const EMPTY_BAG_FIELDS = Object.fromEntries(BAG_FIELD_NAMES.map((field) => [field, '']));
+const BAG_COLUMN_WIDTH = 64;
 
 const orderTableHeaderColor = (theme) => (theme.palette.mode === 'dark' ? '#d1d5db' : 'rgba(0, 0, 0, 0.6)');
 
@@ -76,21 +87,21 @@ const orderTableHeaderBaseSx = {
 const orderCoffeeHeaderSx = {
   ...orderTableHeaderBaseSx,
   textAlign: 'left',
-  width: '16%',
+  width: '17%',
 };
 
 const orderInfoHeaderSx = {
   ...orderTableHeaderBaseSx,
   textAlign: 'center',
-  width: '11%',
+  width: '9%',
 };
 
 const bagColumnHeaderSx = {
   ...orderTableHeaderBaseSx,
   textAlign: 'center',
-  width: 52,
-  minWidth: 52,
-  maxWidth: 52,
+  width: BAG_COLUMN_WIDTH,
+  minWidth: BAG_COLUMN_WIDTH,
+  maxWidth: BAG_COLUMN_WIDTH,
 };
 
 const orderCoffeeCellSx = {
@@ -108,9 +119,9 @@ const orderInfoCellSx = {
 };
 
 const bagColumnCellSx = {
-  width: 52,
-  minWidth: 52,
-  maxWidth: 52,
+  width: BAG_COLUMN_WIDTH,
+  minWidth: BAG_COLUMN_WIDTH,
+  maxWidth: BAG_COLUMN_WIDTH,
   px: 0.25,
   py: 0.5,
   textAlign: 'center',
@@ -118,9 +129,7 @@ const bagColumnCellSx = {
 };
 
 const bagInputFieldSx = {
-  width: 48,
-  maxWidth: 48,
-  mx: 'auto',
+  width: '100%',
   '& .MuiOutlinedInput-root': {
     bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#4b5563' : 'white'),
     '& .MuiOutlinedInput-notchedOutline': {
@@ -135,7 +144,7 @@ const bagInputFieldSx = {
   },
   '& .MuiInputBase-input': {
     textAlign: 'center',
-    padding: '6px 2px',
+    padding: '6px 4px',
     fontSize: '0.85rem',
     color: (theme) => (theme.palette.mode === 'dark' ? 'white' : 'inherit'),
   },
@@ -1042,6 +1051,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsEspresso', e.target.value)}
                             size="small"
+                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={bagInputFieldSx}
                           />
@@ -1053,6 +1063,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'smallBagsFilter', e.target.value)}
                             size="small"
+                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={bagInputFieldSx}
                           />
@@ -1064,6 +1075,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsEspresso', e.target.value)}
                             size="small"
+                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={bagInputFieldSx}
                           />
@@ -1075,6 +1087,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'mediumBagsFilter', e.target.value)}
                             size="small"
+                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={bagInputFieldSx}
                           />
@@ -1086,6 +1099,7 @@ function OrderDialog({ open, onClose, coffeeItems, selectedShop, haircutPercenta
                             placeholder="0"
                             onChange={(e) => handleQuantityChange(coffee.id, 'largeBags', e.target.value)}
                             size="small"
+                            fullWidth
                             error={Boolean(validationErrors[coffee.id])}
                             sx={bagInputFieldSx}
                           />
@@ -1609,6 +1623,7 @@ export default function RetailOrders() {
   const [error, setError] = useState(null);
   const [shops, setShops] = useState([]);
   const [selectedShop, setSelectedShop] = useState('');
+  const [defaultShopId, setDefaultShopId] = useState('');
   const [selectedShopDetails, setSelectedShopDetails] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [inventoryHistory, setInventoryHistory] = useState([]);
@@ -1664,29 +1679,61 @@ export default function RetailOrders() {
     }));
   };
 
-  // Check for stored shop preference
+  // Load stored shop preferences on mount
   useEffect(() => {
-    const storedShopId = localStorage.getItem('selectedShopId');
-    console.log('Checking stored shop preference:', storedShopId);
-    if (storedShopId) {
-      console.log('Setting selectedShop from localStorage:', storedShopId);
-      setSelectedShop(storedShopId);
+    const storedDefaultShopId = getStoredDefaultShopId();
+    const storedSelectedShopId = getStoredSelectedShopId();
+
+    if (storedDefaultShopId) {
+      setDefaultShopId(storedDefaultShopId);
+    }
+
+    if (storedSelectedShopId) {
+      setSelectedShop(storedSelectedShopId);
     }
   }, []);
 
-  // Ensure a shop is selected when shops are available
+  const selectShopForRetail = useCallback((shopId) => {
+    if (!shopId) return;
+    setSelectedShop(shopId);
+    setStoredSelectedShopId(shopId);
+  }, []);
+
+  const applyShopSelection = useCallback((shopArray) => {
+    if (!Array.isArray(shopArray) || shopArray.length === 0) return;
+
+    setSelectedShop((current) => {
+      if (current && shopArray.some((shop) => shop.id === current)) {
+        return current;
+      }
+
+      const resolvedShopId = resolveInitialShopId(shopArray, {
+        defaultShopId: getStoredDefaultShopId(),
+        selectedShopId: getStoredSelectedShopId(),
+      });
+
+      if (resolvedShopId) {
+        setStoredSelectedShopId(resolvedShopId);
+      }
+
+      return resolvedShopId;
+    });
+  }, []);
+
+  const handleSetDefaultShop = () => {
+    if (!selectedShop) return;
+    setStoredDefaultShopId(selectedShop);
+    setDefaultShopId(selectedShop);
+  };
+
+  const handleShopChange = (shopId) => {
+    selectShopForRetail(shopId);
+  };
+
+  // Ensure a valid shop is selected when shops are available
   useEffect(() => {
-    console.log('🔥 DEBUG: Shop selection useEffect triggered');
-    console.log('🔥 DEBUG: shops.length:', shops.length);
-    console.log('🔥 DEBUG: selectedShop:', selectedShop);
-    console.log('🔥 DEBUG: selectedShop type:', typeof selectedShop);
-    if (shops.length > 0 && (!selectedShop || selectedShop === '')) {
-      const shopId = shops[0].id;
-      console.log('Fallback: Auto-selecting first shop:', shopId, shops[0].name);
-      setSelectedShop(shopId);
-      localStorage.setItem('selectedShopId', shopId);
-    }
-  }, [shops, selectedShop]);
+    applyShopSelection(shops);
+  }, [shops, applyShopSelection]);
 
   // Fetch haircut percentage
   const fetchHaircutPercentage = useCallback(async () => {
@@ -1764,14 +1811,9 @@ export default function RetailOrders() {
         }
         
         setShops(shopArray);
-        
-        // If we have shop data and no selected shop, select the first one
-        if (shopArray.length > 0 && (!selectedShop || selectedShop === '')) {
-          const shopId = shopArray[0].id;
-          console.log('Auto-selecting first shop:', shopId, shopArray[0].name);
-          setSelectedShop(shopId);
-          localStorage.setItem('selectedShopId', shopId);
-        } else if (shopArray.length === 0) {
+        applyShopSelection(shopArray);
+
+        if (shopArray.length === 0) {
           console.log('No shops returned from API, checking localStorage cache');
           
           // Try to get shops from localStorage if API returned empty
@@ -1782,14 +1824,8 @@ export default function RetailOrders() {
               if (Array.isArray(cachedShops) && cachedShops.length > 0) {
                 console.log('Using cached shops from localStorage:', cachedShops.length);
                 setShops(cachedShops);
-                
-                // If we still need to select a shop, use the first cached one
-                if (!selectedShop || selectedShop === '') {
-                  const shopId = cachedShops[0].id;
-                  setSelectedShop(shopId);
-                  localStorage.setItem('selectedShopId', shopId);
-                }
-                
+                applyShopSelection(cachedShops);
+
                 // Don't show error when using cached shops
                 return;
               }
@@ -1813,13 +1849,7 @@ export default function RetailOrders() {
             if (Array.isArray(cachedShops) && cachedShops.length > 0) {
               console.log('Using cached shops from localStorage as error fallback');
               setShops(cachedShops);
-              
-              // If we need to select a shop, use the first cached one
-              if (!selectedShop) {
-                const shopId = cachedShops[0].id;
-                setSelectedShop(shopId);
-                // Don't update localStorage here as it might overwrite a valid ID
-              }
+              applyShopSelection(cachedShops);
             }
           }
         } catch (cacheError) {
@@ -1829,7 +1859,7 @@ export default function RetailOrders() {
     };
 
     fetchShops();
-  }, []); // Remove selectedShop dependency to prevent circular updates
+  }, [applyShopSelection]);
 
   // Fetch shop details when the selected shop changes
   useEffect(() => {
@@ -1997,10 +2027,8 @@ export default function RetailOrders() {
   // Fetch inventory and available coffee when shop changes
   useEffect(() => {
     if (!selectedShop) return;
-    
-    // Store selected shop in localStorage for persistence
-    localStorage.setItem('selectedShopId', selectedShop);
-    
+
+    setStoredSelectedShopId(selectedShop);
     fetchData();
   }, [selectedShop, fetchData]);
   
@@ -2447,40 +2475,58 @@ export default function RetailOrders() {
             </IconlessAlert>
           )}
 
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel sx={{ color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit' }}>Shop</InputLabel>
-            <Select
-              value={selectedShop}
-              onChange={(e) => setSelectedShop(e.target.value)}
-              label="Shop"
-              size="small"
-              sx={{
-                color: theme => theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'inherit',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme => theme.palette.mode === 'dark' ? '#9ca3af' : 'inherit',
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme => theme.palette.mode === 'dark' ? '#3b82f6' : 'inherit',
-                },
-                '& .MuiSvgIcon-root': {
-                  color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit',
-                }
-              }}
-            >
-              {Array.isArray(shops) && shops.length > 0 ? (
-                shops.map((shop) => (
-                  <MenuItem key={shop.id} value={shop.id}>
-                    {shop.name}
-                  </MenuItem>
-                ))
-              ) : (
-                <MenuItem disabled>No shops available</MenuItem>
-              )}
-            </Select>
-          </FormControl>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'flex-end' }} sx={{ mb: 3 }}>
+            <FormControl fullWidth>
+              <InputLabel sx={{ color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit' }}>Shop</InputLabel>
+              <Select
+                value={selectedShop}
+                onChange={(e) => handleShopChange(e.target.value)}
+                label="Shop"
+                size="small"
+                sx={{
+                  color: theme => theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme => theme.palette.mode === 'dark' ? '#6b7280' : 'inherit',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme => theme.palette.mode === 'dark' ? '#9ca3af' : 'inherit',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme => theme.palette.mode === 'dark' ? '#3b82f6' : 'inherit',
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: theme => theme.palette.mode === 'dark' ? '#d1d5db' : 'inherit',
+                  }
+                }}
+              >
+                {Array.isArray(shops) && shops.length > 0 ? (
+                  shops.map((shop) => (
+                    <MenuItem key={shop.id} value={shop.id}>
+                      {shop.name}
+                      {shop.id === defaultShopId ? ' (default)' : ''}
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>No shops available</MenuItem>
+                )}
+              </Select>
+            </FormControl>
+
+            {selectedShop && (
+              <Tooltip title={defaultShopId === selectedShop ? 'This is your default shop' : 'Use this shop when you open the retail page'}>
+                <Button
+                  variant={defaultShopId === selectedShop ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={handleSetDefaultShop}
+                  disabled={defaultShopId === selectedShop}
+                  startIcon={defaultShopId === selectedShop ? <StarIcon /> : <StarBorderIcon />}
+                  sx={{ flexShrink: 0, whiteSpace: 'nowrap', minHeight: 40 }}
+                >
+                  {defaultShopId === selectedShop ? 'Default shop' : 'Set as default'}
+                </Button>
+              </Tooltip>
+            )}
+          </Stack>
           
           <Box sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
